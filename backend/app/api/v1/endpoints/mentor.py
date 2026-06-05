@@ -170,49 +170,53 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
                         'assistant_message': clean_response(reply)
                     }
                 else:
-                    raise HTTPException(status_code=response.status_code, detail=f"Groq API error: {response.text}")
+                    import logging
+                    logging.getLogger(__name__).error(f"Groq API error: {response.text}")
             except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
+                import logging
+                logging.getLogger(__name__).error(f"Error calling Groq: {e}")
 
     api_key = settings.gemini_api_key
-    if not api_key:
-        return {
-            'user_id': user_id,
-            'assistant_message': f"[Stub Mode] Synced repos: {repo_list_str}. You asked: {payload.message}"
-        }
-        
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                url,
-                json={
-                    "contents": [
-                        {
-                            "parts": [
-                                {
-                                    "text": f"{system_prompt}\nUser message: {payload.message}"
-                                }
-                            ]
+    if api_key:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url,
+                    json={
+                        "contents": [
+                            {
+                                "parts": [
+                                    {
+                                        "text": f"{system_prompt}\nUser message: {payload.message}"
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    headers={"Content-Type": "application/json"},
+                    timeout=30.0
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    try:
+                        reply = data['candidates'][0]['content']['parts'][0]['text']
+                        return {
+                            'user_id': user_id,
+                            'assistant_message': clean_response(reply)
                         }
-                    ]
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=30.0
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                try:
-                    reply = data['candidates'][0]['content']['parts'][0]['text']
-                    return {
-                        'user_id': user_id,
-                        'assistant_message': clean_response(reply)
-                    }
-                except (KeyError, IndexError):
-                    raise HTTPException(status_code=500, detail="Malformed Gemini response")
-            else:
-                raise HTTPException(status_code=response.status_code, detail=f"Gemini API error: {response.text}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+                    except (KeyError, IndexError):
+                        import logging
+                        logging.getLogger(__name__).error("Malformed Gemini response")
+                else:
+                    import logging
+                    logging.getLogger(__name__).error(f"Gemini API error: {response.text}")
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error calling Gemini: {e}")
+
+    # Ultimate fallback if no keys exist or if both API calls failed
+    return {
+        'user_id': user_id,
+        'assistant_message': f"[Stub Mode] Synced repos: {repo_list_str}. You asked: {payload.message}"
+    }
