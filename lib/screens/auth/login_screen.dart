@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/web_helper.dart';
 import '../../routes/route_paths.dart';
@@ -28,8 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleGithubLogin() {
     setState(() => _isLoading = true);
     const clientId = 'Ov23liN1MaudLGibnAcW';
-    const redirectUri = 'http://localhost:8000/api/v1/auth/github/callback';
-    const url = 'https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirectUri&scope=read:user,repo';
+    final redirectUri = '${AppConfig.apiBaseUrl}/auth/github/callback';
+    final url = 'https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirectUri&scope=read:user,repo';
     openUrl(url);
   }
 
