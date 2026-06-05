@@ -10,7 +10,8 @@ import os
 DB_PATH = "backend/devmentor.db"
 SECRET_KEY = "change-me"
 ALGORITHM = "HS256"
-API_URL = "http://172.20.10.7:8000/api/v1/prompts/event"
+API_URL = "https://devmentor-jmjh.onrender.com/api/v1/prompts/event"
+
 
 def get_first_user_id():
     if not os.path.exists(DB_PATH):
@@ -44,14 +45,20 @@ def main():
     prompt_text = sys.argv[1]
     project_name = sys.argv[2] if len(sys.argv) > 2 else "autodevs-cli"
     
-    user_id = get_first_user_id()
-    if not user_id:
-        print("\nNo user found in the database. Please make sure the backend is running and you have logged in via the DevMentor mobile app first.")
-        sys.exit(1)
-        
-    print(f"Detected User ID from DB: {user_id}")
-    token = generate_token(user_id)
-    print("Generated JWT authentication token.")
+    token = os.environ.get("DEVMENTOR_TOKEN")
+    if token:
+        print("Using JWT token from environment variable DEVMENTOR_TOKEN.")
+    else:
+        user_id = get_first_user_id()
+        if not user_id:
+            print("\nNo user found in the local database and no DEVMENTOR_TOKEN environment variable is set.")
+            print("To run against production, log in via your mobile app and set the DEVMENTOR_TOKEN environment variable.")
+            sys.exit(1)
+            
+        print(f"Detected User ID from DB: {user_id}")
+        token = generate_token(user_id)
+        print("Generated JWT authentication token.")
+
     
     print(f"\nSending prompt event to DevMentor API...")
     print(f"Original Prompt: '{prompt_text}'")
