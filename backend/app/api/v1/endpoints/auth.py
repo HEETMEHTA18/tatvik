@@ -54,10 +54,11 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
         access_token = token_data.get('access_token')
         if not access_token:
             host_header = request.headers.get("host", "localhost:8000")
-            if "onrender.com" in host_header or "render.com" in host_header:
-                frontend_base = "https://devsmentor.vercel.app"
-            else:
+            is_local = any(x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."])
+            if is_local:
                 frontend_base = f"http://{host_header.replace('8000', '8080')}"
+            else:
+                frontend_base = "https://devsmentor.vercel.app"
             return RedirectResponse(url=f'{frontend_base}/#/login?error=github_token_failed')
 
         # 2. Get user info from GitHub
@@ -98,10 +99,11 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
 
         # 6. Redirect back to frontend
         host_header = request.headers.get("host", "localhost:8000")
-        if "onrender.com" in host_header or "render.com" in host_header:
-            frontend_base = "https://devsmentor.vercel.app"
-        else:
+        is_local = any(x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."])
+        if is_local:
             frontend_base = f"http://{host_header.replace('8000', '8080')}"
+        else:
+            frontend_base = "https://devsmentor.vercel.app"
         frontend_url = f'{frontend_base}/#/app?token={system_token}&username={login}'
         return RedirectResponse(url=frontend_url)
 
