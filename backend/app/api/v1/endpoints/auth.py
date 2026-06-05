@@ -55,7 +55,7 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
         if not access_token:
             host_header = request.headers.get("host", "localhost:8000")
             if "onrender.com" in host_header or "render.com" in host_header:
-                frontend_base = "https://web-delta-eight-17.vercel.app"
+                frontend_base = "https://devsmentor.vercel.app"
             else:
                 frontend_base = f"http://{host_header.replace('8000', '8080')}"
             return RedirectResponse(url=f'{frontend_base}/#/login?error=github_token_failed')
@@ -99,10 +99,11 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
         # 6. Redirect back to frontend
         host_header = request.headers.get("host", "localhost:8000")
         if "onrender.com" in host_header or "render.com" in host_header:
-            frontend_base = "https://web-delta-eight-17.vercel.app"
+            frontend_base = "https://devsmentor.vercel.app"
         else:
             frontend_base = f"http://{host_header.replace('8000', '8080')}"
         frontend_url = f'{frontend_base}/#/app?token={system_token}&username={login}'
         return RedirectResponse(url=frontend_url)
+
 
 
