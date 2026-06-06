@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 from app.db.base import Base
 from app.db.session import engine, get_db
 from app.main import app
-from app.models.entities import PromptHistory, AutoDevSession, ExecutedCommand, GeneratedFile
+from app.models.entities import (
+    PromptHistory,
+    AutoDevSession,
+    ExecutedCommand,
+    GeneratedFile,
+)
 
 client = TestClient(app)
 
@@ -55,7 +60,7 @@ def test_legacy_prompt_event():
         json={
             "original_prompt": "Create a React component",
             "project_name": "my-project",
-            "file_context": "index.js"
+            "file_context": "index.js",
         },
         headers=headers,
     )
@@ -69,7 +74,7 @@ def test_legacy_prompt_event():
 
 def test_autodev_session_telemetry_flow():
     headers = get_auth_headers()
-    
+
     # 1. Session Start
     session_id = "test-session-123"
     response = client.post(
@@ -87,9 +92,9 @@ def test_autodev_session_telemetry_flow():
                     "branch": "main",
                     "commit": "abc12345",
                     "languages": ["Go", "HTML"],
-                    "frameworks": []
-                }
-            }
+                    "frameworks": [],
+                },
+            },
         },
         headers=headers,
     )
@@ -116,7 +121,7 @@ def test_autodev_session_telemetry_flow():
                         "stdout": "PASS",
                         "stderr": "",
                         "duration_ms": 150,
-                        "timestamp": "2026-06-06T12:01:05Z"
+                        "timestamp": "2026-06-06T12:01:05Z",
                     }
                 ],
                 "generated_files": [
@@ -124,7 +129,7 @@ def test_autodev_session_telemetry_flow():
                         "file_path": "math.go",
                         "size_bytes": 120,
                         "action": "created",
-                        "timestamp": "2026-06-06T12:01:10Z"
+                        "timestamp": "2026-06-06T12:01:10Z",
                     }
                 ],
                 "metadata": {
@@ -133,9 +138,9 @@ def test_autodev_session_telemetry_flow():
                     "branch": "main",
                     "commit": "abc12345",
                     "languages": ["Go"],
-                    "frameworks": []
-                }
-            }
+                    "frameworks": [],
+                },
+            },
         },
         headers=headers,
     )
@@ -158,9 +163,9 @@ def test_autodev_session_telemetry_flow():
                 "end_time": "2026-06-06T12:05:00Z",
                 "metadata": {
                     "project_name": "my-go-project",
-                    "path": "/path/to/go-project"
-                }
-            }
+                    "path": "/path/to/go-project",
+                },
+            },
         },
         headers=headers,
     )

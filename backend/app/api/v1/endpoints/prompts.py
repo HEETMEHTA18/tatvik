@@ -62,15 +62,21 @@ async def receive_prompt_event(
     if payload.event:
         event_type = payload.event
         session_id = payload.session_id or (payload.data or {}).get("session_id")
-        timestamp_str = payload.timestamp or (payload.data or {}).get("timestamp") or (payload.data or {}).get("start_time")
-        
+        timestamp_str = (
+            payload.timestamp
+            or (payload.data or {}).get("timestamp")
+            or (payload.data or {}).get("start_time")
+        )
+
         if event_type == "session.started":
             meta = (payload.data or {}).get("metadata") or {}
             languages_str = ", ".join(meta.get("languages", []))
             frameworks_str = ", ".join(meta.get("frameworks", []))
-            
+
             # Check if session already exists
-            session_stmt = select(AutoDevSession).where(AutoDevSession.session_id == session_id)
+            session_stmt = select(AutoDevSession).where(
+                AutoDevSession.session_id == session_id
+            )
             db_session = db.scalar(session_stmt)
             if not db_session:
                 db_session = AutoDevSession(
@@ -86,28 +92,38 @@ async def receive_prompt_event(
                 )
                 db.add(db_session)
                 db.commit()
-            return {"success": True, "message": "Session start logged", "session_id": session_id}
-            
+            return {
+                "success": True,
+                "message": "Session start logged",
+                "session_id": session_id,
+            }
+
         elif event_type == "session.ended":
-            session_stmt = select(AutoDevSession).where(AutoDevSession.session_id == session_id)
+            session_stmt = select(AutoDevSession).where(
+                AutoDevSession.session_id == session_id
+            )
             db_session = db.scalar(session_stmt)
             if db_session:
                 db_session.end_time = parse_datetime(timestamp_str)
                 db.commit()
-            return {"success": True, "message": "Session end logged", "session_id": session_id}
-            
+            return {
+                "success": True,
+                "message": "Session end logged",
+                "session_id": session_id,
+            }
+
         elif event_type == "prompt.captured":
             prompt_data = payload.data or {}
             original_prompt = prompt_data.get("prompt", "")
             response_content = prompt_data.get("response", "")
             prompt_id = prompt_data.get("id")
-            
+
             meta = prompt_data.get("metadata") or {}
             project_name = meta.get("project_name")
-            
+
             if not original_prompt.strip():
                 raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-                
+
             ai_prompt = (
                 f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
                 f"Prompt: {original_prompt}\n"
@@ -157,7 +173,7 @@ async def receive_prompt_event(
             db.add(db_prompt)
             db.commit()
             db.refresh(db_prompt)
-            
+
             # Log executed commands if present
             cmds = prompt_data.get("executed_commands") or []
             for cmd in cmds:
@@ -173,7 +189,7 @@ async def receive_prompt_event(
                     timestamp=parse_datetime(cmd.get("timestamp")),
                 )
                 db.add(db_cmd)
-                
+
             # Log generated files if present
             files = prompt_data.get("generated_files") or []
             for f in files:
@@ -186,9 +202,9 @@ async def receive_prompt_event(
                     timestamp=parse_datetime(f.get("timestamp")),
                 )
                 db.add(db_file)
-                
+
             db.commit()
-            
+
             return {
                 "id": db_prompt.id,
                 "user_id": db_prompt.user_id,

@@ -1,6 +1,6 @@
 import sqlite3
 
-db_path = "devmentor.db"
+db_path = "/home/heet18/Projects/devmentor/backend/devmentor.db"
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 

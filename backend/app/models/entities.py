@@ -162,7 +162,9 @@ class ExecutedCommand(Base):
         String(36), primary_key=True, default=lambda: str(uuid4())
     )
     session_id: Mapped[str] = mapped_column(String(255), index=True)
-    prompt_event_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("prompt_histories.id"), nullable=True)
+    prompt_event_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("prompt_histories.id"), nullable=True
+    )
     command: Mapped[str] = mapped_column(Text)
     args: Mapped[str] = mapped_column(Text, default="[]")  # JSON string
     exit_code: Mapped[int] = mapped_column(Integer, default=0)
@@ -178,7 +180,9 @@ class GeneratedFile(Base):
         String(36), primary_key=True, default=lambda: str(uuid4())
     )
     session_id: Mapped[str] = mapped_column(String(255), index=True)
-    prompt_event_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("prompt_histories.id"), nullable=True)
+    prompt_event_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("prompt_histories.id"), nullable=True
+    )
     file_path: Mapped[str] = mapped_column(String(1024))
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     action: Mapped[str] = mapped_column(String(64))  # "created" or "modified"
