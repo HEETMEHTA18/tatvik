@@ -212,8 +212,8 @@ async def mentor_chat(
 
     api_key = settings.gemini_api_key
     if api_key:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        async with httpx.AsyncClient() as client:
+      url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
+      async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
                     url,

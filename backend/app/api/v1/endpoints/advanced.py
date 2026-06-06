@@ -32,35 +32,10 @@ async def call_ai_json(prompt: str) -> dict:
     """
     Utility function to call Groq or Gemini API with a JSON prompt and return parsed dict.
     """
-    if settings.groq_api_key:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {settings.groq_api_key}",
-            "Content-Type": "application/json",
-        }
-        json_payload = {
-            "model": "llama-3.1-8b-instant",
-            "messages": [{"role": "user", "content": prompt}],
-            "response_format": {"type": "json_object"},
-            "temperature": 0.3,
-        }
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    url, json=json_payload, headers=headers, timeout=25.0
-                )
-                if response.status_code == 200:
-                    reply = response.json()["choices"][0]["message"]["content"]
-                    return json.loads(reply)
-                else:
-                    logger.error(f"Groq API error in advanced route: {response.text}")
-            except Exception as e:
-                logger.error(f"Error calling Groq in advanced route: {e}")
-
-    # Fallback to Gemini
+    # Primary: Gemini (higher context limits for large tasks)
     api_key = settings.gemini_api_key
     if api_key:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
         json_payload = {
             "contents": [
                 {
@@ -92,6 +67,32 @@ async def call_ai_json(prompt: str) -> dict:
                     logger.error(f"Gemini API error in advanced route: {response.text}")
             except Exception as e:
                 logger.error(f"Error calling Gemini in advanced route: {e}")
+
+    # Fallback: Groq
+    if settings.groq_api_key:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {settings.groq_api_key}",
+            "Content-Type": "application/json",
+        }
+        json_payload = {
+            "model": "llama-3.1-8b-instant",
+            "messages": [{"role": "user", "content": prompt}],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.3,
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=json_payload, headers=headers, timeout=25.0
+                )
+                if response.status_code == 200:
+                    reply = response.json()["choices"][0]["message"]["content"]
+                    return json.loads(reply)
+                else:
+                    logger.error(f"Groq API error in advanced route: {response.text}")
+            except Exception as e:
+                logger.error(f"Error calling Groq in advanced route: {e}")
 
     # Ultimate fallback if no keys or errors occur
     return {}

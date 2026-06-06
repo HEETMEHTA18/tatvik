@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
+import '../routes/route_paths.dart';
 import '../widgets/liquid_glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../providers/app_state.dart';
@@ -13,7 +14,8 @@ import 'profile/profile_screen.dart';
 import 'prompts/prompt_hub_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final int initialTabIndex;
+  const MainNavigationScreen({super.key, this.initialTabIndex = 0});
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
@@ -23,6 +25,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   late PageController _pageController;
   double _pageOffset = 0.0;
+  bool _isUpdatingUrl = false;
 
   final List<Widget> _screens = [
     const HomeScreen(),
@@ -35,8 +38,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
-    final appState = Provider.of<AppState>(context, listen: false);
-    _selectedIndex = appState.currentTabIndex;
+    // Use the tab index from the URL (via router) as the initial tab.
+    // This ensures /app?tab=prompts opens directly on the Prompts tab.
+    _selectedIndex = widget.initialTabIndex;
     _pageController = PageController(initialPage: _selectedIndex);
     _pageOffset = _selectedIndex.toDouble();
     _pageController.addListener(() {
@@ -46,6 +50,21 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         });
       }
     });
+
+    // Sync AppState with the initial tab from URL
+    Provider.of<AppState>(context, listen: false).setTabIndex(_selectedIndex);
+  }
+
+  /// Updates the browser URL bar to reflect the selected tab
+  /// without triggering a go_router navigation/rebuild.
+  void _updateUrlSilently(int index) {
+    if (_isUpdatingUrl) return;
+    _isUpdatingUrl = true;
+    final router = GoRouter.of(context);
+    GoRouter.neglect(context, () {
+      router.go(RoutePaths.appTab(index));
+    });
+    _isUpdatingUrl = false;
   }
 
   @override
@@ -90,6 +109,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               _selectedIndex = index;
             });
             Provider.of<AppState>(context, listen: false).setTabIndex(index);
+            // Silently update the URL to match the swiped-to tab
+            _updateUrlSilently(index);
           },
           children: _screens,
         ),
@@ -164,6 +185,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           duration: const Duration(milliseconds: 350),
           curve: Curves.easeInOutCubic,
         );
+        // Silently update the URL to match the tapped tab
+        _updateUrlSilently(index);
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -193,3 +216,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 }
+

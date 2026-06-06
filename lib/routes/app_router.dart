@@ -29,7 +29,11 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: RoutePaths.app,
-        builder: (context, state) => const MainNavigationScreen(),
+        builder: (context, state) {
+          final tabName = state.uri.queryParameters['tab'];
+          final tabIndex = RoutePaths.tabIndexFromName(tabName);
+          return MainNavigationScreen(key: const ValueKey('main_nav'), initialTabIndex: tabIndex);
+        },
       ),
       GoRoute(
         path: RoutePaths.mentor,
