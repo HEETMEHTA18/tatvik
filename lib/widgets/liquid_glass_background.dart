@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../core/theme/app_theme.dart';
 
 class LiquidGlassBackground extends StatefulWidget {
   final Widget child;

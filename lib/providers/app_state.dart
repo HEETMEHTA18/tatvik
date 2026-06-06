@@ -395,13 +395,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _getAIResponse(String input) {
-    input = input.toLowerCase();
-    if (input.contains('score')) return 'Your developer score is currently 8.7. Focus on Backend projects to reach 9.0!';
-    if (input.contains('roadmap')) return 'You are 37% through your Senior Mobile Architect path. Your next task is Backend Integration.';
-    return "That's an interesting topic! Looking at your GitHub profile, I recommend exploring $input through some of the repositories in your Discover tab.";
-  }
-
   // Preferences
   String _themeModeSetting = 'dark'; // 'dark' is default
   String get themeModeSetting => _themeModeSetting;

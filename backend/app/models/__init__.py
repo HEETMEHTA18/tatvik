@@ -13,17 +13,15 @@ from app.models.entities import (
 )
 
 __all__ = [
-    'User',
-    'GithubProfile',
-    'Repository',
-    'DeveloperScore',
-    'Skill',
-    'SkillGap',
-    'Roadmap',
-    'Recommendation',
-    'MentorChat',
-    'ProjectRecommendation',
-    'PromptHistory',
+    "User",
+    "GithubProfile",
+    "Repository",
+    "DeveloperScore",
+    "Skill",
+    "SkillGap",
+    "Roadmap",
+    "Recommendation",
+    "MentorChat",
+    "ProjectRecommendation",
+    "PromptHistory",
 ]
-
-

@@ -21,16 +21,18 @@ class GithubService:
         async with httpx.AsyncClient() as client:
             # 1. Fetch GitHub profile
             profile_response = await client.get(
-                'https://api.github.com/user',
-                headers={'Authorization': f'Bearer {access_token}'}
+                "https://api.github.com/user",
+                headers={"Authorization": f"Bearer {access_token}"},
             )
             if profile_response.status_code != 200:
-                raise ValueError(f"Failed to fetch GitHub profile: {profile_response.text}")
-            
+                raise ValueError(
+                    f"Failed to fetch GitHub profile: {profile_response.text}"
+                )
+
             github_data = profile_response.json()
-            login = github_data.get('login')
-            avatar_url = github_data.get('avatar_url')
-            name = github_data.get('name') or login
+            login = github_data.get("login")
+            avatar_url = github_data.get("avatar_url")
+            name = github_data.get("name") or login
 
             # Update User profile details
             user_stmt = select(User).where(User.id == user_id)
@@ -45,24 +47,28 @@ class GithubService:
             profile = self.db.scalar(profile_stmt)
             if not profile:
                 profile = GithubProfile(user_id=user_id, login=login)
-            
+
             profile.access_token = access_token
             profile.synced_at = datetime.utcnow()
             self.db.add(profile)
 
             # 2. Fetch User's Repositories
             repos_response = await client.get(
-                'https://api.github.com/user/repos?per_page=100',
-                headers={'Authorization': f'Bearer {access_token}'}
+                "https://api.github.com/user/repos?per_page=100",
+                headers={"Authorization": f"Bearer {access_token}"},
             )
             if repos_response.status_code != 200:
-                raise ValueError(f"Failed to fetch GitHub repositories: {repos_response.text}")
-            
+                raise ValueError(
+                    f"Failed to fetch GitHub repositories: {repos_response.text}"
+                )
+
             repos_data = repos_response.json()
-            
+
             # Fetch existing repositories for the user to avoid duplicate key issues or delete and recreate
             # Delete existing repos for clean sync to avoid primary key/unique issues on full_name across users
-            existing_repos_stmt = select(Repository).where(Repository.user_id == user_id)
+            existing_repos_stmt = select(Repository).where(
+                Repository.user_id == user_id
+            )
             existing_repos = self.db.scalars(existing_repos_stmt).all()
             for r in existing_repos:
                 self.db.delete(r)
@@ -71,23 +77,23 @@ class GithubService:
             synced_repos = []
 
             for r_data in repos_data:
-                owner = r_data.get('owner', {}).get('login', '')
-                name = r_data.get('name', '')
-                full_name = r_data.get('full_name', f"{owner}/{name}")
-                description = r_data.get('description') or 'No description provided.'
-                language = r_data.get('language')
-                stars = r_data.get('stargazers_count', 0)
-                forks = r_data.get('forks_count', 0)
-                watchers = r_data.get('watchers_count', 0)
-                open_issues = r_data.get('open_issues_count', 0)
+                owner = r_data.get("owner", {}).get("login", "")
+                name = r_data.get("name", "")
+                full_name = r_data.get("full_name", f"{owner}/{name}")
+                description = r_data.get("description") or "No description provided."
+                language = r_data.get("language")
+                stars = r_data.get("stargazers_count", 0)
+                forks = r_data.get("forks_count", 0)
+                watchers = r_data.get("watchers_count", 0)
+                open_issues = r_data.get("open_issues_count", 0)
 
                 total_stars += stars
 
-                difficulty = 'Beginner'
+                difficulty = "Beginner"
                 if stars > 50:
-                    difficulty = 'Advanced'
+                    difficulty = "Advanced"
                 elif stars > 5:
-                    difficulty = 'Intermediate'
+                    difficulty = "Intermediate"
 
                 impact_score = min(max(stars * 5 + 40, 40), 100)
 
@@ -100,28 +106,32 @@ class GithubService:
                     language=language,
                     difficulty=difficulty,
                     impact_score=impact_score,
-                    why_recommended='Based on your GitHub activity and repository engagement.',
+                    why_recommended="Based on your GitHub activity and repository engagement.",
                     stars_count=stars,
                     forks_count=forks,
                     watchers_count=watchers,
                     open_issues_count=open_issues,
-                    synced_at=datetime.utcnow()
+                    synced_at=datetime.utcnow(),
                 )
                 self.db.add(repo)
-                synced_repos.append({
-                    'name': name,
-                    'owner': owner,
-                    'description': description,
-                    'difficulty': difficulty,
-                    'impactScore': impact_score,
-                    'tags': [language] if language else ['Repo'],
-                    'whyRecommended': repo.why_recommended
-                })
+                synced_repos.append(
+                    {
+                        "name": name,
+                        "owner": owner,
+                        "description": description,
+                        "difficulty": difficulty,
+                        "impactScore": impact_score,
+                        "tags": [language] if language else ["Repo"],
+                        "whyRecommended": repo.why_recommended,
+                    }
+                )
 
             # Calculate a basic Developer Score and save it
             # Developer score formula (0 to 10 scale)
-            developer_score_val = round(min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1)
-            
+            developer_score_val = round(
+                min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1
+            )
+
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
             score_rec = self.db.scalar(score_stmt)
             if not score_rec:
@@ -133,11 +143,11 @@ class GithubService:
             self.db.commit()
 
             return {
-                'login': login,
-                'avatar_url': avatar_url,
-                'repos_count': len(repos_data),
-                'total_stars': total_stars,
-                'developer_score': developer_score_val
+                "login": login,
+                "avatar_url": avatar_url,
+                "repos_count": len(repos_data),
+                "total_stars": total_stars,
+                "developer_score": developer_score_val,
             }
 
     async def sync_public_github_data(self, user_id: str, username: str) -> dict:
@@ -146,19 +156,20 @@ class GithubService:
         """
         async with httpx.AsyncClient() as client:
             headers = {"User-Agent": "DevMentor-App"}
-            
+
             # 1. Fetch GitHub profile
             profile_response = await client.get(
-                f'https://api.github.com/users/{username}',
-                headers=headers
+                f"https://api.github.com/users/{username}", headers=headers
             )
             if profile_response.status_code != 200:
-                raise ValueError(f"Failed to fetch GitHub profile for {username}: {profile_response.text}")
-            
+                raise ValueError(
+                    f"Failed to fetch GitHub profile for {username}: {profile_response.text}"
+                )
+
             github_data = profile_response.json()
-            login = github_data.get('login', username)
-            avatar_url = github_data.get('avatar_url')
-            name = github_data.get('name') or login
+            login = github_data.get("login", username)
+            avatar_url = github_data.get("avatar_url")
+            name = github_data.get("name") or login
 
             # Update User profile details in DB
             user_stmt = select(User).where(User.id == user_id)
@@ -173,22 +184,26 @@ class GithubService:
             profile = self.db.scalar(profile_stmt)
             if not profile:
                 profile = GithubProfile(user_id=user_id, login=login)
-            
+
             profile.synced_at = datetime.utcnow()
             self.db.add(profile)
 
             # 2. Fetch User's Repositories
             repos_response = await client.get(
-                f'https://api.github.com/users/{username}/repos?per_page=100',
-                headers=headers
+                f"https://api.github.com/users/{username}/repos?per_page=100",
+                headers=headers,
             )
             if repos_response.status_code != 200:
-                raise ValueError(f"Failed to fetch GitHub repositories for {username}: {repos_response.text}")
-            
+                raise ValueError(
+                    f"Failed to fetch GitHub repositories for {username}: {repos_response.text}"
+                )
+
             repos_data = repos_response.json()
-            
+
             # Delete existing repos for clean sync
-            existing_repos_stmt = select(Repository).where(Repository.user_id == user_id)
+            existing_repos_stmt = select(Repository).where(
+                Repository.user_id == user_id
+            )
             existing_repos = self.db.scalars(existing_repos_stmt).all()
             for r in existing_repos:
                 self.db.delete(r)
@@ -197,23 +212,23 @@ class GithubService:
             synced_repos = []
 
             for r_data in repos_data:
-                owner = r_data.get('owner', {}).get('login', login)
-                repo_name = r_data.get('name', '')
-                full_name = r_data.get('full_name', f"{owner}/{repo_name}")
-                description = r_data.get('description') or 'No description provided.'
-                language = r_data.get('language')
-                stars = r_data.get('stargazers_count', 0)
-                forks = r_data.get('forks_count', 0)
-                watchers = r_data.get('watchers_count', 0)
-                open_issues = r_data.get('open_issues_count', 0)
+                owner = r_data.get("owner", {}).get("login", login)
+                repo_name = r_data.get("name", "")
+                full_name = r_data.get("full_name", f"{owner}/{repo_name}")
+                description = r_data.get("description") or "No description provided."
+                language = r_data.get("language")
+                stars = r_data.get("stargazers_count", 0)
+                forks = r_data.get("forks_count", 0)
+                watchers = r_data.get("watchers_count", 0)
+                open_issues = r_data.get("open_issues_count", 0)
 
                 total_stars += stars
 
-                difficulty = 'Beginner'
+                difficulty = "Beginner"
                 if stars > 50:
-                    difficulty = 'Advanced'
+                    difficulty = "Advanced"
                 elif stars > 5:
-                    difficulty = 'Intermediate'
+                    difficulty = "Intermediate"
 
                 impact_score = min(max(stars * 5 + 40, 40), 100)
 
@@ -226,27 +241,31 @@ class GithubService:
                     language=language,
                     difficulty=difficulty,
                     impact_score=impact_score,
-                    why_recommended='Based on your GitHub activity and repository engagement.',
+                    why_recommended="Based on your GitHub activity and repository engagement.",
                     stars_count=stars,
                     forks_count=forks,
                     watchers_count=watchers,
                     open_issues_count=open_issues,
-                    synced_at=datetime.utcnow()
+                    synced_at=datetime.utcnow(),
                 )
                 self.db.add(repo)
-                synced_repos.append({
-                    'name': repo_name,
-                    'owner': owner,
-                    'description': description,
-                    'difficulty': difficulty,
-                    'impactScore': impact_score,
-                    'tags': [language] if language else ['Repo'],
-                    'whyRecommended': repo.why_recommended
-                })
+                synced_repos.append(
+                    {
+                        "name": repo_name,
+                        "owner": owner,
+                        "description": description,
+                        "difficulty": difficulty,
+                        "impactScore": impact_score,
+                        "tags": [language] if language else ["Repo"],
+                        "whyRecommended": repo.why_recommended,
+                    }
+                )
 
             # Calculate a basic Developer Score and save it
-            developer_score_val = round(min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1)
-            
+            developer_score_val = round(
+                min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1
+            )
+
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
             score_rec = self.db.scalar(score_stmt)
             if not score_rec:
@@ -254,12 +273,12 @@ class GithubService:
             score_rec.score = int(developer_score_val * 10)  # scale to 0-100 in db
             score_rec.calculated_at = datetime.utcnow()
             self.db.add(score_rec)
-            
+
             self.db.commit()
-            
+
             return {
-                'login': login,
-                'repos_count': len(repos_data),
-                'total_stars': total_stars,
-                'developer_score': score_rec.score
+                "login": login,
+                "repos_count": len(repos_data),
+                "total_stars": total_stars,
+                "developer_score": score_rec.score,
             }

@@ -17,15 +17,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
-  void _handleLogin() async {
-    setState(() => _isLoading = true);
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    context.go(RoutePaths.app);
-  }
-
   void _handleGithubLogin() {
     setState(() => _isLoading = true);
     const clientId = 'Ov23liN1MaudLGibnAcW';

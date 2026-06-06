@@ -10,14 +10,17 @@ class AuthService:
     def register(self, email: str, password: str, name: str) -> str:
         existing = self.user_repository.get_by_email(email)
         if existing:
-            raise ApiException(code='AUTH_EMAIL_EXISTS', message='Email already in use')
+            raise ApiException(code="AUTH_EMAIL_EXISTS", message="Email already in use")
         hashed_password = get_password_hash(password)
-        user = self.user_repository.create(email=email, name=name, hashed_password=hashed_password)
+        user = self.user_repository.create(
+            email=email, name=name, hashed_password=hashed_password
+        )
         return create_access_token(subject=user.id)
 
     def login(self, email: str, password: str) -> str:
         user = self.user_repository.get_by_email(email)
         if not user or not verify_password(password, user.hashed_password):
-            raise ApiException(code='AUTH_INVALID_CREDENTIALS', message='Invalid credentials')
+            raise ApiException(
+                code="AUTH_INVALID_CREDENTIALS", message="Invalid credentials"
+            )
         return create_access_token(subject=user.id)
-

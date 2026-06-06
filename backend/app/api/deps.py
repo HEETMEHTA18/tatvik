@@ -20,14 +20,17 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(user_repository=UserRepository(db))
 
 
-def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> str:
+def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> str:
     token = credentials.credentials
     try:
-        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
-        sub = payload.get('sub')
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
+        sub = payload.get("sub")
         if not sub:
-            raise ValueError('missing subject')
+            raise ValueError("missing subject")
         return str(sub)
     except (JWTError, ValueError) as exc:
-        raise ValueError('Invalid or expired token') from exc
-
+        raise ValueError("Invalid or expired token") from exc

@@ -22,11 +22,11 @@ class RoadmapGenerateRequest(BaseModel):
     preferred_stack: Optional[str] = None
 
 
-@router.post('/generate')
+@router.post("/generate")
 async def generate_roadmap(
     payload: Optional[RoadmapGenerateRequest] = None,
     user_id: str = Depends(get_current_user_id),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Generate a dynamic 5-step career roadmap for the user based on their actual repositories,
@@ -35,7 +35,11 @@ async def generate_roadmap(
     # 1. Fetch repositories and user profile info
     stmt = select(Repository).where(Repository.user_id == user_id)
     repos = db.scalars(stmt).all()
-    repo_list_str = ", ".join([f"{r.name} ({r.language or 'General'})" for r in repos]) if repos else "No repositories synced yet"
+    repo_list_str = (
+        ", ".join([f"{r.name} ({r.language or 'General'})" for r in repos])
+        if repos
+        else "No repositories synced yet"
+    )
 
     score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
     score_rec = db.scalar(score_stmt)
@@ -69,11 +73,11 @@ async def generate_roadmap(
         f"{{\n"
         f'  "title": "Roadmap path name (e.g. Flutter Developer to Senior Mobile Architect)",\n'
         f'  "milestones": [\n'
-        f'    {{\n'
+        f"    {{\n"
         f'      "title": "Milestone Title (e.g. Master State Management & Performance)",\n'
         f'      "description": "Specific actions to take (e.g. Optimize rendering, implement BLoC/Riverpod, write integration tests)"\n'
-        f'    }}\n'
-        f'  ]\n'
+        f"    }}\n"
+        f"  ]\n"
         f"}}"
     )
 
@@ -87,24 +91,41 @@ async def generate_roadmap(
             milestones = res_json.get("milestones") or []
     except Exception as e:
         logger.error(f"Error calling AI for roadmap generation: {e}")
-        
+
     # Fallback if AI call failed or returned empty list
     if not milestones:
         title = "Senior Developer Career Path"
         milestones = [
-            {"title": "Master Core Architecture", "description": "Learn clean design patterns, state management, and write unit tests."},
-            {"title": "Advanced Framework Implementations", "description": "Build high-performance components and optimize layout render passes."},
-            {"title": "Testing & Quality Assurance", "description": "Achieve 80%+ coverage with unit, widget, and integration tests."},
-            {"title": "CI/CD & Cloud Deployments", "description": "Automate build and deployment pipelines using GitHub Actions or Codemagic."},
-            {"title": "System Design & Scaling", "description": "Understand distributed system patterns, offline storage synchronization, and local caching."}
+            {
+                "title": "Master Core Architecture",
+                "description": "Learn clean design patterns, state management, and write unit tests.",
+            },
+            {
+                "title": "Advanced Framework Implementations",
+                "description": "Build high-performance components and optimize layout render passes.",
+            },
+            {
+                "title": "Testing & Quality Assurance",
+                "description": "Achieve 80%+ coverage with unit, widget, and integration tests.",
+            },
+            {
+                "title": "CI/CD & Cloud Deployments",
+                "description": "Automate build and deployment pipelines using GitHub Actions or Codemagic.",
+            },
+            {
+                "title": "System Design & Scaling",
+                "description": "Understand distributed system patterns, offline storage synchronization, and local caching.",
+            },
         ]
 
     # 3. Save roadmap to the database (upsert active roadmap)
-    roadmap_stmt = select(Roadmap).where(Roadmap.user_id == user_id, Roadmap.status == 'active')
+    roadmap_stmt = select(Roadmap).where(
+        Roadmap.user_id == user_id, Roadmap.status == "active"
+    )
     db_roadmap = db.scalar(roadmap_stmt)
     if not db_roadmap:
-        db_roadmap = Roadmap(user_id=user_id, status='active')
-        
+        db_roadmap = Roadmap(user_id=user_id, status="active")
+
     db_roadmap.title = title
     db_roadmap.milestones = json.dumps(milestones)
     db.add(db_roadmap)
@@ -112,32 +133,36 @@ async def generate_roadmap(
     db.refresh(db_roadmap)
 
     return {
-        'id': db_roadmap.id,
-        'user_id': db_roadmap.user_id,
-        'title': db_roadmap.title,
-        'milestones': milestones,
-        'status': db_roadmap.status
+        "id": db_roadmap.id,
+        "user_id": db_roadmap.user_id,
+        "title": db_roadmap.title,
+        "milestones": milestones,
+        "status": db_roadmap.status,
     }
 
 
-@router.get('/current')
-async def current_roadmap(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+@router.get("/current")
+async def current_roadmap(
+    user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)
+):
     """
     Get the active career roadmap for the authenticated user.
     If no roadmap exists, automatically trigger generation on the fly.
     """
-    roadmap_stmt = select(Roadmap).where(Roadmap.user_id == user_id, Roadmap.status == 'active')
+    roadmap_stmt = select(Roadmap).where(
+        Roadmap.user_id == user_id, Roadmap.status == "active"
+    )
     db_roadmap = db.scalar(roadmap_stmt)
-    
+
     if db_roadmap and db_roadmap.milestones:
         try:
             milestones = json.loads(db_roadmap.milestones)
             return {
-                'id': db_roadmap.id,
-                'user_id': db_roadmap.user_id,
-                'title': db_roadmap.title,
-                'milestones': milestones,
-                'status': db_roadmap.status
+                "id": db_roadmap.id,
+                "user_id": db_roadmap.user_id,
+                "title": db_roadmap.title,
+                "milestones": milestones,
+                "status": db_roadmap.status,
             }
         except Exception:
             pass

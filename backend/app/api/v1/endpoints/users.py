@@ -7,7 +7,7 @@ from app.services.user_service import UserService
 router = APIRouter()
 
 
-@router.get('/me', response_model=UserResponse)
+@router.get("/me", response_model=UserResponse)
 def get_me(
     user_id: str = Depends(get_current_user_id),
     service: UserService = Depends(get_user_service),
@@ -15,5 +15,6 @@ def get_me(
     try:
         return service.get_current_user(user_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+        ) from exc

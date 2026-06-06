@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title='DevMentor API', version='0.1.0')
+app = FastAPI(title="DevMentor API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,39 +44,49 @@ async def periodic_news_scanner():
         await asyncio.sleep(3600)
 
 
-@app.on_event('startup')
+@app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
     asyncio.create_task(periodic_news_scanner())
 
 
-@app.middleware('http')
+@app.middleware("http")
 async def request_timing_middleware(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
-    response.headers['X-Process-Time-Ms'] = str(duration_ms)
-    logger.info('%s %s -> %s (%sms)', request.method, request.url.path, response.status_code, duration_ms)
+    response.headers["X-Process-Time-Ms"] = str(duration_ms)
+    logger.info(
+        "%s %s -> %s (%sms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
     return response
 
 
 @app.exception_handler(ApiException)
 async def api_exception_handler(_: Request, exc: ApiException):
-    return JSONResponse(status_code=exc.status_code, content={'success': False, 'error': exc.detail})
+    return JSONResponse(
+        status_code=exc.status_code, content={"success": False, "error": exc.detail}
+    )
 
 
 @app.exception_handler(ValueError)
 async def value_error_handler(_: Request, exc: ValueError):
     return JSONResponse(
         status_code=401,
-        content={'success': False, 'error': {'code': 'AUTH_INVALID_TOKEN', 'message': str(exc)}},
+        content={
+            "success": False,
+            "error": {"code": "AUTH_INVALID_TOKEN", "message": str(exc)},
+        },
     )
 
 
-@app.get('/health')
+@app.get("/health")
 def health_check():
-    return {'status': 'ok'}
+    return {"status": "ok"}
 
 
 app.include_router(api_router)
-

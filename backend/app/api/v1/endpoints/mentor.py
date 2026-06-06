@@ -15,7 +15,9 @@ class MentorMessageRequest(BaseModel):
     message: str
 
 
-async def search_github_repositories(topic_query: str, access_token: str = None) -> list:
+async def search_github_repositories(
+    topic_query: str, access_token: str = None
+) -> list:
     """
     Search GitHub repositories for a given topic or keyword, sorted by stars.
     """
@@ -38,11 +40,11 @@ async def search_github_repositories(topic_query: str, access_token: str = None)
     url = f"https://api.github.com/search/repositories?q={search_q}&sort=stars&order=desc&per_page=5"
     headers = {
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "DevMentor-App"
+        "User-Agent": "DevMentor-App",
     }
     if access_token:
         headers["Authorization"] = f"token {access_token}"
-    
+
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, headers=headers, timeout=12.0)
@@ -52,26 +54,36 @@ async def search_github_repositories(topic_query: str, access_token: str = None)
                     {
                         "name": item.get("name"),
                         "full_name": item.get("full_name"),
-                        "description": item.get("description") or "No description provided.",
+                        "description": item.get("description")
+                        or "No description provided.",
                         "stars": item.get("stargazers_count", 0),
                         "html_url": item.get("html_url"),
-                        "language": item.get("language")
+                        "language": item.get("language"),
                     }
                     for item in items
                 ]
         except Exception as e:
             import logging
+
             logging.getLogger(__name__).error(f"Error calling GitHub Search API: {e}")
     return []
 
 
-@router.post('/chat')
-async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db)):
+@router.post("/chat")
+async def mentor_chat(
+    payload: MentorMessageRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
     # 1. Fetch user repositories from db to build contextual developer profile
     stmt = select(Repository).where(Repository.user_id == user_id)
     repos = db.scalars(stmt).all()
-    repo_list_str = ", ".join([r.full_name for r in repos]) if repos else "No repositories synced yet"
-    
+    repo_list_str = (
+        ", ".join([r.full_name for r in repos])
+        if repos
+        else "No repositories synced yet"
+    )
+
     # 2. Get user's github profile to see if we have access token
     profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
     profile = db.scalar(profile_stmt)
@@ -80,7 +92,19 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
     # 3. Detect if they are asking for top repositories
     msg_lower = payload.message.lower()
     github_context = ""
-    if any(k in msg_lower for k in ["top repo", "best repo", "popular repo", "excelling repo", "top github", "best github", "popular github", "excelling github"]):
+    if any(
+        k in msg_lower
+        for k in [
+            "top repo",
+            "best repo",
+            "popular repo",
+            "excelling repo",
+            "top github",
+            "best github",
+            "popular github",
+            "excelling github",
+        ]
+    ):
         # Determine the topic
         topic = "data-science"
         if "cybersecurity" in msg_lower or "cyber security" in msg_lower:
@@ -93,11 +117,15 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
             topic = "web-development"
         elif "mobile" in msg_lower or "flutter" in msg_lower:
             topic = "flutter"
-        
+
         # Query Github Search API
         search_results = await search_github_repositories(topic, access_token)
         if search_results:
-            github_context = "\nReal-time Top Repositories in " + topic.replace("-", " ") + " from GitHub:\n"
+            github_context = (
+                "\nReal-time Top Repositories in "
+                + topic.replace("-", " ")
+                + " from GitHub:\n"
+            )
             for r in search_results:
                 github_context += f"- {r['full_name']} ({r['stars']} stars): {r['description']} (Link: {r['html_url']})\n"
         else:
@@ -135,10 +163,12 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
         f"{news_context}\n"
         "Always recommend actionable learning steps based on these real-time tech trends and repositories."
     )
-    
+
     def clean_response(text: str) -> str:
         # Strip bold symbols and header symbols
-        cleaned = text.replace("**", "").replace("###", "").replace("##", "").replace("#", "")
+        cleaned = (
+            text.replace("**", "").replace("###", "").replace("##", "").replace("#", "")
+        )
         # Replace common markdown list markers with clean dashes if needed
         return cleaned.strip()
 
@@ -153,27 +183,31 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
                         "model": "llama-3.1-8b-instant",
                         "messages": [
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": payload.message}
-                        ]
+                            {"role": "user", "content": payload.message},
+                        ],
                     },
                     headers={
                         "Authorization": f"Bearer {settings.groq_api_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    reply = data['choices'][0]['message']['content']
+                    reply = data["choices"][0]["message"]["content"]
                     return {
-                        'user_id': user_id,
-                        'assistant_message': clean_response(reply)
+                        "user_id": user_id,
+                        "assistant_message": clean_response(reply),
                     }
                 else:
                     import logging
-                    logging.getLogger(__name__).error(f"Groq API error: {response.text}")
+
+                    logging.getLogger(__name__).error(
+                        f"Groq API error: {response.text}"
+                    )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).error(f"Error calling Groq: {e}")
 
     api_key = settings.gemini_api_key
@@ -195,28 +229,33 @@ async def mentor_chat(payload: MentorMessageRequest, user_id: str = Depends(get_
                         ]
                     },
                     headers={"Content-Type": "application/json"},
-                    timeout=30.0
+                    timeout=30.0,
                 )
                 if response.status_code == 200:
                     data = response.json()
                     try:
-                        reply = data['candidates'][0]['content']['parts'][0]['text']
+                        reply = data["candidates"][0]["content"]["parts"][0]["text"]
                         return {
-                            'user_id': user_id,
-                            'assistant_message': clean_response(reply)
+                            "user_id": user_id,
+                            "assistant_message": clean_response(reply),
                         }
                     except (KeyError, IndexError):
                         import logging
+
                         logging.getLogger(__name__).error("Malformed Gemini response")
                 else:
                     import logging
-                    logging.getLogger(__name__).error(f"Gemini API error: {response.text}")
+
+                    logging.getLogger(__name__).error(
+                        f"Gemini API error: {response.text}"
+                    )
             except Exception as e:
                 import logging
+
                 logging.getLogger(__name__).error(f"Error calling Gemini: {e}")
 
     # Ultimate fallback if no keys exist or if both API calls failed
     return {
-        'user_id': user_id,
-        'assistant_message': f"[Stub Mode] Synced repos: {repo_list_str}. You asked: {payload.message}"
+        "user_id": user_id,
+        "assistant_message": f"[Stub Mode] Synced repos: {repo_list_str}. You asked: {payload.message}",
     }
