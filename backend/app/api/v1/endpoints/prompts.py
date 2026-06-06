@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
-from app.models.entities import PromptHistory
+from app.models.entities import PromptHistory, GithubProfile, Repository
 from app.api.v1.endpoints.advanced import call_ai_json
 
 logger = logging.getLogger(__name__)
@@ -272,3 +272,213 @@ async def get_prompt_recommendations(
         ]
         
     return {"recommendations": recommendations}
+
+
+class GithubSyncRequest(BaseModel):
+    github_username: Optional[str] = None
+
+
+@router.post("/sync-github")
+async def sync_github_prompts(
+    payload: Optional[GithubSyncRequest] = None,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    Scan the user's synchronized GitHub repositories (or public ones if username is provided)
+    for the presence of a .autodevs/prompts.md file.
+    If found, parse the prompts list, refine/score them, and import them into PromptHistory.
+    """
+    import base64
+    import httpx
+    from app.models.user import User
+    
+    # 1. Fetch user's GitHub access token (if they linked via OAuth)
+    profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+    profile = db.scalar(profile_stmt)
+    access_token = profile.access_token if profile else None
+    
+    # 2. Determine GitHub username to scan
+    github_username = None
+    if payload and payload.github_username:
+        github_username = payload.github_username.strip().replace("@", "")
+    
+    if not github_username and profile and profile.login:
+        github_username = profile.login
+        
+    if not github_username:
+        # Check if username is set on User object
+        user_stmt = select(User).where(User.id == user_id)
+        user = db.scalar(user_stmt)
+        if user and user.username:
+            github_username = user.username
+            
+    if not github_username:
+        raise HTTPException(
+            status_code=400,
+            detail="GitHub username not provided and no GitHub account linked to profile."
+        )
+
+    # Update username on the User table if it has changed/was set
+    user_stmt = select(User).where(User.id == user_id)
+    user = db.scalar(user_stmt)
+    if user and github_username and user.username != github_username:
+        user.username = github_username
+        db.add(user)
+        db.commit()
+        
+    # 3. Determine repository list
+    repos_stmt = select(Repository).where(Repository.user_id == user_id)
+    db_repos = db.scalars(repos_stmt).all()
+    
+    repo_list = []
+    if db_repos:
+        for repo in db_repos:
+            repo_list.append({
+                "owner": repo.owner,
+                "name": repo.name,
+                "full_name": repo.full_name
+            })
+    else:
+        # Fetch public repositories dynamically using GitHub API
+        async with httpx.AsyncClient() as client:
+            headers = {"User-Agent": "DevMentor-App"}
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+            try:
+                # Fetch up to 100 public repositories
+                api_url = f"https://api.github.com/users/{github_username}/repos?per_page=100"
+                res = await client.get(api_url, headers=headers, timeout=12.0)
+                if res.status_code == 200:
+                    repos_data = res.json()
+                    for r_data in repos_data:
+                        owner = r_data.get('owner', {}).get('login', github_username)
+                        name = r_data.get('name', '')
+                        full_name = r_data.get('full_name', f"{owner}/{name}")
+                        repo_list.append({
+                            "owner": owner,
+                            "name": name,
+                            "full_name": full_name
+                        })
+                else:
+                    logger.warning(f"Failed to fetch public repos for {github_username}: {res.status_code} {res.text}")
+            except Exception as e:
+                logger.error(f"Error fetching public repos for {github_username}: {e}")
+
+    if not repo_list:
+        return {"success": True, "message": f"No repositories found for GitHub user '{github_username}' to scan.", "imported_count": 0}
+        
+    imported_count = 0
+    scanned_repos = []
+    
+    async with httpx.AsyncClient() as client:
+        for repo in repo_list:
+            owner = repo["owner"]
+            name = repo["name"]
+            full_name = repo["full_name"]
+            
+            # Check for .autodevs/prompts.md
+            url = f"https://api.github.com/repos/{owner}/{name}/contents/.autodevs/prompts.md"
+            headers = {
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "DevMentor-App"
+            }
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+                
+            try:
+                response = await client.get(url, headers=headers, timeout=12.0)
+                if response.status_code == 200:
+                    data = response.json()
+                    raw_content = data.get("content", "")
+                    raw_content = raw_content.replace("\n", "").replace("\r", "")
+                    decoded_bytes = base64.b64decode(raw_content)
+                    markdown_text = decoded_bytes.decode("utf-8")
+                    
+                    # Parse the markdown prompts
+                    lines = markdown_text.split("\n")
+                    for line in lines:
+                        line_str = line.strip()
+                        # Match list items like "- " or "* " or "1. "
+                        if line_str.startswith("- ") or line_str.startswith("* "):
+                            prompt_raw = line_str[2:].strip()
+                        elif line_str.startswith("1. "):
+                            prompt_raw = line_str[3:].strip()
+                        else:
+                            continue
+                            
+                        if not prompt_raw:
+                            continue
+                            
+                        # Parse [project_name] if present
+                        project_name = None
+                        original_prompt = prompt_raw
+                        if prompt_raw.startswith("["):
+                            end_bracket = prompt_raw.find("]")
+                            if end_bracket != -1:
+                                project_name = prompt_raw[1:end_bracket].strip()
+                                original_prompt = prompt_raw[end_bracket+1:].strip()
+                                
+                        # Check if prompt already exists in history
+                        check_stmt = select(PromptHistory).where(
+                            PromptHistory.user_id == user_id,
+                            PromptHistory.original_prompt == original_prompt
+                        )
+                        exists = db.scalar(check_stmt)
+                        if not exists:
+                            # Run prompt analysis (refine, score, extract tech & workflow)
+                            ai_prompt = (
+                                f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
+                                f"Prompt: {original_prompt}\n"
+                                f"Project Name Context: {project_name or 'N/A'}\n\n"
+                                f"Perform the following tasks:\n"
+                                f"1. Refine and upgrade the original prompt to be much more clear, professional, structured (with instructions/placeholders) and effective for an AI coding assistant.\n"
+                                f"2. Score the original prompt from 0 to 100 based on its clarity, specificity, context, and structural quality.\n"
+                                f"3. Extract technologies, languages, libraries or frameworks referenced or relevant. Return as a list of names.\n"
+                                f"4. Detect the developer workflow category. Choose exactly one from: Debugging, Refactoring, Feature Building, Testing, DevOps, Architecture, Documentation.\n\n"
+                                f"Return your response strictly as a JSON object with these exact keys:\n"
+                                f"{{\n"
+                                f'  "refined_prompt": "upgraded prompt content here",\n'
+                                f'  "score": 85,\n'
+                                f'  "technologies": ["Python", "FastAPI"],\n'
+                                f'  "workflow": "Feature Building"\n'
+                                f"}}"
+                            )
+                            
+                            ai_res = {}
+                            try:
+                                ai_res = await call_ai_json(ai_prompt)
+                            except Exception as e:
+                                logger.error(f"Error calling AI for prompt analysis in sync: {e}")
+                                
+                            refined_prompt = ai_res.get("refined_prompt") or f"// Refined:\n{original_prompt}"
+                            score = ai_res.get("score") or 50
+                            techs_list = ai_res.get("technologies") or []
+                            workflow = ai_res.get("workflow") or "Development"
+                            technologies_str = ", ".join(techs_list) if techs_list else "General"
+                            
+                            db_prompt = PromptHistory(
+                                user_id=user_id,
+                                original_prompt=original_prompt,
+                                refined_prompt=refined_prompt,
+                                score=score,
+                                technologies=technologies_str,
+                                workflow=workflow,
+                                project_name=project_name
+                            )
+                            db.add(db_prompt)
+                            imported_count += 1
+                            
+                    scanned_repos.append(full_name)
+            except Exception as e:
+                logger.error(f"Error scanning repo {full_name} for prompts: {e}")
+                
+    if imported_count > 0:
+        db.commit()
+        
+    return {
+        "success": True,
+        "message": f"Successfully scanned {len(scanned_repos)} repositories and imported {imported_count} new prompts from GitHub.",
+        "scanned_repositories": scanned_repos,
+        "imported_count": imported_count
+    }

@@ -56,6 +56,27 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           ),
           actions: [
             IconButton(
+              icon: const Icon(Icons.cloud_sync_rounded),
+              tooltip: 'Sync GitHub Prompts',
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Scanning GitHub repositories for .autodevs/prompts.md...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                final message = await state.syncGithubPrompts();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: message.contains('failed') ? AppTheme.destructive : AppTheme.success,
+                    ),
+                  );
+                }
+              },
+            ),
+            IconButton(
               icon: const Icon(Icons.refresh_rounded),
               onPressed: () {
                 state.fetchPromptHistory(query: _searchController.text);
@@ -124,45 +145,56 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
   }
 
   Widget _buildCliStatusBanner(bool isDark) {
+    final state = Provider.of<AppState>(context, listen: false);
     return GlassCard(
       borderRadius: 16,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showCliInstructionsBottomSheet(context, state, isDark),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.terminal_rounded, color: AppTheme.accent, size: 22),
               ),
-              child: Icon(Icons.terminal_rounded, color: AppTheme.accent, size: 22),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'AutoDevs CLI Connected',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textMain,
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'AutoDevs CLI Integration',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.info_outline_rounded, color: AppTheme.accent, size: 16),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Prompts used in your terminal are automatically synced, scored, and upgraded.',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
+                    const SizedBox(height: 3),
+                    Text(
+                      'Tap to see how to connect AutoDevs CLI and sync prompts from .autodevs/prompts.md in your repositories.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -836,6 +868,280 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showCliInstructionsBottomSheet(BuildContext context, AppState state, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xE0121214) : const Color(0xE0F8F9FA),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+                border: Border(
+                  top: BorderSide(color: AppTheme.border, width: 1.0),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  // Drag indicator handle
+                  Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppTheme.textSecondary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'AutoDevs CLI & GitHub Setup',
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+                      children: [
+                        // SECTION 1: GITHUB PROMPTS.MD
+                        _buildInstructionStep(
+                          stepNumber: '1',
+                          title: 'Setup GitHub .autodevs/prompts.md',
+                          description: 'Track coding prompts in your repositories. The app will fetch and analyze them.',
+                          isDark: isDark,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '1. Create a folder named `.autodevs` in the root of your repository.',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '2. Inside it, create a file named `prompts.md`.',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '3. List your prompts in markdown format:',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '- [project-name] implement email service\n'
+                                  '- [refactor] optimize database queries\n'
+                                  '- how to center widgets in Flutter',
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '4. In the DevMentor app, enter your GitHub handle in settings, then tap the Sync GitHub Prompts cloud button at the top of the Prompts tab.',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // SECTION 2: CLI INTEGRATION
+                        _buildInstructionStep(
+                          stepNumber: '2',
+                          title: 'Real-time Terminal Integration',
+                          description: 'Use the AutoDevs CLI simulator to capture prompts directly from your shell/IDE.',
+                          isDark: isDark,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Your Authentication Token:',
+                                style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        state.token ?? 'Login to view your auth token',
+                                        style: GoogleFonts.firaCode(fontSize: 11, color: AppTheme.textMain),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: Icon(Icons.copy_rounded, color: AppTheme.accent),
+                                    onPressed: state.token == null
+                                        ? null
+                                        : () {
+                                            Clipboard.setData(ClipboardData(text: state.token!));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Auth token copied to clipboard!')),
+                                            );
+                                          },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Set environment variable in your terminal:',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'export DEVMENTOR_TOKEN="your_copied_token"',
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Run the CLI script:',
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'python autodevs_cli_simulator.py "how to create centered container" devmentor-app',
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Prompts sent through the CLI are parsed, refined, scored by AI, and instantly updated in the Prompt Library.',
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInstructionStep({
+    required String stepNumber,
+    required String title,
+    required String description,
+    required bool isDark,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppTheme.accent,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            stepNumber,
+            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

@@ -879,6 +879,40 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<String> syncGithubPrompts() async {
+    if (token == null) {
+      return 'Mock Mode: Cannot sync GitHub prompts without authentication.';
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/prompts/sync-github'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'github_username': githubUsername,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Refresh prompt history, analytics, and recommendations
+        fetchPromptHistory();
+        fetchPromptAnalytics();
+        fetchPromptRecommendations();
+        return data['message'] ?? 'Successfully synchronized prompts from GitHub.';
+      } else {
+        final data = jsonDecode(response.body);
+        final String? msg = data['error']?['message'] ?? data['detail'];
+        return 'Sync failed: ${msg ?? 'Server returned error ${response.statusCode}'}';
+      }
+    } catch (e) {
+      return 'Sync failed: $e';
+    }
+  }
+
   Future<void> fetchPromptAnalytics() async {
     isLoadingPromptAnalytics = true;
     notifyListeners();
