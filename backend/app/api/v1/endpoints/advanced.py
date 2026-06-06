@@ -1,10 +1,12 @@
 import json
 import logging
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+import io
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import select
+from pypdf import PdfReader
 
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
@@ -203,13 +205,17 @@ async def review_developer_resume(
         f"Compare this developer's resume content:\n{payload.resume_text}\n\n"
         f"With their synced GitHub repositories: {repo_list_str}.\n"
         "Determine an ATS alignment score (1-100) representing how well their actual coding repositories back up their resume claims. "
-        "List 3 missing key technologies they claim but don't have code for, 3 weak resume bullet points, and 3 project upgrade suggestions to improve alignment.\n\n"
+        "List 3 missing key technologies they claim but don't have code for, 3 weak resume bullet points, and 3 project upgrade suggestions to improve alignment. "
+        "Additionally, list 3 recommendations on where to upgrade into the developer mindset (e.g., scale, testing, production thinking) and "
+        "3 skill upgrades (e.g., using platforms like skill.sh for assessments, and other learning paths).\n\n"
         "Return a JSON object with keys:\n"
         "{\n"
         '  "ats_score": int,\n'
         '  "missing_technologies": ["tech 1", "tech 2", "tech 3"],\n'
         '  "weak_bullet_points": ["bullet 1", "bullet 2", "bullet 3"],\n'
-        '  "project_improvements": ["improvement 1", "improvement 2", "improvement 3"]\n'
+        '  "project_improvements": ["improvement 1", "improvement 2", "improvement 3"],\n'
+        '  "mindset_upgrades": ["mindset upgrade 1", "mindset upgrade 2", "mindset upgrade 3"],\n'
+        '  "skill_upgrades": ["skill upgrade 1 (referencing skill.sh or other platforms)", "skill upgrade 2", "skill upgrade 3"]\n'
         "}"
     )
 
@@ -220,6 +226,7 @@ async def review_developer_resume(
     except Exception:
         pass
 
+    # Mock fallback
     return {
         "ats_score": 74,
         "missing_technologies": [
@@ -237,6 +244,104 @@ async def review_developer_resume(
             "Implement a test suite using Jest/Pytest in your main repositories.",
             "Add visual architecture diagrams to your READMEs.",
         ],
+        "mindset_upgrades": [
+            "Shift from 'just code' to 'systems architect' thinking: Focus on scalability, monitoring, and edge-cases.",
+            "Incorporate automated test-driven development (TDD) as a mandatory practice.",
+            "Publish and document code with clear setup guides to build open-source collaboration mindset."
+        ],
+        "skill_upgrades": [
+            "Take the backend developer assessment on skill.sh to identify blind spots in REST API practices.",
+            "Build a full-scale multi-service project in Go or Rust to master low-level concurrency.",
+            "Study Docker/Kubernetes and setup automated multi-stage builds in GitHub Actions."
+        ]
+    }
+
+
+@router.post("/resume-upload")
+async def upload_developer_resume(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+    
+    try:
+        pdf_bytes = await file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        resume_text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                resume_text += page_text + "\n"
+        
+        if not resume_text.strip():
+            raise HTTPException(status_code=400, detail="Unable to extract text from the PDF file.")
+            
+    except Exception as e:
+        logger.error(f"Error reading PDF: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse the PDF resume file.")
+    
+    # Run the exact same analysis on the extracted resume_text
+    stmt = select(Repository).where(Repository.user_id == user_id)
+    repos = db.scalars(stmt).all()
+    repo_list_str = (
+        ", ".join([r.full_name for r in repos]) if repos else "No repositories synced"
+    )
+
+    prompt = (
+        f"Compare this developer's resume content:\n{resume_text}\n\n"
+        f"With their synced GitHub repositories: {repo_list_str}.\n"
+        "Determine an ATS alignment score (1-100) representing how well their actual coding repositories back up their resume claims. "
+        "List 3 missing key technologies they claim but don't have code for, 3 weak resume bullet points, and 3 project upgrade suggestions to improve alignment. "
+        "Additionally, list 3 recommendations on where to upgrade into the developer mindset (e.g., scale, testing, production thinking) and "
+        "3 skill upgrades (e.g., using platforms like skill.sh for assessments, and other learning paths).\n\n"
+        "Return a JSON object with keys:\n"
+        "{\n"
+        '  "ats_score": int,\n'
+        '  "missing_technologies": ["tech 1", "tech 2", "tech 3"],\n'
+        '  "weak_bullet_points": ["bullet 1", "bullet 2", "bullet 3"],\n'
+        '  "project_improvements": ["improvement 1", "improvement 2", "improvement 3"],\n'
+        '  "mindset_upgrades": ["mindset upgrade 1", "mindset upgrade 2", "mindset upgrade 3"],\n'
+        '  "skill_upgrades": ["skill upgrade 1 (referencing skill.sh or other platforms)", "skill upgrade 2", "skill upgrade 3"]\n'
+        "}"
+    )
+
+    try:
+        review_data = await call_ai_json(prompt)
+        if review_data:
+            return review_data
+    except Exception:
+        pass
+
+    # Mock fallback
+    return {
+        "ats_score": 74,
+        "missing_technologies": [
+            "Docker / Containers",
+            "Redis Caching",
+            "CI/CD Actions",
+        ],
+        "weak_bullet_points": [
+            "Generic statement: 'Assisted in building various web applications.'",
+            "Unquantified bullet: 'Responsible for maintaining database systems.'",
+            "Redundant bullet: 'Learned HTML, CSS and TypeScript.'",
+        ],
+        "project_improvements": [
+            "Add Dockerfiles and compose files to express-api-starter.",
+            "Implement a test suite using Jest/Pytest in your main repositories.",
+            "Add visual architecture diagrams to your READMEs.",
+        ],
+        "mindset_upgrades": [
+            "Shift from 'just code' to 'systems architect' thinking: Focus on scalability, monitoring, and edge-cases.",
+            "Incorporate automated test-driven development (TDD) as a mandatory practice.",
+            "Publish and document code with clear setup guides to build open-source collaboration mindset."
+        ],
+        "skill_upgrades": [
+            "Take the backend developer assessment on skill.sh to identify blind spots in REST API practices.",
+            "Build a full-scale multi-service project in Go or Rust to master low-level concurrency.",
+            "Study Docker/Kubernetes and setup automated multi-stage builds in GitHub Actions."
+        ]
     }
 
 

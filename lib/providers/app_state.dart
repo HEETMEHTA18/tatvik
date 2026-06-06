@@ -97,6 +97,8 @@ class AppState extends ChangeNotifier {
   List<String>? resumeMissingTech;
   List<String>? resumeWeakBullets;
   List<String>? resumeProjectImprovements;
+  List<String>? resumeMindsetUpgrades;
+  List<String>? resumeSkillUpgrades;
   bool isReviewingResume = false;
 
   // Project Evaluator
@@ -843,9 +845,48 @@ class AppState extends ChangeNotifier {
         resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
         resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
         resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
+        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
+        resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
       }
     } catch (e) {
       debugPrint('Error reviewing resume: $e');
+    } finally {
+      isReviewingResume = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> uploadResume(List<int> fileBytes, String filename) async {
+    isReviewingResume = true;
+    notifyListeners();
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.apiBaseUrl}/advanced/resume-upload'),
+      );
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+      ));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        resumeAtsScore = data['ats_score'];
+        resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
+        resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
+        resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
+        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
+        resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
+      }
+    } catch (e) {
+      debugPrint('Error uploading resume: $e');
     } finally {
       isReviewingResume = false;
       notifyListeners();

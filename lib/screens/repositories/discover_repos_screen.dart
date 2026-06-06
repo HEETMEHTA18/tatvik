@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../providers/app_state.dart';
@@ -176,15 +177,45 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(Icons.description_rounded, color: AppTheme.accent, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'PASTE YOUR RESUME TEXT',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: AppTheme.textMain,
+                    Row(
+                      children: [
+                        Icon(Icons.description_rounded, color: AppTheme.accent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'PASTE YOUR RESUME TEXT',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextButton.icon(
+                      onPressed: state.isReviewingResume
+                          ? null
+                          : () async {
+                              final result = await FilePicker.pickFiles(
+                                type: FileType.custom,
+                                allowedExtensions: ['pdf'],
+                                withData: true,
+                              );
+                              if (result != null && result.files.isNotEmpty) {
+                                final file = result.files.first;
+                                if (file.bytes != null) {
+                                  state.uploadResume(file.bytes!, file.name);
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.upload_file_rounded, size: 18),
+                      label: Text(
+                        'UPLOAD PDF',
+                        style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.accent,
                       ),
                     ),
                   ],
@@ -297,6 +328,14 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                   _buildBulletList('WEAK BULLET POINTS', state.resumeWeakBullets ?? [], AppTheme.peach),
                   const Divider(height: 32, color: Colors.white12),
                   _buildBulletList('RECOMMENDED UPGRADES', state.resumeProjectImprovements ?? [], AppTheme.success),
+                  if (state.resumeMindsetUpgrades != null && state.resumeMindsetUpgrades!.isNotEmpty) ...[
+                    const Divider(height: 32, color: Colors.white12),
+                    _buildBulletList('DEVELOPER MINDSET UPGRADES', state.resumeMindsetUpgrades!, AppTheme.accent),
+                  ],
+                  if (state.resumeSkillUpgrades != null && state.resumeSkillUpgrades!.isNotEmpty) ...[
+                    const Divider(height: 32, color: Colors.white12),
+                    _buildBulletList('SKILL UPGRADES (assessment: skill.sh)', state.resumeSkillUpgrades!, AppTheme.blue),
+                  ],
                 ],
               ),
             ),
