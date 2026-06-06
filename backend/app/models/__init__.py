@@ -10,6 +10,9 @@ from app.models.entities import (
     Skill,
     SkillGap,
     PromptHistory,
+    AutoDevSession,
+    ExecutedCommand,
+    GeneratedFile,
 )
 
 __all__ = [
@@ -24,4 +27,7 @@ __all__ = [
     "MentorChat",
     "ProjectRecommendation",
     "PromptHistory",
+    "AutoDevSession",
+    "ExecutedCommand",
+    "GeneratedFile",
 ]

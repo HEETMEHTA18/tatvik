@@ -9,34 +9,208 @@ from typing import List, Optional
 
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
-from app.models.entities import PromptHistory, GithubProfile, Repository
+from app.models.entities import (
+    PromptHistory,
+    GithubProfile,
+    Repository,
+    AutoDevSession,
+    ExecutedCommand,
+    GeneratedFile,
+)
 from app.api.v1.endpoints.advanced import call_ai_json
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-class PromptEventRequest(BaseModel):
-    original_prompt: str
+class UniversalEventRequest(BaseModel):
+    # Old/Simple PromptEventRequest fields
+    original_prompt: Optional[str] = None
     project_name: Optional[str] = None
     file_context: Optional[str] = None
+
+    # New DevMentorEventPayload fields
+    event: Optional[str] = None
+    session_id: Optional[str] = None
+    timestamp: Optional[str] = None
+    data: Optional[dict] = None
+
+
+def parse_datetime(val) -> datetime:
+    if not val:
+        return datetime.utcnow()
+    try:
+        if isinstance(val, str):
+            val = val.replace("Z", "+00:00")
+            return datetime.fromisoformat(val)
+        return datetime.utcnow()
+    except Exception:
+        return datetime.utcnow()
 
 
 @router.post("/event")
 async def receive_prompt_event(
-    payload: PromptEventRequest,
+    payload: UniversalEventRequest,
     user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db),
 ):
     """
     Receive an AutoDevs event, refine the prompt, score it, extract tech/workflow, and save it.
+    Supports both legacy PromptEventRequest and new structured DevMentorEventPayload.
     """
-    if not payload.original_prompt.strip():
+    # 1. Handle DevMentorEventPayload structure
+    if payload.event:
+        event_type = payload.event
+        session_id = payload.session_id or (payload.data or {}).get("session_id")
+        timestamp_str = payload.timestamp or (payload.data or {}).get("timestamp") or (payload.data or {}).get("start_time")
+        
+        if event_type == "session.started":
+            meta = (payload.data or {}).get("metadata") or {}
+            languages_str = ", ".join(meta.get("languages", []))
+            frameworks_str = ", ".join(meta.get("frameworks", []))
+            
+            # Check if session already exists
+            session_stmt = select(AutoDevSession).where(AutoDevSession.session_id == session_id)
+            db_session = db.scalar(session_stmt)
+            if not db_session:
+                db_session = AutoDevSession(
+                    user_id=user_id,
+                    session_id=session_id or "unknown",
+                    project_name=meta.get("project_name", "unknown"),
+                    project_path=meta.get("path", ""),
+                    branch=meta.get("branch", "unknown"),
+                    commit_sha=meta.get("commit", "unknown"),
+                    languages=languages_str,
+                    frameworks=frameworks_str,
+                    start_time=parse_datetime(timestamp_str),
+                )
+                db.add(db_session)
+                db.commit()
+            return {"success": True, "message": "Session start logged", "session_id": session_id}
+            
+        elif event_type == "session.ended":
+            session_stmt = select(AutoDevSession).where(AutoDevSession.session_id == session_id)
+            db_session = db.scalar(session_stmt)
+            if db_session:
+                db_session.end_time = parse_datetime(timestamp_str)
+                db.commit()
+            return {"success": True, "message": "Session end logged", "session_id": session_id}
+            
+        elif event_type == "prompt.captured":
+            prompt_data = payload.data or {}
+            original_prompt = prompt_data.get("prompt", "")
+            response_content = prompt_data.get("response", "")
+            prompt_id = prompt_data.get("id")
+            
+            meta = prompt_data.get("metadata") or {}
+            project_name = meta.get("project_name")
+            
+            if not original_prompt.strip():
+                raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+                
+            ai_prompt = (
+                f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
+                f"Prompt: {original_prompt}\n"
+                f"Project Name Context: {project_name or 'N/A'}\n"
+                f"File Context: {payload.file_context or 'N/A'}\n\n"
+                f"Perform the following tasks:\n"
+                f"1. Refine and upgrade the original prompt to be much more clear, professional, structured (with instructions/placeholders) and effective for an AI coding assistant.\n"
+                f"2. Score the original prompt from 0 to 100 based on its clarity, specificity, context, and structural quality.\n"
+                f"3. Extract technologies, languages, libraries or frameworks referenced or relevant (e.g. Flutter, FastAPI, python, react). Return as a list of names.\n"
+                f"4. Detect the developer workflow category. Choose exactly one from: Debugging, Refactoring, Feature Building, Testing, DevOps, Architecture, Documentation.\n\n"
+                f"Return your response strictly as a JSON object with these exact keys:\n"
+                f"{{\n"
+                f'  "refined_prompt": "upgraded prompt content here",\n'
+                f'  "score": 85,\n'
+                f'  "technologies": ["Python", "FastAPI"],\n'
+                f'  "workflow": "Feature Building"\n'
+                f"}}"
+            )
+
+            ai_res = {}
+            try:
+                ai_res = await call_ai_json(ai_prompt)
+            except Exception as e:
+                logger.error(f"Error calling AI for prompt analysis: {e}")
+
+            refined_prompt = (
+                ai_res.get("refined_prompt")
+                or f"// Refined:\n{original_prompt}\n\n(Specify detailed requirements for better results.)"
+            )
+            score = ai_res.get("score") or 50
+            techs_list = ai_res.get("technologies") or []
+            workflow = ai_res.get("workflow") or "Development"
+            technologies_str = ", ".join(techs_list) if techs_list else "General"
+
+            db_prompt = PromptHistory(
+                user_id=user_id,
+                session_id=session_id,
+                prompt_id=prompt_id,
+                original_prompt=original_prompt,
+                refined_prompt=refined_prompt,
+                response=response_content,
+                score=score,
+                technologies=technologies_str,
+                workflow=workflow,
+                project_name=project_name,
+            )
+            db.add(db_prompt)
+            db.commit()
+            db.refresh(db_prompt)
+            
+            # Log executed commands if present
+            cmds = prompt_data.get("executed_commands") or []
+            for cmd in cmds:
+                db_cmd = ExecutedCommand(
+                    session_id=session_id or "unknown",
+                    prompt_event_id=db_prompt.id,
+                    command=cmd.get("command", ""),
+                    args=json.dumps(cmd.get("args", [])),
+                    exit_code=cmd.get("exit_code", 0),
+                    stdout=cmd.get("stdout", ""),
+                    stderr=cmd.get("stderr", ""),
+                    duration_ms=cmd.get("duration_ms", 0),
+                    timestamp=parse_datetime(cmd.get("timestamp")),
+                )
+                db.add(db_cmd)
+                
+            # Log generated files if present
+            files = prompt_data.get("generated_files") or []
+            for f in files:
+                db_file = GeneratedFile(
+                    session_id=session_id or "unknown",
+                    prompt_event_id=db_prompt.id,
+                    file_path=f.get("file_path", ""),
+                    size_bytes=f.get("size_bytes", 0),
+                    action=f.get("action", "created"),
+                    timestamp=parse_datetime(f.get("timestamp")),
+                )
+                db.add(db_file)
+                
+            db.commit()
+            
+            return {
+                "id": db_prompt.id,
+                "user_id": db_prompt.user_id,
+                "original_prompt": db_prompt.original_prompt,
+                "refined_prompt": db_prompt.refined_prompt,
+                "score": db_prompt.score,
+                "technologies": techs_list,
+                "workflow": db_prompt.workflow,
+                "project_name": db_prompt.project_name,
+                "created_at": db_prompt.created_at.isoformat(),
+            }
+        else:
+            return {"success": True, "message": f"Event type {event_type} ignored"}
+
+    # 2. Legacy / Simple PromptEventRequest fallback
+    original_prompt = payload.original_prompt
+    if not original_prompt or not original_prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
     ai_prompt = (
         f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
-        f"Prompt: {payload.original_prompt}\n"
+        f"Prompt: {original_prompt}\n"
         f"Project Name Context: {payload.project_name or 'N/A'}\n"
         f"File Context: {payload.file_context or 'N/A'}\n\n"
         f"Perform the following tasks:\n"
@@ -61,18 +235,16 @@ async def receive_prompt_event(
 
     refined_prompt = (
         ai_res.get("refined_prompt")
-        or f"// Refined:\n{payload.original_prompt}\n\n(Specify detailed requirements for better results.)"
+        or f"// Refined:\n{original_prompt}\n\n(Specify detailed requirements for better results.)"
     )
     score = ai_res.get("score") or 50
     techs_list = ai_res.get("technologies") or []
     workflow = ai_res.get("workflow") or "Development"
-
-    # Format technologies list to comma separated string
     technologies_str = ", ".join(techs_list) if techs_list else "General"
 
     db_prompt = PromptHistory(
         user_id=user_id,
-        original_prompt=payload.original_prompt,
+        original_prompt=original_prompt,
         refined_prompt=refined_prompt,
         score=score,
         technologies=technologies_str,

@@ -80,6 +80,42 @@ class ProfileScreen extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 24),
+            _buildSection(context, 'CHAT HISTORY', [
+              _buildSettingItem(
+                context,
+                Icons.history_rounded,
+                'View Chat History',
+                trailing: '${appState.chatSessions.length} chats',
+                onTap: () => _showChatHistoryBottomSheet(context, appState),
+              ),
+              _buildSettingItem(
+                context,
+                Icons.add_comment_outlined,
+                'Start New Chat',
+                onTap: () async {
+                  await appState.startNewChat();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('New chat started'),
+                        backgroundColor: AppTheme.success,
+                      ),
+                    );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MentorChatScreen()),
+                    );
+                  }
+                },
+              ),
+              _buildSettingItem(
+                context,
+                Icons.delete_sweep_outlined,
+                'Clear All Chat History',
+                onTap: () => _showClearChatHistoryDialog(context, appState),
+              ),
+            ]),
+            const SizedBox(height: 24),
             _buildSection(context, 'ACCOUNT', [
               _buildSettingItem(
                 context,
@@ -1044,6 +1080,237 @@ class ProfileScreen extends StatelessWidget {
               child: Text('Save', style: TextStyle(color: AppTheme.accent)),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showChatHistoryBottomSheet(BuildContext context, AppState appState) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.3),
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(
+              top: BorderSide(color: AppTheme.border, width: 1.5),
+            ),
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                final sessions = appState.getChatSessions();
+                return DraggableScrollableSheet(
+                  initialChildSize: 0.6,
+                  maxChildSize: 0.9,
+                  minChildSize: 0.4,
+                  expand: false,
+                  builder: (context, scrollController) {
+                    return SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 36,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.textSecondary.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Chat History',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppTheme.textMain,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Switch to a previous chat session or delete old history.',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                  ),
+                            ),
+                            const SizedBox(height: 20),
+                            Expanded(
+                              child: sessions.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.chat_bubble_outline_rounded,
+                                            size: 48,
+                                            color: AppTheme.textSecondary.withOpacity(0.5),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No saved chats yet.',
+                                            style: TextStyle(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      controller: scrollController,
+                                      itemCount: sessions.length,
+                                      itemBuilder: (context, idx) {
+                                        final session = sessions[idx];
+                                        final id = session['id'] as String;
+                                        final title = session['title'] as String;
+                                        final startedAt = DateTime.tryParse(session['startedAt'] ?? '') ?? DateTime.now();
+                                        final formattedDate = "${startedAt.day}/${startedAt.month}/${startedAt.year} ${startedAt.hour.toString().padLeft(2, '0')}:${startedAt.minute.toString().padLeft(2, '0')}";
+                                        final msgCount = (session['messages'] as List<dynamic>?)?.length ?? 0;
+
+                                        return Container(
+                                          margin: const EdgeInsets.only(bottom: 12),
+                                          child: GlassCard(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                            borderRadius: 16,
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.chat_bubble_outline, color: AppTheme.accent),
+                                                const SizedBox(width: 16),
+                                                Expanded(
+                                                  child: InkWell(
+                                                    onTap: () async {
+                                                      await appState.loadChatSession(id);
+                                                      if (context.mounted) {
+                                                        Navigator.pop(context);
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(builder: (_) => const MentorChatScreen()),
+                                                        );
+                                                      }
+                                                    },
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          title,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: TextStyle(
+                                                            color: AppTheme.textMain,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        Text(
+                                                          '$formattedDate • $msgCount messages',
+                                                          style: TextStyle(
+                                                            color: AppTheme.textSecondary,
+                                                            fontSize: 11,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(Icons.delete_outline_rounded, color: AppTheme.destructive),
+                                                  onPressed: () async {
+                                                    await appState.deleteChatSession(id);
+                                                    setModalState(() {});
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showClearChatHistoryDialog(BuildContext context, AppState appState) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: GlassCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Clear Chat History',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.textMain,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Are you sure you want to permanently clear all saved chat sessions and history? This action cannot be undone.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await appState.clearAllChatHistory();
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text('All chat history cleared.'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.destructive,
+                        minimumSize: const Size(80, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: const Text('Clear All', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

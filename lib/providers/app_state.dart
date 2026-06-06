@@ -34,6 +34,7 @@ class AppState extends ChangeNotifier {
         githubUsername = 'alexjohnson';
         _triggerFallbackFetches();
       }
+      await loadChatHistory();
     } catch (e) {
       debugPrint('Error restoring shared preferences: $e');
       githubUsername = 'alexjohnson';
@@ -352,6 +353,9 @@ class AppState extends ChangeNotifier {
     ),
   ];
 
+  List<Map<String, dynamic>> chatSessions = [];
+  String? _currentChatSessionId;
+
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -395,6 +399,188 @@ class AppState extends ChangeNotifier {
       ));
     }
     notifyListeners();
+    await saveChatHistory();
+  }
+
+  /// Saves the current chat messages to SharedPreferences as the active session.
+  Future<void> saveChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Ensure current session has an ID
+      _currentChatSessionId ??= DateTime.now().millisecondsSinceEpoch.toString();
+
+      // Derive a title from the first user message, or use a default
+      String title = 'New Chat';
+      for (final msg in chatMessages) {
+        if (msg.role == MessageRole.user) {
+          title = msg.content.length > 40
+              ? '${msg.content.substring(0, 40)}...'
+              : msg.content;
+          break;
+        }
+      }
+
+      // Build the session map
+      final session = {
+        'id': _currentChatSessionId,
+        'title': title,
+        'startedAt': chatMessages.isNotEmpty
+            ? chatMessages.first.timestamp.toIso8601String()
+            : DateTime.now().toIso8601String(),
+        'messages': chatMessages.map((m) => m.toJson()).toList(),
+      };
+
+      // Update or insert in chatSessions list
+      final idx = chatSessions.indexWhere((s) => s['id'] == _currentChatSessionId);
+      if (idx >= 0) {
+        chatSessions[idx] = session;
+      } else {
+        chatSessions.insert(0, session);
+      }
+
+      // Persist
+      await prefs.setString('chat_sessions', jsonEncode(chatSessions));
+      await prefs.setString('current_chat_session_id', _currentChatSessionId!);
+    } catch (e) {
+      debugPrint('Error saving chat history: $e');
+    }
+  }
+
+  /// Loads chat history from SharedPreferences on app start.
+  Future<void> loadChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sessionsJson = prefs.getString('chat_sessions');
+      final lastSessionId = prefs.getString('current_chat_session_id');
+
+      if (sessionsJson != null) {
+        final decoded = jsonDecode(sessionsJson) as List<dynamic>;
+        chatSessions = decoded.cast<Map<String, dynamic>>();
+
+        // Restore the last active session
+        if (lastSessionId != null) {
+          final session = chatSessions.firstWhere(
+            (s) => s['id'] == lastSessionId,
+            orElse: () => <String, dynamic>{},
+          );
+          if (session.isNotEmpty && session['messages'] != null) {
+            final msgs = (session['messages'] as List<dynamic>)
+                .map((m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)))
+                .toList();
+            if (msgs.isNotEmpty) {
+              chatMessages = msgs;
+              _currentChatSessionId = lastSessionId;
+            }
+          }
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading chat history: $e');
+    }
+  }
+
+  /// Returns the list of saved chat sessions (id, title, startedAt).
+  List<Map<String, dynamic>> getChatSessions() {
+    return chatSessions;
+  }
+
+  /// Saves the current chat and starts a fresh conversation.
+  Future<void> startNewChat() async {
+    // Save the current conversation if it has user messages
+    if (chatMessages.any((m) => m.role == MessageRole.user)) {
+      await saveChatHistory();
+    }
+
+    // Reset to a fresh chat
+    _currentChatSessionId = DateTime.now().millisecondsSinceEpoch.toString();
+    chatMessages = [
+      MentorMessage(
+        content: 'Hello! I am your DevMentor. How can I help you grow today?',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ),
+    ];
+    notifyListeners();
+  }
+
+  /// Loads a specific chat session by its ID.
+  Future<void> loadChatSession(String sessionId) async {
+    try {
+      // Save current chat first if it has content
+      if (chatMessages.any((m) => m.role == MessageRole.user)) {
+        await saveChatHistory();
+      }
+
+      final session = chatSessions.firstWhere(
+        (s) => s['id'] == sessionId,
+        orElse: () => <String, dynamic>{},
+      );
+
+      if (session.isNotEmpty && session['messages'] != null) {
+        final msgs = (session['messages'] as List<dynamic>)
+            .map((m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)))
+            .toList();
+        chatMessages = msgs;
+        _currentChatSessionId = sessionId;
+
+        // Persist the switch
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('current_chat_session_id', sessionId);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading chat session: $e');
+    }
+  }
+
+  /// Deletes a specific chat session by its ID.
+  Future<void> deleteChatSession(String sessionId) async {
+    try {
+      chatSessions.removeWhere((s) => s['id'] == sessionId);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('chat_sessions', jsonEncode(chatSessions));
+
+      // If the deleted session was the active one, start a new chat
+      if (_currentChatSessionId == sessionId) {
+        _currentChatSessionId = null;
+        chatMessages = [
+          MentorMessage(
+            content: 'Hello! I am your DevMentor. How can I help you grow today?',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        ];
+        await prefs.remove('current_chat_session_id');
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error deleting chat session: $e');
+    }
+  }
+
+  /// Clears all saved chat history and resets to a fresh chat.
+  Future<void> clearAllChatHistory() async {
+    try {
+      chatSessions.clear();
+      _currentChatSessionId = null;
+      chatMessages = [
+        MentorMessage(
+          content: 'Hello! I am your DevMentor. How can I help you grow today?',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ),
+      ];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('chat_sessions');
+      await prefs.remove('current_chat_session_id');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error clearing chat history: $e');
+    }
   }
 
   // Preferences

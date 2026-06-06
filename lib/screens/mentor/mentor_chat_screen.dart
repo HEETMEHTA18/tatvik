@@ -1,7 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
@@ -17,6 +20,49 @@ class MentorChatScreen extends StatefulWidget {
 class _MentorChatScreenState extends State<MentorChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyPress);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyPress);
+    _focusNode.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  bool _handleKeyPress(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final key = event.logicalKey;
+
+      if (key == LogicalKeyboardKey.escape) {
+        if (_focusNode.hasFocus) {
+          _focusNode.unfocus();
+          return true;
+        }
+      }
+
+      if (!_focusNode.hasFocus) {
+        final character = event.character;
+        if (character != null && character.isNotEmpty) {
+          _focusNode.requestFocus();
+          final text = _controller.text + character;
+          _controller.value = TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -35,26 +81,44 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     final appState = Provider.of<AppState>(context);
 
     return LiquidGlassBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text('AI Mentor', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        ),
-        body: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(24),
-                itemCount: appState.chatMessages.length,
-                itemBuilder: (context, index) {
-                  final msg = appState.chatMessages[index];
-                  return _buildMessageBubble(msg);
-                },
+      child: GestureDetector(
+        onTap: () {
+          if (_focusNode.hasFocus) {
+            _focusNode.unfocus();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text('AI Mentor', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification notification) {
+                    if (notification is ScrollStartNotification) {
+                      if (_focusNode.hasFocus) {
+                        _focusNode.unfocus();
+                      }
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.all(24),
+                    itemCount: appState.chatMessages.length,
+                    itemBuilder: (context, index) {
+                      final msg = appState.chatMessages[index];
+                      return _buildMessageBubble(msg);
+                    },
+                  ),
+                ),
               ),
-            ),
-            _buildInputArea(appState),
-          ],
+              _buildInputArea(appState),
+            ],
+          ),
         ),
       ),
     );
@@ -103,9 +167,47 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 width: 1.0,
               ),
             ),
-            child: Text(
-              msg.content,
-              style: TextStyle(color: isUser ? Colors.white : AppTheme.textMain, fontSize: 15),
+            child: MarkdownBody(
+              data: msg.content,
+              onTapLink: (text, href, title) async {
+                if (href != null) {
+                  final url = Uri.parse(href);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                }
+              },
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                p: TextStyle(
+                  color: isUser ? Colors.white : AppTheme.textMain,
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+                a: TextStyle(
+                  color: isUser ? Colors.white : AppTheme.accent,
+                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.bold,
+                ),
+                code: TextStyle(
+                  backgroundColor: isUser 
+                      ? Colors.white.withValues(alpha: 0.2) 
+                      : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+                  fontFamily: 'monospace',
+                  fontSize: 13,
+                  color: isUser ? Colors.white : AppTheme.textMain,
+                ),
+                codeblockDecoration: BoxDecoration(
+                  color: isUser 
+                      ? Colors.white.withValues(alpha: 0.1) 
+                      : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03)),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isUser 
+                        ? Colors.white.withValues(alpha: 0.2) 
+                        : AppTheme.border,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -136,6 +238,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               Expanded(
                 child: TextField(
                   controller: _controller,
+                  focusNode: _focusNode,
                   style: TextStyle(color: AppTheme.textMain),
                   decoration: InputDecoration(
                     hintText: 'Ask anything...',
@@ -152,6 +255,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     state.sendMessage(val);
                     _controller.clear();
                     _scrollToBottom();
+                    _focusNode.requestFocus();
                   },
                 ),
               ),
@@ -161,6 +265,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   state.sendMessage(_controller.text);
                   _controller.clear();
                   _scrollToBottom();
+                  _focusNode.requestFocus();
                 },
                 child: Container(
                   padding: const EdgeInsets.all(12),

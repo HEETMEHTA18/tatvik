@@ -126,10 +126,60 @@ class PromptHistory(Base):
         String(36), primary_key=True, default=lambda: str(uuid4())
     )
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    prompt_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     original_prompt: Mapped[str] = mapped_column(Text)
     refined_prompt: Mapped[str] = mapped_column(Text)
+    response: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[int] = mapped_column(Integer, default=0)
     technologies: Mapped[str] = mapped_column(String(255), default="")
     workflow: Mapped[str] = mapped_column(String(128), default="Development")
     project_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class AutoDevSession(Base):
+    __tablename__ = "autodev_sessions"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    session_id: Mapped[str] = mapped_column(String(255), index=True, unique=True)
+    project_name: Mapped[str] = mapped_column(String(255))
+    project_path: Mapped[str] = mapped_column(String(1024))
+    branch: Mapped[str] = mapped_column(String(255), default="unknown")
+    commit_sha: Mapped[str] = mapped_column(String(255), default="unknown")
+    languages: Mapped[str] = mapped_column(Text, default="")
+    frameworks: Mapped[str] = mapped_column(Text, default="")
+    start_time: Mapped[datetime] = mapped_column(DateTime)
+    end_time: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ExecutedCommand(Base):
+    __tablename__ = "executed_commands"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    session_id: Mapped[str] = mapped_column(String(255), index=True)
+    prompt_event_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("prompt_histories.id"), nullable=True)
+    command: Mapped[str] = mapped_column(Text)
+    args: Mapped[str] = mapped_column(Text, default="[]")  # JSON string
+    exit_code: Mapped[int] = mapped_column(Integer, default=0)
+    stdout: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stderr: Mapped[str | None] = mapped_column(Text, nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class GeneratedFile(Base):
+    __tablename__ = "generated_files"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    session_id: Mapped[str] = mapped_column(String(255), index=True)
+    prompt_event_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("prompt_histories.id"), nullable=True)
+    file_path: Mapped[str] = mapped_column(String(1024))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    action: Mapped[str] = mapped_column(String(64))  # "created" or "modified"
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
