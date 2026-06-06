@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/email_auth_screen.dart';
 import '../screens/main_navigation_screen.dart';
 import '../screens/mentor/mentor_chat_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -21,6 +22,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: RoutePaths.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.emailAuth,
+        builder: (context, state) => const EmailAuthScreen(),
       ),
       GoRoute(
         path: RoutePaths.app,

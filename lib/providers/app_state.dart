@@ -470,6 +470,21 @@ class AppState extends ChangeNotifier {
     fetchPromptRecommendations();
   }
 
+  void setEmailSession(String sessionToken) {
+    token = sessionToken;
+    githubUsername = 'alexjohnson';
+    fetchGithubData(githubUsername);
+    fetchActivityData();
+    fetchDeveloperDna();
+    fetchProfileRoast();
+    fetchWeeklyReport();
+    fetchLearningPaths();
+    fetchOpportunities();
+    fetchPromptHistory();
+    fetchPromptAnalytics();
+    fetchPromptRecommendations();
+  }
+
 
   Future<void> fetchActivityData() async {
     isLoadingActivity = true;

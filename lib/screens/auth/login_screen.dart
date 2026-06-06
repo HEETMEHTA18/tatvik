@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       OutlinedButton(
-                        onPressed: _handleLogin,
+                        onPressed: () => context.push(RoutePaths.emailAuth),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 56),
                           side: BorderSide(color: AppTheme.border),
