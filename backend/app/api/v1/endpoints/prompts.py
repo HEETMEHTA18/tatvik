@@ -336,6 +336,7 @@ async def sync_github_prompts(
         elif github_username:
             await github_service.sync_public_github_data(user_id=user_id, username=github_username)
     except Exception as e:
+        db.rollback()
         logger.error(f"Error pre-syncing repositories in prompts sync: {e}")
 
     # Determine repository list (now fresh!)

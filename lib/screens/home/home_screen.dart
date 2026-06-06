@@ -18,6 +18,13 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
 
+    if (appState.showLinkGitHubPrompt) {
+      appState.showLinkGitHubPrompt = false; // Reset to prevent loop
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showLinkGitHubDialog(context, appState);
+      });
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -1620,6 +1627,99 @@ class HomeScreen extends StatelessWidget {
           Text(label, style: TextStyle(fontSize: 9, color: AppTheme.textSecondary)),
         ],
       ),
+    );
+  }
+
+  void _showLinkGitHubDialog(BuildContext context, AppState state) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: GlassCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Link your GitHub Account',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.textMain,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'DevMentor uses your GitHub profile to build your developer DNA, calculate your ratings, and generate your custom career milestones.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: TextStyle(color: AppTheme.textMain),
+                  decoration: InputDecoration(
+                    labelText: 'GitHub Username',
+                    labelStyle: TextStyle(color: AppTheme.textSecondary),
+                    prefixText: '@ ',
+                    prefixStyle: TextStyle(color: AppTheme.textSecondary),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.border),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.accent),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('You can link your GitHub account later in Settings.'),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Skip',
+                        style: TextStyle(color: AppTheme.textSecondary),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        final username = controller.text.trim();
+                        if (username.isNotEmpty) {
+                          state.setGithubUsername(username);
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Linking GitHub account @$username...'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(80, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: const Text('Link Account'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

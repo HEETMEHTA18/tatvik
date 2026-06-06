@@ -90,6 +90,7 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
             github_service = GithubService(db)
             await github_service.sync_user_github_data(user_id=user.id, access_token=access_token)
         except Exception as e:
+            db.rollback()
             # log the exception but allow login to continue
             import logging
             logging.getLogger(__name__).error(f"Error syncing github data on callback: {e}")

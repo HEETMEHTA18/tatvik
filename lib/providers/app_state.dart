@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/repository.dart';
 import '../models/roadmap.dart';
 import '../models/mentor_message.dart';
@@ -11,6 +12,36 @@ import '../models/prompt_item.dart';
 
 class AppState extends ChangeNotifier {
   AppState() {
+    initPreferences();
+  }
+
+  bool showLinkGitHubPrompt = false;
+
+  Future<void> initPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedToken = prefs.getString('auth_token');
+      final storedUsername = prefs.getString('github_username');
+      if (storedToken != null && storedToken.isNotEmpty) {
+        token = storedToken;
+        if (storedUsername != null && storedUsername.isNotEmpty) {
+          githubUsername = storedUsername;
+        } else {
+          githubUsername = 'alexjohnson';
+        }
+        await fetchUserProfile();
+      } else {
+        githubUsername = 'alexjohnson';
+        _triggerFallbackFetches();
+      }
+    } catch (e) {
+      debugPrint('Error restoring shared preferences: $e');
+      githubUsername = 'alexjohnson';
+      _triggerFallbackFetches();
+    }
+  }
+
+  void _triggerFallbackFetches() {
     fetchGithubData(githubUsername);
     fetchActivityData();
     fetchDeveloperDna();
@@ -549,6 +580,12 @@ class AppState extends ChangeNotifier {
   Future<void> setGithubUsername(String newUsername) async {
     githubUsername = newUsername.trim().replaceAll('@', '');
     notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('github_username', githubUsername);
+    } catch (_) {}
+
     await fetchGithubData(githubUsername);
     
     if (token != null) {
@@ -565,9 +602,19 @@ class AppState extends ChangeNotifier {
         );
         if (response.statusCode == 200) {
           debugPrint('Backend sync-username succeeded');
+          showLinkGitHubPrompt = false;
+          notifyListeners();
+          
           await fetchActivityData();
           await fetchDeveloperDna();
           await fetchProfileRoast();
+          await fetchWeeklyReport();
+          await fetchLearningPaths();
+          await fetchOpportunities();
+          await fetchPromptHistory();
+          await fetchPromptAnalytics();
+          await fetchPromptRecommendations();
+          await fetchRoadmap();
         } else {
           debugPrint('Backend sync-username failed: ${response.body}');
         }
@@ -577,9 +624,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  void setGithubSession(String username, String sessionToken) {
+  void setGithubSession(String username, String sessionToken) async {
     token = sessionToken;
     githubUsername = username.trim().replaceAll('@', '');
+    showLinkGitHubPrompt = false;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', sessionToken);
+      await prefs.setString('github_username', githubUsername);
+    } catch (_) {}
+
     fetchGithubData(githubUsername);
     fetchActivityData();
     fetchDeveloperDna();
@@ -593,20 +649,78 @@ class AppState extends ChangeNotifier {
     fetchRoadmap();
   }
 
-  void setEmailSession(String sessionToken) {
+  void setEmailSession(String sessionToken) async {
     token = sessionToken;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', sessionToken);
+    } catch (_) {}
+
+    await fetchUserProfile();
+  }
+
+  Future<void> fetchUserProfile() async {
+    if (token == null) return;
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final userData = jsonDecode(response.body);
+        final String? linkedUsername = userData['username'];
+        this.username = userData['name'] ?? 'Alex Johnson';
+        this.avatarUrl = userData['avatar_url'];
+
+        if (linkedUsername != null && linkedUsername.isNotEmpty) {
+          githubUsername = linkedUsername;
+          showLinkGitHubPrompt = false;
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('github_username', githubUsername);
+          } catch (_) {}
+
+          fetchGithubData(githubUsername);
+          fetchActivityData();
+          fetchDeveloperDna();
+          fetchProfileRoast();
+          fetchWeeklyReport();
+          fetchLearningPaths();
+          fetchOpportunities();
+          fetchPromptHistory();
+          fetchPromptAnalytics();
+          fetchPromptRecommendations();
+          fetchRoadmap();
+        } else {
+          githubUsername = '';
+          showLinkGitHubPrompt = true;
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user profile: $e');
+      githubUsername = 'alexjohnson';
+      _triggerFallbackFetches();
+    }
+  }
+
+  Future<void> clearSession() async {
+    token = null;
     githubUsername = 'alexjohnson';
-    fetchGithubData(githubUsername);
-    fetchActivityData();
-    fetchDeveloperDna();
-    fetchProfileRoast();
-    fetchWeeklyReport();
-    fetchLearningPaths();
-    fetchOpportunities();
-    fetchPromptHistory();
-    fetchPromptAnalytics();
-    fetchPromptRecommendations();
-    fetchRoadmap();
+    avatarUrl = null;
+    showLinkGitHubPrompt = false;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('github_username');
+    } catch (_) {}
   }
 
 
