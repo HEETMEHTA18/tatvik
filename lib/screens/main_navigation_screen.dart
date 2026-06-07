@@ -52,7 +52,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     });
 
     // Sync AppState with the initial tab from URL
-    Provider.of<AppState>(context, listen: false).setTabIndex(_selectedIndex);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<AppState>(context, listen: false).setTabIndex(_selectedIndex);
+      }
+    });
   }
 
   /// Updates the browser URL bar to reflect the selected tab
