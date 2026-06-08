@@ -138,7 +138,7 @@ class ProfileScreen extends StatelessWidget {
                 'DEVMENTOR v1.0.1',
                 style: GoogleFonts.jetBrainsMono(
                   fontSize: 10,
-                  color: AppTheme.textSecondary.withOpacity(0.5),
+                  color: AppTheme.textSecondary.withValues(alpha: 0.5),
                   letterSpacing: 2,
                 ),
               ),
@@ -206,7 +206,7 @@ class ProfileScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppTheme.accent.withOpacity(0.15),
+                        color: AppTheme.accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -286,8 +286,8 @@ class ProfileScreen extends StatelessWidget {
               Switch(
                 value: switchValue,
                 onChanged: (v) => onToggle?.call(),
-                activeColor: AppTheme.accent,
-                activeTrackColor: AppTheme.accent.withOpacity(0.3),
+                activeThumbColor: AppTheme.accent,
+                activeTrackColor: AppTheme.accent.withValues(alpha: 0.3),
                 inactiveThumbColor: AppTheme.textSecondary,
                 inactiveTrackColor: AppTheme.border,
                 trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -321,9 +321,9 @@ class ProfileScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.destructive.withOpacity(0.1),
+          color: AppTheme.destructive.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppTheme.destructive.withOpacity(0.2), width: 1.5),
+          border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.2), width: 1.5),
         ),
         child: Row(
           children: [
@@ -428,7 +428,7 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -454,7 +454,7 @@ class ProfileScreen extends StatelessWidget {
                             width: 36,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: AppTheme.textSecondary.withOpacity(0.3),
+                              color: AppTheme.textSecondary.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -508,10 +508,10 @@ class ProfileScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.accent.withOpacity(0.12) : AppTheme.surface.withOpacity(0.1),
+          color: isSelected ? AppTheme.accent.withValues(alpha: 0.12) : AppTheme.surface.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppTheme.accent.withOpacity(0.4) : AppTheme.border,
+            color: isSelected ? AppTheme.accent.withValues(alpha: 0.4) : AppTheme.border,
             width: 1.5,
           ),
         ),
@@ -544,7 +544,7 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -570,7 +570,7 @@ class ProfileScreen extends StatelessWidget {
                             width: 36,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: AppTheme.textSecondary.withOpacity(0.3),
+                              color: AppTheme.textSecondary.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -716,8 +716,8 @@ class ProfileScreen extends StatelessWidget {
         Switch(
           value: val,
           onChanged: onChanged,
-          activeColor: AppTheme.accent,
-          activeTrackColor: AppTheme.accent.withOpacity(0.3),
+          activeThumbColor: AppTheme.accent,
+          activeTrackColor: AppTheme.accent.withValues(alpha: 0.3),
           inactiveThumbColor: AppTheme.textSecondary,
           inactiveTrackColor: AppTheme.border,
           trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
@@ -731,7 +731,7 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       isScrollControlled: true,
       builder: (context) {
         return Container(
@@ -760,7 +760,7 @@ class ProfileScreen extends StatelessWidget {
                           width: 36,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: AppTheme.textSecondary.withOpacity(0.3),
+                            color: AppTheme.textSecondary.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -1089,7 +1089,7 @@ class ProfileScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      barrierColor: Colors.black.withOpacity(0.3),
+      barrierColor: Colors.black.withValues(alpha: 0.3),
       isScrollControlled: true,
       builder: (context) {
         return Container(
@@ -1122,7 +1122,7 @@ class ProfileScreen extends StatelessWidget {
                                 width: 36,
                                 height: 4,
                                 decoration: BoxDecoration(
-                                  color: AppTheme.textSecondary.withOpacity(0.3),
+                                  color: AppTheme.textSecondary.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
@@ -1152,7 +1152,7 @@ class ProfileScreen extends StatelessWidget {
                                           Icon(
                                             Icons.chat_bubble_outline_rounded,
                                             size: 48,
-                                            color: AppTheme.textSecondary.withOpacity(0.5),
+                                            color: AppTheme.textSecondary.withValues(alpha: 0.5),
                                           ),
                                           const SizedBox(height: 16),
                                           Text(

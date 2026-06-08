@@ -81,17 +81,20 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
           if (appState.twoFactorAuth) {
             final verified = await _show2FADialog(context);
             if (!verified) {
-              setState(() {
-                _isLoading = false;
-              });
+              if (mounted) {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
               return;
             }
           }
-          
+
           // Save session token in AppState
           appState.setEmailSession(token);
 
           // Navigate directly to App Navigation Shell
+          if (!mounted) return;
           context.go(RoutePaths.app);
         } else {
           setState(() {
@@ -214,8 +217,8 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        border: Border.all(color: Colors.red.withOpacity(0.5)),
+                        color: Colors.red.withValues(alpha: 0.1),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(

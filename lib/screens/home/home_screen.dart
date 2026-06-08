@@ -148,7 +148,7 @@ class HomeScreen extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppTheme.accent.withOpacity(0.3),
+                color: AppTheme.accent.withValues(alpha: 0.3),
                 blurRadius: 16,
                 spreadRadius: 2,
               ),
@@ -167,7 +167,7 @@ class HomeScreen extends StatelessWidget {
             child: Ink(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.accent, AppTheme.accent.withOpacity(0.8)],
+                  colors: [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -791,7 +791,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withOpacity(0.8), size: 40),
+                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withValues(alpha: 0.8), size: 40),
                   const SizedBox(height: 16),
                   Text(
                     'AI Insights Disabled',
@@ -817,9 +817,9 @@ class HomeScreen extends StatelessWidget {
                       state.togglePreference('ai');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.peach.withOpacity(0.2),
+                      backgroundColor: AppTheme.peach.withValues(alpha: 0.2),
                       foregroundColor: AppTheme.peach,
-                      side: BorderSide(color: AppTheme.peach.withOpacity(0.4)),
+                      side: BorderSide(color: AppTheme.peach.withValues(alpha: 0.4)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -1065,7 +1065,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.accent.withOpacity(0.8), size: 40),
+                  Icon(Icons.lock_outline_rounded, color: AppTheme.accent.withValues(alpha: 0.8), size: 40),
                   const SizedBox(height: 16),
                   Text(
                     'Weekly Report Disabled',
@@ -1091,9 +1091,9 @@ class HomeScreen extends StatelessWidget {
                       state.togglePreference('report');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accent.withOpacity(0.2),
+                      backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
                       foregroundColor: AppTheme.accent,
-                      side: BorderSide(color: AppTheme.accent.withOpacity(0.4)),
+                      side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.4)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     ),
@@ -1270,7 +1270,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withOpacity(0.8), size: 40),
+                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withValues(alpha: 0.8), size: 40),
                   const SizedBox(height: 16),
                   Text(
                     'Profile Roast Locked',
@@ -1482,7 +1482,7 @@ class HomeScreen extends StatelessWidget {
                   topRight: Radius.circular(30),
                 ),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   width: 1,
                 ),
               ),
@@ -1573,7 +1573,7 @@ class HomeScreen extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: color.withOpacity(0.15),
+                                            color: color.withValues(alpha: 0.15),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(icon, color: color, size: 20),
@@ -1805,7 +1805,7 @@ class HomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: col.withOpacity(0.1),
+        color: col.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

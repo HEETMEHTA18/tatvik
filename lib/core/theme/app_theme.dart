@@ -68,10 +68,10 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xCC1E1E24), // High-contrast translucent dark gray
+        color: const Color(0x661E1E24), // Increased translucency for Liquid Glass
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(32), // Rounder forms
           side: const BorderSide(color: Color(0x33FFFFFF), width: 1),
         ),
       ),
@@ -87,13 +87,16 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFF8FAFC),
-          foregroundColor: const Color(0xFF09090B),
-          minimumSize: const Size(double.infinity, 56),
+          backgroundColor: const Color(0x33F8FAFC), // Glass-like background
+          foregroundColor: const Color(0xFFFFFFFF),
+          minimumSize: const Size(double.infinity, 60), // Extra-large size option
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(32), // Rounder forms
           ),
           elevation: 0,
+          shadowColor: Colors.transparent,
+        ).copyWith(
+          overlayColor: WidgetStateProperty.all(const Color(0x33FFFFFF)),
         ),
       ),
     );
@@ -149,11 +152,11 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xEEFFFFFF), // More solid white for light mode glass card
+        color: const Color(0x99FFFFFF), // Increased translucency for light mode glass card
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: Color(0x66FFFFFF), width: 1),
+          borderRadius: BorderRadius.circular(32), // Rounder forms
+          side: const BorderSide(color: Color(0x4DFFFFFF), width: 1),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -169,13 +172,16 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF4F46E5),
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
+          backgroundColor: const Color(0x1A4F46E5), // Glass-like background
+          foregroundColor: const Color(0xFF4F46E5),
+          minimumSize: const Size(double.infinity, 60), // Extra-large size option
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(32), // Rounder forms
           ),
           elevation: 0,
+          shadowColor: Colors.transparent,
+        ).copyWith(
+          overlayColor: WidgetStateProperty.all(const Color(0x1A4F46E5)),
         ),
       ),
     );

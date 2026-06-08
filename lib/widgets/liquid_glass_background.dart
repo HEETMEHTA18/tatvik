@@ -190,7 +190,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                   ),
                   child: Container(
                     color: (isDark ? Colors.black : Colors.white)
-                        .withOpacity(widget.transitionProgress * 0.15),
+                        .withValues(alpha: widget.transitionProgress * 0.15),
                   ),
                 ),
               ),

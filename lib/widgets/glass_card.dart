@@ -11,9 +11,9 @@ class GlassCard extends StatelessWidget {
   const GlassCard({
     super.key,
     required this.child,
-    this.borderRadius = 24,
+    this.borderRadius = 32, // Rounder forms for Liquid Glass
     this.padding,
-    this.blur = 20,
+    this.blur = 30, // Increased blur for better liquid glass effect
     this.opacity = 0.08,
   });
 

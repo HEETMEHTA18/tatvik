@@ -651,9 +651,9 @@ class AppState extends ChangeNotifier {
       
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
-        this.username = userData['name'] ?? userData['login'] ?? 'Alex Johnson';
-        this.repos = userData['public_repos'] ?? 0;
-        this.avatarUrl = userData['avatar_url'];
+        username = userData['name'] ?? userData['login'] ?? 'Alex Johnson';
+        repos = userData['public_repos'] ?? 0;
+        avatarUrl = userData['avatar_url'];
       }
 
       final reposUri = Uri.parse('https://api.github.com/users/$username/repos?per_page=100');
@@ -683,24 +683,24 @@ class AppState extends ChangeNotifier {
           ));
         }
 
-        this.stars = totalStars;
-        this.commits = reposData.length * 15; // Estimate commits for prototype
+        stars = totalStars;
+        commits = reposData.length * 15; // Estimate commits for prototype
 
         if (newRepos.isNotEmpty) {
-          this.allRepositories = newRepos;
+          allRepositories = newRepos;
         }
 
         // Calculate dynamic Developer Score
-        this.developerScore = double.parse(((totalStars * 0.15 + reposData.length * 0.4 + 5.0).clamp(1.0, 10.0)).toStringAsFixed(1));
+        developerScore = double.parse(((totalStars * 0.15 + reposData.length * 0.4 + 5.0).clamp(1.0, 10.0)).toStringAsFixed(1));
 
         // Determine strengths and gaps dynamically
-        this.strengths = [];
-        this.gaps = [];
+        strengths = [];
+        gaps = [];
 
         if (totalStars > 10) {
-          this.strengths.add('Popular repositories (Total stars: $totalStars)');
+          strengths.add('Popular repositories (Total stars: $totalStars)');
         } else {
-          this.gaps.add('Increase repo visibility and stargazers');
+          gaps.add('Increase repo visibility and stargazers');
         }
 
         bool hasBackend = false;
@@ -716,22 +716,22 @@ class AppState extends ChangeNotifier {
         }
 
         if (hasBackend) {
-          this.strengths.add('Solid backend development knowledge');
+          strengths.add('Solid backend development knowledge');
         } else {
-          this.gaps.add('Backend experience is holding back your score');
+          gaps.add('Backend experience is holding back your score');
         }
 
         if (hasFrontend) {
-          this.strengths.add('Strong UI/frontend development foundation');
+          strengths.add('Strong UI/frontend development foundation');
         } else {
-          this.gaps.add('Lack of frontend/UI application projects');
+          gaps.add('Lack of frontend/UI application projects');
         }
 
-        if (this.strengths.isEmpty) {
-          this.strengths.add('Clean repository setup');
+        if (strengths.isEmpty) {
+          strengths.add('Clean repository setup');
         }
-        if (this.gaps.isEmpty) {
-          this.gaps.add('Learn system architecture & cloud deployment');
+        if (gaps.isEmpty) {
+          gaps.add('Learn system architecture & cloud deployment');
         }
 
         // Dynamically update milestones based on languages
@@ -873,8 +873,8 @@ class AppState extends ChangeNotifier {
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body);
         final String? linkedUsername = userData['username'];
-        this.username = userData['name'] ?? 'Alex Johnson';
-        this.avatarUrl = userData['avatar_url'];
+        username = userData['name'] ?? 'Alex Johnson';
+        avatarUrl = userData['avatar_url'];
 
         if (linkedUsername != null && linkedUsername.isNotEmpty) {
           githubUsername = linkedUsername;
@@ -901,6 +901,10 @@ class AppState extends ChangeNotifier {
           showLinkGitHubPrompt = true;
           notifyListeners();
         }
+      } else if (response.statusCode == 401) {
+        // Token is expired or invalid — auto-logout
+        debugPrint('Auth token expired (401) — clearing session automatically');
+        await clearSession();
       }
     } catch (e) {
       debugPrint('Error fetching user profile: $e');

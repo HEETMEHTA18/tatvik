@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -17,21 +17,79 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="DevMentor – Your AI-powered developer mentoring and career growth companion. Track GitHub activity, get AI coaching, and accelerate your tech career.">
+  <meta name="keywords" content="developer mentor, AI coach, GitHub analytics, career growth, tech skills, coding coach">
+  <meta name="author" content="DevMentor">
 
-  <!-- iOS meta tags & icons -->
+  <!-- Theme Color (changes status bar on mobile browsers) -->
+  <meta name="theme-color" content="#6C63FF">
+  <meta name="msapplication-TileColor" content="#6C63FF">
+
+  <!-- iOS / Apple PWA meta tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DevMentor">
+
+  <!-- Apple Touch Icons (iOS home screen icon) -->
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/Icon-512.png">
+
+  <!-- Apple Splash Screens for various iPhone sizes -->
+  <!-- iPhone 14 Pro Max -->
+  <link rel="apple-touch-startup-image"
+        href="icons/Icon-512.png"
+        media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+  <!-- iPhone 14 Pro -->
+  <link rel="apple-touch-startup-image"
+        href="icons/Icon-512.png"
+        media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+  <!-- iPhone SE -->
+  <link rel="apple-touch-startup-image"
+        href="icons/Icon-512.png"
+        media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="shortcut icon" type="image/png" href="favicon.png"/>
 
-  <title>devmentor</title>
+  <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
+
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="DevMentor – AI Developer Coach">
+  <meta property="og:description" content="Track GitHub activity, get AI career coaching, and accelerate your tech career with DevMentor.">
+  <meta property="og:image" content="icons/Icon-512.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="DevMentor – AI Developer Coach">
+  <meta name="twitter:description" content="Your AI-powered developer mentoring companion.">
+  <meta name="twitter:image" content="icons/Icon-512.png">
+
+  <title>DevMentor – AI Developer Coach</title>
+
+  <!-- Inline splash screen style for iOS PWA -->
+  <style>
+    /* Prevent content flash during Flutter initialization */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0A0A0F;
+      overflow: hidden;
+    }
+    /* iOS safe area support */
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  </style>
 </head>
 <body>
   <!--

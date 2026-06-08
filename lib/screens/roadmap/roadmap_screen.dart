@@ -778,7 +778,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                 ),
                 const SizedBox(height: 20),
                 DropdownButtonFormField<String>(
-                  value: _selectedBattleRole,
+                  initialValue: _selectedBattleRole,
                   dropdownColor: AppTheme.isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   decoration: InputDecoration(
                     labelText: 'SELECT TARGET ROLE',

@@ -10,36 +10,42 @@ import 'route_paths.dart';
 
 import '../providers/app_state.dart';
 
+// Routes that require authentication
+const _protectedRoutes = {RoutePaths.app, RoutePaths.mentor};
+// Routes only for guests (non-authenticated)
+const _guestOnlyRoutes = {
+  RoutePaths.splash,
+  RoutePaths.onboarding,
+  RoutePaths.login,
+  RoutePaths.emailAuth,
+};
+
 GoRouter createAppRouter(AppState appState) {
   return GoRouter(
     initialLocation: RoutePaths.splash,
     refreshListenable: appState,
+    // Use a stable navigator key so the navigator tree is never torn down on rebuilds
+    navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'root'),
     redirect: (context, state) {
       // 1. Wait for preferences to be loaded from storage
       if (!appState.isPreferencesLoaded) {
-        return null; // Stay where we are until preferences load
+        return null; // Stay put until prefs are loaded
       }
 
       final isLoggedIn = appState.token != null && appState.token!.isNotEmpty;
       final matchedLocation = state.matchedLocation;
 
-      // 2. Redirect logic
-      if (isLoggedIn) {
-        // Logged in user cannot access onboarding, splash, login, or email auth pages.
-        if (matchedLocation == RoutePaths.splash ||
-            matchedLocation == RoutePaths.onboarding ||
-            matchedLocation == RoutePaths.login ||
-            matchedLocation == RoutePaths.emailAuth) {
-          return RoutePaths.app; // Redirect to home dashboard
-        }
-      } else {
-        // Non-logged in user cannot access dashboard or AI mentor pages.
-        if (matchedLocation == RoutePaths.app || matchedLocation == RoutePaths.mentor) {
-          return RoutePaths.onboarding; // Redirect to onboarding
-        }
+      // 2. Logged-in user on a guest-only page → send to dashboard
+      if (isLoggedIn && _guestOnlyRoutes.contains(matchedLocation)) {
+        return RoutePaths.app;
       }
 
-      return null; // No redirect
+      // 3. Guest user on a protected page → send to onboarding
+      if (!isLoggedIn && _protectedRoutes.contains(matchedLocation)) {
+        return RoutePaths.onboarding;
+      }
+
+      return null; // No redirect needed
     },
     routes: [
       GoRoute(
@@ -61,9 +67,15 @@ GoRouter createAppRouter(AppState appState) {
       GoRoute(
         path: RoutePaths.app,
         builder: (context, state) {
+          // Only use the tab query param for the INITIAL build.
+          // After that, the MainNavigationScreen manages its own tab state
+          // via a stable ValueKey so it is never rebuilt from scratch.
           final tabName = state.uri.queryParameters['tab'];
           final tabIndex = RoutePaths.tabIndexFromName(tabName);
-          return MainNavigationScreen(key: const ValueKey('main_nav'), initialTabIndex: tabIndex);
+          return MainNavigationScreen(
+            key: const ValueKey('main_nav'),
+            initialTabIndex: tabIndex,
+          );
         },
       ),
       GoRoute(
@@ -73,4 +85,3 @@ GoRouter createAppRouter(AppState appState) {
     ],
   );
 }
-

@@ -889,7 +889,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: col.withOpacity(0.1),
+        color: col.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(

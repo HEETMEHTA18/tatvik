@@ -376,9 +376,9 @@ class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotifica
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.accent.withOpacity(0.15),
+                          color: AppTheme.accent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.accent.withOpacity(0.3), width: 1.5),
+                          border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3), width: 1.5),
                         ),
                         child: Icon(
                           Icons.notifications_active_rounded,
