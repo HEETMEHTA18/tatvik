@@ -48,25 +48,23 @@ async def periodic_news_scanner():
 def startup_event():
     Base.metadata.create_all(bind=engine)
 
-    # Custom self-healing migrations for users columns
-    from sqlalchemy import text
+    # Custom self-healing migrations for users columns using schema inspection (PostgreSQL safe)
+    from sqlalchemy import text, inspect
 
     try:
-        with engine.begin() as conn:
-            # Check if personal_goal exists
-            try:
-                conn.execute(text("SELECT personal_goal FROM users LIMIT 1"))
-            except Exception:
-                logger.info("Adding column personal_goal to users table")
+        inspector = inspect(engine)
+        columns = [col["name"] for col in inspector.get_columns("users")]
+
+        if "personal_goal" not in columns:
+            logger.info("Adding column personal_goal to users table")
+            with engine.begin() as conn:
                 conn.execute(
                     text("ALTER TABLE users ADD COLUMN personal_goal VARCHAR(512)")
                 )
 
-            # Check if preferred_stack exists
-            try:
-                conn.execute(text("SELECT preferred_stack FROM users LIMIT 1"))
-            except Exception:
-                logger.info("Adding column preferred_stack to users table")
+        if "preferred_stack" not in columns:
+            logger.info("Adding column preferred_stack to users table")
+            with engine.begin() as conn:
                 conn.execute(
                     text("ALTER TABLE users ADD COLUMN preferred_stack VARCHAR(512)")
                 )

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+// ignore: depend_on_referenced_packages
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'routes/app_router.dart';
 
 void main() {
+  usePathUrlStrategy();
   runApp(
     ProviderScope(
       child: p.ChangeNotifierProvider(
