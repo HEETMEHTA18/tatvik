@@ -7,6 +7,7 @@ import '../routes/route_paths.dart';
 import '../widgets/liquid_glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../providers/app_state.dart';
+import '../core/utils/web_helper.dart';
 import 'home/home_screen.dart';
 import 'repositories/discover_repos_screen.dart';
 import 'roadmap/roadmap_screen.dart';
@@ -61,6 +62,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       _lastNotificationId = _appState.notifications.first['id'] as String?;
     }
     _appState.addListener(_onAppStateChanged);
+    
+    // Request actual OS/browser notification permission
+    requestNotificationPermission();
 
     // Sync AppState with the initial tab from URL
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,10 +86,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         _lastNotificationCount = _appState.notifications.length;
         
         if (_appState.pushNotifications) {
-          _showSimulatedPushNotification(
-            newNotification['title'] ?? 'New Notification',
-            newNotification['body'] ?? '',
-          );
+          if (isAppWindowBackgrounded()) {
+            showBrowserNotification(
+              newNotification['title'] ?? 'New Notification',
+              newNotification['body'] ?? '',
+            );
+          } else {
+            _showSimulatedPushNotification(
+              newNotification['title'] ?? 'New Notification',
+              newNotification['body'] ?? '',
+            );
+          }
         }
       }
     } else {

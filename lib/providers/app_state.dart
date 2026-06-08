@@ -640,13 +640,13 @@ class AppState extends ChangeNotifier {
   String? avatarUrl;
   String? token;
 
-  Future<void> fetchGithubData(String username) async {
-    if (username.isEmpty) return;
+  Future<void> fetchGithubData(String ghUsername) async {
+    if (ghUsername.isEmpty) return;
     isLoading = true;
     notifyListeners();
 
     try {
-      final userUri = Uri.parse('https://api.github.com/users/$username');
+      final userUri = Uri.parse('https://api.github.com/users/$ghUsername');
       final userResponse = await http.get(userUri);
       
       if (userResponse.statusCode == 200) {
@@ -656,7 +656,7 @@ class AppState extends ChangeNotifier {
         avatarUrl = userData['avatar_url'];
       }
 
-      final reposUri = Uri.parse('https://api.github.com/users/$username/repos?per_page=100');
+      final reposUri = Uri.parse('https://api.github.com/users/$ghUsername/repos?per_page=100');
       final reposResponse = await http.get(reposUri);
       
       if (reposResponse.statusCode == 200) {
@@ -924,6 +924,12 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('auth_token');
       await prefs.remove('github_username');
+      await prefs.remove('dna_response_cache');
+      await prefs.remove('dna_cache_timestamp');
+      await prefs.remove('roast_response_cache');
+      await prefs.remove('roast_cache_timestamp');
+      await prefs.remove('weekly_report_response_cache');
+      await prefs.remove('weekly_report_cache_timestamp');
     } catch (_) {}
   }
 
@@ -959,7 +965,27 @@ class AppState extends ChangeNotifier {
     fetchActivityData();
   }
 
-  Future<void> fetchDeveloperDna() async {
+  Future<void> fetchDeveloperDna({bool force = false}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('dna_response_cache');
+      final cachedTime = prefs.getInt('dna_cache_timestamp') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
+        final data = jsonDecode(cachedJson);
+        dnaArchetype = data['archetype'];
+        dnaScore = data['score'];
+        dnaDescription = data['description'];
+        dnaStrengths = List<String>.from(data['strengths'] ?? []);
+        dnaWeaknesses = List<String>.from(data['weaknesses'] ?? []);
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error reading DNA cache: $e');
+    }
+
     isLoadingDna = true;
     notifyListeners();
     try {
@@ -970,12 +996,19 @@ class AppState extends ChangeNotifier {
         },
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final bodyText = response.body;
+        final data = jsonDecode(bodyText);
         dnaArchetype = data['archetype'];
         dnaScore = data['score'];
         dnaDescription = data['description'];
         dnaStrengths = List<String>.from(data['strengths'] ?? []);
         dnaWeaknesses = List<String>.from(data['weaknesses'] ?? []);
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('dna_response_cache', bodyText);
+          await prefs.setInt('dna_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+        } catch (_) {}
 
         notifications.insert(0, {
           'id': 'dna_${DateTime.now().millisecondsSinceEpoch}',
@@ -995,7 +1028,24 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchProfileRoast() async {
+  Future<void> fetchProfileRoast({bool force = false}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('roast_response_cache');
+      final cachedTime = prefs.getInt('roast_cache_timestamp') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
+        final data = jsonDecode(cachedJson);
+        profileRoast = data['roast'];
+        roastTips = List<String>.from(data['tips'] ?? []);
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error reading roast cache: $e');
+    }
+
     isLoadingRoast = true;
     notifyListeners();
     try {
@@ -1006,9 +1056,16 @@ class AppState extends ChangeNotifier {
         },
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final bodyText = response.body;
+        final data = jsonDecode(bodyText);
         profileRoast = data['roast'];
         roastTips = List<String>.from(data['tips'] ?? []);
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('roast_response_cache', bodyText);
+          await prefs.setInt('roast_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+        } catch (_) {}
 
         notifications.insert(0, {
           'id': 'roast_${DateTime.now().millisecondsSinceEpoch}',
@@ -1149,7 +1206,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchWeeklyReport() async {
+  Future<void> fetchWeeklyReport({bool force = false}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('weekly_report_response_cache');
+      final cachedTime = prefs.getInt('weekly_report_cache_timestamp') ?? 0;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      
+      if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
+        final data = jsonDecode(cachedJson);
+        weeklyExplored = data['repositories_explored'];
+        weeklySkills = data['skills_learned'];
+        weeklyImprovement = data['improvement_percentage'];
+        weeklyChartData = List<int>.from(data['chart_data'] ?? []);
+        notifyListeners();
+        return;
+      }
+    } catch (e) {
+      debugPrint('Error reading weekly report cache: $e');
+    }
+
     isLoadingWeeklyReport = true;
     notifyListeners();
     try {
@@ -1160,11 +1236,18 @@ class AppState extends ChangeNotifier {
         },
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final bodyText = response.body;
+        final data = jsonDecode(bodyText);
         weeklyExplored = data['repositories_explored'];
         weeklySkills = data['skills_learned'];
         weeklyImprovement = data['improvement_percentage'];
         weeklyChartData = List<int>.from(data['chart_data'] ?? []);
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('weekly_report_response_cache', bodyText);
+          await prefs.setInt('weekly_report_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+        } catch (_) {}
 
         notifications.insert(0, {
           'id': 'weekly_${DateTime.now().millisecondsSinceEpoch}',
@@ -1278,9 +1361,33 @@ class AppState extends ChangeNotifier {
     personalGoal = goal;
     preferredStack = stack;
     notifyListeners();
-    await Future.delayed(const Duration(milliseconds: 600));
-    isSavingMemory = false;
-    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/users/memory'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'personal_goal': goal,
+          'preferred_stack': stack,
+        }),
+      );
+      if (response.statusCode == 200) {
+        // Force refresh all AI features to match the new goals
+        fetchDeveloperDna(force: true);
+        fetchProfileRoast(force: true);
+        fetchWeeklyReport(force: true);
+        fetchLearningPaths();
+        regenerateRoadmap();
+      }
+    } catch (e) {
+      debugPrint('Error saving developer memory: $e');
+    } finally {
+      isSavingMemory = false;
+      notifyListeners();
+    }
   }
 
   void togglePreference(String key) async {

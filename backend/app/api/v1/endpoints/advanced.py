@@ -11,6 +11,7 @@ from pypdf import PdfReader
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
 from app.models.entities import Repository, TechNews, GithubProfile, DeveloperScore
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -108,13 +109,26 @@ async def get_developer_dna(
         ", ".join([r.full_name for r in repos]) if repos else "No repositories synced"
     )
 
-    prompt = (
-        f"Analyze this developer's GitHub repositories: {repo_list_str}. "
+    # Fetch user personal goal and preferred stack
+    user_stmt = select(User).where(User.id == user_id)
+    user = db.scalar(user_stmt)
+    goal = user.personal_goal if user else None
+    preferred_stack = user.preferred_stack if user else None
+
+    prompt = f"Analyze this developer's GitHub repositories: {repo_list_str}. "
+    if goal:
+        prompt += f"Their target career goal/topic is: {goal}. "
+    if preferred_stack:
+        prompt += f"Their preferred tech stack is: {preferred_stack}. "
+
+    prompt += (
         "Classify them into one of these 4 Developer Archetypes:\n"
         "- Builder (focuses on shipping quick products/MVPs)\n"
         "- Architect (focuses on clean code structure, scale, patterns)\n"
         "- Hacker (likes quick hacks, automation, cybersecurity, scripts)\n"
         "- Explorer (explores open source, diverse tech stack, contributions)\n\n"
+        "Crucial instruction: Make sure the classification, strengths, weaknesses and description are highly tailored "
+        "and relevant to their target career goal and preferred tech stack.\n\n"
         "Return a JSON object with these exact keys:\n"
         "{\n"
         '  "archetype": "Builder" | "Architect" | "Hacker" | "Explorer",\n'
@@ -161,10 +175,24 @@ async def get_github_roast(
     score_rec = db.scalar(score_stmt)
     score = score_rec.score / 10.0 if score_rec else 5.0
 
-    prompt = (
-        f"Analyze this developer's GitHub repositories: {repo_list_str} (Developer Score: {score}/10). "
-        "Write a brutal but hilarious review/roast of their GitHub profile. Roast them about unfinished projects, "
-        "boilerplate repositories, missing descriptions, lack of readmes, or generic names. "
+    # Fetch user personal goal and preferred stack
+    user_stmt = select(User).where(User.id == user_id)
+    user = db.scalar(user_stmt)
+    goal = user.personal_goal if user else None
+    preferred_stack = user.preferred_stack if user else None
+
+    prompt = f"Analyze this developer's GitHub repositories: {repo_list_str} (Developer Score: {score}/10). "
+    if goal:
+        prompt += f"Their target career goal/topic is: {goal}. "
+    if preferred_stack:
+        prompt += f"Their target tech stack is: {preferred_stack}. "
+
+    prompt += (
+        "Write a brutal but hilarious review/roast of their GitHub profile. "
+        "Importantly, roast them in terms of their goal/target stack! For example, if they want to be a 'Blockchain developer' "
+        "but they have no smart contracts or Web3 repos, make fun of that discrepancy. If they want to be a 'Flutter developer' "
+        "but they only have Python repositories, call them out on that. Make the roast and the 3 quick tips highly related to "
+        "bridging the gap to their target goal/topic. "
         "Keep it highly entertaining but constructive. Also provide 3 quick tips to make their profile look elite.\n\n"
         "Return a JSON object with keys:\n"
         "{\n"
@@ -440,9 +468,21 @@ async def get_weekly_report(
         ", ".join([r.full_name for r in repos]) if repos else "No repositories"
     )
 
-    prompt = (
-        f"Analyze these repositories: {repo_list_str}. "
+    # Fetch user personal goal and preferred stack
+    user_stmt = select(User).where(User.id == user_id)
+    user = db.scalar(user_stmt)
+    goal = user.personal_goal if user else None
+    preferred_stack = user.preferred_stack if user else None
+
+    prompt = f"Analyze these repositories: {repo_list_str}. "
+    if goal:
+        prompt += f"The user's target career goal/topic is: {goal}. "
+    if preferred_stack:
+        prompt += f"The target tech stack is: {preferred_stack}. "
+
+    prompt += (
         "Generate a weekly developer progress report. "
+        "Ensure the assessment and progress metrics are framed relative to their target career goal and stack. "
         "Provide repositories explored (int), skills learned (int), overall improvement percentage (int), "
         "and a list of 7 integers representing daily commit counts/learning hours (Mon-Sun).\n\n"
         "Return a JSON object with keys:\n"
@@ -479,9 +519,21 @@ async def get_learning_paths(
         ", ".join([r.full_name for r in repos]) if repos else "No repositories"
     )
 
-    prompt = (
-        f"Create a personalized 5-step Duolingo-style learning path for this developer based on their repositories: {repo_list_str}. "
+    # Fetch user personal goal and preferred stack
+    user_stmt = select(User).where(User.id == user_id)
+    user = db.scalar(user_stmt)
+    goal = user.personal_goal if user else None
+    preferred_stack = user.preferred_stack if user else None
+
+    prompt = f"Create a personalized 5-step Duolingo-style learning path for this developer based on their repositories: {repo_list_str}. "
+    if goal:
+        prompt += f"Their target career goal/topic is: {goal}. "
+    if preferred_stack:
+        prompt += f"Their target tech stack is: {preferred_stack}. "
+
+    prompt += (
         "Each step should recommend a highly popular real-world open-source GitHub repository to study, a brief description of why it fits, and an actionable learning task. "
+        "IMPORTANT: Ensure the learning path, repositories selected, and tasks are strictly related to their career goal/topic and target tech stack. "
         "Mark the first step as completed if it matches their languages, and the rest as not completed.\n\n"
         "Return a JSON object with keys:\n"
         "{\n"

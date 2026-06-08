@@ -19,4 +19,10 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    personal_goal: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, default="Become Full Stack AI Engineer"
+    )
+    preferred_stack: Mapped[str | None] = mapped_column(
+        String(512), nullable=True, default="Flutter, Python, Fast API"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

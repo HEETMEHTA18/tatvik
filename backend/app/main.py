@@ -47,6 +47,32 @@ async def periodic_news_scanner():
 @app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
+
+    # Custom self-healing migrations for users columns
+    from sqlalchemy import text
+
+    try:
+        with engine.begin() as conn:
+            # Check if personal_goal exists
+            try:
+                conn.execute(text("SELECT personal_goal FROM users LIMIT 1"))
+            except Exception:
+                logger.info("Adding column personal_goal to users table")
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN personal_goal VARCHAR(512)")
+                )
+
+            # Check if preferred_stack exists
+            try:
+                conn.execute(text("SELECT preferred_stack FROM users LIMIT 1"))
+            except Exception:
+                logger.info("Adding column preferred_stack to users table")
+                conn.execute(
+                    text("ALTER TABLE users ADD COLUMN preferred_stack VARCHAR(512)")
+                )
+    except Exception as e:
+        logger.error(f"Error executing startup database migration: {e}")
+
     asyncio.create_task(periodic_news_scanner())
 
 

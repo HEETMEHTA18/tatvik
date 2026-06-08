@@ -92,6 +92,12 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
             user.avatar_url = github_user.get("avatar_url")
             db.commit()
             db.refresh(user)
+        else:
+            user.name = name or user.name
+            user.username = login or user.username
+            user.avatar_url = github_user.get("avatar_url") or user.avatar_url
+            db.commit()
+            db.refresh(user)
 
         # 4. Sync GitHub profile & repositories to local database
         try:

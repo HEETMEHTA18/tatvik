@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-
-from app.api.deps import get_current_user_id, get_user_service
-from app.schemas.user import UserResponse
+from app.api.deps import get_current_user_id, get_user_service, get_db
+from app.schemas.user import UserResponse, DeveloperMemoryUpdateRequest
 from app.services.user_service import UserService
+from sqlalchemy.orm import Session
+from sqlalchemy import select
+from app.models.user import User
 
 router = APIRouter()
 
@@ -18,3 +20,20 @@ def get_me(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         ) from exc
+
+
+@router.post("/memory", response_model=UserResponse)
+def update_developer_memory(
+    payload: DeveloperMemoryUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    stmt = select(User).where(User.id == user_id)
+    user = db.scalar(stmt)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.personal_goal = payload.personal_goal
+    user.preferred_stack = payload.preferred_stack
+    db.commit()
+    db.refresh(user)
+    return user
