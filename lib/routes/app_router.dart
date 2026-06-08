@@ -32,6 +32,16 @@ GoRouter createAppRouter(AppState appState) {
         return null; // Stay put until prefs are loaded
       }
 
+      // Extract OAuth callback parameters and set session immediately
+      final queryToken = state.uri.queryParameters['token'];
+      final queryUsername = state.uri.queryParameters['username'];
+      if (queryToken != null && queryToken.isNotEmpty) {
+        if (appState.token != queryToken) {
+          appState.setGithubSession(queryUsername ?? '', queryToken);
+        }
+        return RoutePaths.app; // Redirect to clean URL path without query params
+      }
+
       final isLoggedIn = appState.token != null && appState.token!.isNotEmpty;
       final matchedLocation = state.matchedLocation;
 

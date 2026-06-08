@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_theme.dart';
@@ -22,6 +24,20 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
+class WalkthroughStep {
+  final IconData icon;
+  final String title;
+  final String description;
+  final int tabIndex;
+
+  const WalkthroughStep({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.tabIndex,
+  });
+}
+
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
   late PageController _pageController;
@@ -33,6 +49,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _lastNotificationCount = 0;
   String? _lastNotificationId;
   late final AppState _appState;
+
+  bool _showWalkthrough = false;
+  int _walkthroughStep = 0;
+
+  final List<WalkthroughStep> _walkthroughSteps = const [
+    WalkthroughStep(
+      icon: Icons.grid_view_rounded,
+      title: 'Personalized Hub 🚀',
+      description: 'Your home dashboard showing AI Insights, Developer DNA, and your profile Roast. All dynamically tailored to your stack and goals.',
+      tabIndex: 0,
+    ),
+    WalkthroughStep(
+      icon: Icons.explore_outlined,
+      title: 'Explore Projects 📂',
+      description: 'Discover curated open-source repositories and hands-on projects suited to your learning aspirations and goals.',
+      tabIndex: 1,
+    ),
+    WalkthroughStep(
+      icon: Icons.psychology_outlined,
+      title: 'AI Mentor Chat & Prompts 💬',
+      description: 'Interact with your AI Mentor. Save topics directly to your Development Memory to customize your future roadmaps.',
+      tabIndex: 2,
+    ),
+    WalkthroughStep(
+      icon: Icons.route_outlined,
+      title: 'Interactive Roadmaps 🗺️',
+      description: 'Follow milestones and structured step-by-step paths curated for you. Tap nodes to see advanced details.',
+      tabIndex: 3,
+    ),
+    WalkthroughStep(
+      icon: Icons.settings_outlined,
+      title: 'Settings & Security ⚙️',
+      description: 'Manage preferences, update your personal memory, and lock down your GitHub account sync to ensure your data stays private.',
+      tabIndex: 4,
+    ),
+  ];
 
   final List<Widget> _screens = [
     const HomeScreen(),
@@ -66,11 +118,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Request actual OS/browser notification permission
     requestNotificationPermission();
 
-    // Sync AppState with the initial tab from URL
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Sync AppState with the initial tab from URL and check walkthrough status
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         _appState.setTabIndex(_selectedIndex);
       }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final hasCompleted = prefs.getBool('has_completed_walkthrough') ?? false;
+        if (!hasCompleted && mounted) {
+          setState(() {
+            _showWalkthrough = true;
+            _walkthroughStep = 0;
+            _selectedIndex = 0;
+          });
+          _pageController.jumpToPage(0);
+        }
+      } catch (_) {}
     });
   }
 
@@ -182,6 +246,167 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  void _nextWalkthroughStep() async {
+    if (_walkthroughStep < _walkthroughSteps.length - 1) {
+      setState(() {
+        _walkthroughStep++;
+        _selectedIndex = _walkthroughSteps[_walkthroughStep].tabIndex;
+      });
+      _pageController.animateToPage(
+        _selectedIndex,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_walkthrough', true);
+      setState(() {
+        _showWalkthrough = false;
+        _selectedIndex = 0;
+      });
+      _pageController.jumpToPage(0);
+    }
+  }
+
+  Widget _buildWalkthroughOverlay() {
+    final step = _walkthroughSteps[_walkthroughStep];
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.75),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: GlassCard(
+                borderRadius: 24,
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'STEP ${_walkthroughStep + 1} OF ${_walkthroughSteps.length}',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accent,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Row(
+                          children: List.generate(
+                            _walkthroughSteps.length,
+                            (index) => Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _walkthroughStep == index
+                                    ? AppTheme.accent
+                                    : AppTheme.border,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppTheme.accent.withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        step.icon,
+                        size: 32,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      step.title,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      step.description,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: AppTheme.textSecondary,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('has_completed_walkthrough', true);
+                            setState(() {
+                              _showWalkthrough = false;
+                              _selectedIndex = 0;
+                            });
+                            _pageController.jumpToPage(0);
+                          },
+                          child: Text(
+                            'SKIP TOUR',
+                            style: GoogleFonts.jetBrainsMono(
+                              color: AppTheme.textSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: _nextWalkthroughStep,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            _walkthroughStep == _walkthroughSteps.length - 1
+                                ? 'GET STARTED'
+                                : 'NEXT',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double diff = (_pageOffset - _pageOffset.round()).abs();
@@ -189,10 +414,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     return LiquidGlassBackground(
       transitionProgress: transitionProgress,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBody: true,
-        body: PageView(
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBody: true,
+            body: PageView(
           controller: _pageController,
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           onPageChanged: (index) {
@@ -210,60 +437,63 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           },
           children: _screens,
         ),
-        bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 24, right: 24, bottom: 20),
-            child: GlassCard(
-              borderRadius: 30,
-              padding: EdgeInsets.zero,
-              child: SizedBox(
-                height: 70,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final totalWidth = constraints.maxWidth;
-                    final itemWidth = totalWidth / 5;
-                    return Stack(
-                      children: [
-                        // Sliding Glass Pill Indicator
-                        AnimatedPositioned(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeOutBack,
-                          left: _selectedIndex * itemWidth + 8,
-                          top: 8,
-                          bottom: 8,
-                          width: itemWidth - 16,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppTheme.accent.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppTheme.accent.withValues(alpha: 0.35),
-                                width: 1.5,
+            bottomNavigationBar: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 24, right: 24, bottom: 20),
+                child: GlassCard(
+                  borderRadius: 30,
+                  padding: EdgeInsets.zero,
+                  child: SizedBox(
+                    height: 70,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final totalWidth = constraints.maxWidth;
+                        final itemWidth = totalWidth / 5;
+                        return Stack(
+                          children: [
+                            // Sliding Glass Pill Indicator
+                            AnimatedPositioned(
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeOutBack,
+                              left: _selectedIndex * itemWidth + 8,
+                              top: 8,
+                              bottom: 8,
+                              width: itemWidth - 16,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accent.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppTheme.accent.withValues(alpha: 0.35),
+                                    width: 1.5,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        // The Items on Top
-                        Positioned.fill(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildNavItem(0, 'HOME', Icons.grid_view_rounded, itemWidth),
-                              _buildNavItem(1, 'EXPLORE', Icons.explore_outlined, itemWidth),
-                              _buildNavItem(2, 'PROMPTS', Icons.psychology_outlined, itemWidth),
-                              _buildNavItem(3, 'ROADMAP', Icons.route_outlined, itemWidth),
-                              _buildNavItem(4, 'SETTINGS', Icons.settings_outlined, itemWidth),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                            // The Items on Top
+                            Positioned.fill(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildNavItem(0, 'HOME', Icons.grid_view_rounded, itemWidth),
+                                  _buildNavItem(1, 'EXPLORE', Icons.explore_outlined, itemWidth),
+                                  _buildNavItem(2, 'PROMPTS', Icons.psychology_outlined, itemWidth),
+                                  _buildNavItem(3, 'ROADMAP', Icons.route_outlined, itemWidth),
+                                  _buildNavItem(4, 'SETTINGS', Icons.settings_outlined, itemWidth),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          if (_showWalkthrough) _buildWalkthroughOverlay(),
+        ],
       ),
     );
   }

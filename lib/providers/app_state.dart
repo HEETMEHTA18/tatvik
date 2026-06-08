@@ -29,6 +29,7 @@ class AppState extends ChangeNotifier {
       weeklyReport = prefs.getBool('pref_report') ?? false;
       shareAnalytics = prefs.getBool('pref_analytics') ?? true;
       twoFactorAuth = prefs.getBool('pref_2fa') ?? false;
+      githubUsernameLocked = prefs.getBool('pref_github_locked') ?? false;
 
       if (storedToken != null && storedToken.isNotEmpty) {
         token = storedToken;
@@ -635,6 +636,7 @@ class AppState extends ChangeNotifier {
   bool weeklyReport = false;
   bool shareAnalytics = true;
   bool twoFactorAuth = false;
+  bool githubUsernameLocked = false;
 
   bool isLoading = false;
   String? avatarUrl;
@@ -828,12 +830,14 @@ class AppState extends ChangeNotifier {
     token = sessionToken;
     githubUsername = username.trim().replaceAll('@', '');
     showLinkGitHubPrompt = false;
+    githubUsernameLocked = true;
     notifyListeners();
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', sessionToken);
       await prefs.setString('github_username', githubUsername);
+      await prefs.setBool('pref_github_locked', true);
     } catch (_) {}
 
     fetchGithubData(githubUsername);
@@ -1411,6 +1415,10 @@ class AppState extends ChangeNotifier {
     if (key == '2fa') {
       twoFactorAuth = !twoFactorAuth;
       await prefs.setBool('pref_2fa', twoFactorAuth);
+    }
+    if (key == 'github_lock') {
+      githubUsernameLocked = !githubUsernameLocked;
+      await prefs.setBool('pref_github_locked', githubUsernameLocked);
     }
     notifyListeners();
   }

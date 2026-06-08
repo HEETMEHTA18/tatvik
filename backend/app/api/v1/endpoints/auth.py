@@ -66,7 +66,7 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
             else:
                 frontend_base = "https://devsmentor.vercel.app"
             return RedirectResponse(
-                url=f"{frontend_base}/#/login?error=github_token_failed"
+                url=f"{frontend_base}/login?error=github_token_failed"
             )
 
         # 2. Get user info from GitHub
@@ -126,5 +126,5 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
             frontend_base = f"http://{host_header.replace('8000', '8080')}"
         else:
             frontend_base = "https://devsmentor.vercel.app"
-        frontend_url = f"{frontend_base}/#/app?token={system_token}&username={login}"
+        frontend_url = f"{frontend_base}/app?token={system_token}&username={login}"
         return RedirectResponse(url=frontend_url)

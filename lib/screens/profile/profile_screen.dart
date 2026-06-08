@@ -34,7 +34,26 @@ class ProfileScreen extends StatelessWidget {
                 Icons.hub_outlined,
                 'GitHub Account',
                 trailing: '@${appState.githubUsername}',
-                onTap: () => _showEditGitHubDialog(context, appState),
+                onTap: appState.githubUsernameLocked
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'GitHub account is locked to your authenticated session for privacy.',
+                            ),
+                            backgroundColor: AppTheme.accent,
+                          ),
+                        );
+                      }
+                    : () => _showEditGitHubDialog(context, appState),
+              ),
+              _buildSettingItem(
+                context,
+                Icons.lock_outline_rounded,
+                'Lock GitHub Connection',
+                hasSwitch: true,
+                switchValue: appState.githubUsernameLocked,
+                onToggle: () => appState.togglePreference('github_lock'),
               ),
             ]),
             const SizedBox(height: 24),
