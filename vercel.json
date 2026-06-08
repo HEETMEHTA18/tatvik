@@ -1,8 +1,10 @@
 {
   "cleanUrls": true,
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": true
   },
+  "buildCommand": "bash scripts/vercel-build.sh",
+  "outputDirectory": "build/web",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
