@@ -46,7 +46,7 @@ app.*.map.json
 
 # Python / Backend ignores
 backend/.env
-# backend/devmentor.db
+backend/devmentor.db
 backend/.venv/
 **/__pycache__/
 *.pyc
