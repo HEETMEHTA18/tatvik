@@ -23,8 +23,6 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  bool _showContextPanel = false;
-  int _contextWindowTokens = 8000;
 
   @override
   void initState() {
@@ -98,10 +96,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppTheme.textMain,
-              ),
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textMain),
               onPressed: () => context.pop(),
             ),
             title: Text(
@@ -112,33 +107,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               ),
             ),
             centerTitle: true,
-            actions: [
-              IconButton(
-                icon: Icon(
-                  _showContextPanel
-                      ? Icons.memory_rounded
-                      : Icons.memory_outlined,
-                  color: _showContextPanel
-                      ? AppTheme.accent
-                      : AppTheme.textSecondary,
-                ),
-                tooltip: 'Context window',
-                onPressed: () {
-                  setState(() {
-                    _showContextPanel = !_showContextPanel;
-                  });
-                },
-              ),
-            ],
           ),
           body: Column(
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: _showContextPanel
-                    ? _buildContextWindowPanel(appState)
-                    : const SizedBox.shrink(),
-              ),
               Expanded(
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
@@ -153,20 +124,14 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       ? _buildEmptyState(appState)
                       : ListView.builder(
                           controller: _scrollController,
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
                             final msg = messages[index];
                             return Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 800,
-                                ),
+                                constraints: const BoxConstraints(maxWidth: 800),
                                 child: _buildMessageRow(msg, appState),
                               ),
                             );
@@ -241,26 +206,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildSuggestionGrid(AppState state) {
     final suggestions = [
-      {
-        'icon': '🔥',
-        'title': 'Roast my code',
-        'desc': 'Get critical feedback on your repository style.',
-      },
-      {
-        'icon': '🗺️',
-        'title': 'Explain my roadmap',
-        'desc': 'Understand the next milestone in your career.',
-      },
-      {
-        'icon': '💼',
-        'title': 'Mock interview prep',
-        'desc': 'Challenge yourself with high-impact tech questions.',
-      },
-      {
-        'icon': '💻',
-        'title': 'Suggest a project',
-        'desc': 'Get real-world recommendations matching your stack.',
-      },
+      {'icon': '🔥', 'title': 'Roast my code', 'desc': 'Get critical feedback on your repository style.'},
+      {'icon': '🗺️', 'title': 'Explain my roadmap', 'desc': 'Understand the next milestone in your career.'},
+      {'icon': '💼', 'title': 'Mock interview prep', 'desc': 'Challenge yourself with high-impact tech questions.'},
+      {'icon': '💻', 'title': 'Suggest a project', 'desc': 'Get real-world recommendations matching your stack.'},
     ];
 
     return GridView.builder(
@@ -281,20 +230,13 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             if (cleanText == 'Roast my code') {
               cleanText = 'Roast my current code quality';
             } else if (cleanText == 'Explain my roadmap') {
-              cleanText =
-                  'Explain my current roadmap milestone and what to do next';
+              cleanText = 'Explain my current roadmap milestone and what to do next';
             } else if (cleanText == 'Mock interview prep') {
-              cleanText =
-                  'Give me a challenging technical mock interview question';
+              cleanText = 'Give me a challenging technical mock interview question';
             } else if (cleanText == 'Suggest a project') {
-              cleanText =
-                  'Suggest a real-world coding project based on my stack';
+              cleanText = 'Suggest a real-world coding project based on my stack';
             }
-            state.sendMessage(
-              cleanText,
-              contextWindowTokens: _contextWindowTokens,
-              clientContext: _buildClientContext(state),
-            );
+            state.sendMessage(cleanText);
             _scrollToBottom();
           },
           borderRadius: BorderRadius.circular(16),
@@ -362,39 +304,18 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: isUser
-                    ? Colors.white24
-                    : AppTheme.accent.withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: isUser ? Colors.white24 : AppTheme.accent.withValues(alpha: 0.5)),
               gradient: isUser
-                  ? const LinearGradient(
-                      colors: [Color(0xFF2D3748), Color(0xFF1A202C)],
-                    )
-                  : LinearGradient(
-                      colors: [
-                        AppTheme.accent,
-                        AppTheme.accent.withValues(alpha: 0.7),
-                      ],
-                    ),
+                  ? const LinearGradient(colors: [Color(0xFF2D3748), Color(0xFF1A202C)])
+                  : LinearGradient(colors: [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.7)]),
             ),
             child: Center(
               child: isUser
                   ? Text(
-                      state.username.isNotEmpty
-                          ? state.username[0].toUpperCase()
-                          : 'U',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                      state.username.isNotEmpty ? state.username[0].toUpperCase() : 'U',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
                     )
-                  : const Icon(
-                      Icons.auto_awesome_rounded,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                  : const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.white),
             ),
           ),
           const SizedBox(width: 16),
@@ -420,41 +341,33 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     if (href != null) {
                       final url = Uri.parse(href);
                       if (await canLaunchUrl(url)) {
-                        await launchUrl(
-                          url,
-                          mode: LaunchMode.externalApplication,
-                        );
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
                       }
                     }
                   },
-                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
-                      .copyWith(
-                        p: TextStyle(
-                          color: AppTheme.textMain,
-                          fontSize: 15,
-                          height: 1.5,
-                        ),
-                        a: TextStyle(
-                          color: AppTheme.accent,
-                          decoration: TextDecoration.underline,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        code: TextStyle(
-                          backgroundColor: isDark
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : Colors.black.withValues(alpha: 0.05),
-                          fontFamily: 'monospace',
-                          fontSize: 13,
-                          color: AppTheme.textMain,
-                        ),
-                        codeblockDecoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.03)
-                              : Colors.black.withValues(alpha: 0.02),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                      ),
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                    p: TextStyle(
+                      color: AppTheme.textMain,
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
+                    a: TextStyle(
+                      color: AppTheme.accent,
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    code: TextStyle(
+                      backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      color: AppTheme.textMain,
+                    ),
+                    codeblockDecoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                  ),
                 ),
                 if (!isUser) ...[
                   const SizedBox(height: 12),
@@ -522,30 +435,18 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
                         hintText: 'Message AI Mentor...',
-                        hintStyle: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 15,
-                        ),
+                        hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: isDark
-                            ? const Color(0x1AFFFFFF)
-                            : const Color(0x08000000),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
+                        fillColor: isDark ? const Color(0x1AFFFFFF) : const Color(0x08000000),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       ),
                       onSubmitted: (val) {
                         if (val.trim().isNotEmpty) {
-                          state.sendMessage(
-                            val.trim(),
-                            contextWindowTokens: _contextWindowTokens,
-                            clientContext: _buildClientContext(state),
-                          );
+                          state.sendMessage(val.trim());
                           _controller.clear();
                           _scrollToBottom();
                           _focusNode.requestFocus();
@@ -558,11 +459,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     onTap: () {
                       final text = _controller.text.trim();
                       if (text.isNotEmpty) {
-                        state.sendMessage(
-                          text,
-                          contextWindowTokens: _contextWindowTokens,
-                          clientContext: _buildClientContext(state),
-                        );
+                        state.sendMessage(text);
                         _controller.clear();
                         _scrollToBottom();
                         _focusNode.requestFocus();
@@ -574,11 +471,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         color: AppTheme.accent,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.arrow_upward_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
+                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
                     ),
                   ),
                 ],
@@ -588,203 +481,5 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildContextWindowPanel(AppState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tokenOptions = [4000, 8000, 32000, 128000];
-    final recentMessages = state.chatMessages.reversed
-        .take(6)
-        .toList()
-        .reversed;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0x26111118)
-                      : const Color(0x66FFFFFF),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.memory_rounded,
-                          color: AppTheme.accent,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Context Window',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textMain,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${state.chatMessages.length} msgs',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 11,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: tokenOptions.map((tokens) {
-                        final selected = tokens == _contextWindowTokens;
-                        return ChoiceChip(
-                          label: Text(_formatTokens(tokens)),
-                          selected: selected,
-                          selectedColor: AppTheme.accent.withValues(
-                            alpha: 0.22,
-                          ),
-                          backgroundColor: isDark
-                              ? const Color(0x12FFFFFF)
-                              : const Color(0x22FFFFFF),
-                          side: BorderSide(
-                            color: selected
-                                ? AppTheme.accent
-                                : AppTheme.border.withValues(alpha: 0.8),
-                          ),
-                          labelStyle: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: selected
-                                ? AppTheme.accent
-                                : AppTheme.textSecondary,
-                          ),
-                          onSelected: (_) {
-                            setState(() {
-                              _contextWindowTokens = tokens;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Sent with every message: selected token budget, synced profile context, and the last few chat turns.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        height: 1.4,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.key_rounded,
-                          size: 15,
-                          color: AppTheme.secondaryAccent,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Free-key tip: use Gemini Flash-Lite for the best limited free quota, Groq for very fast chat, or OpenRouter when you want many free model choices.',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              height: 1.4,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (recentMessages.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0x22000000)
-                              : const Color(0x33FFFFFF),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppTheme.border.withValues(alpha: 0.65),
-                          ),
-                        ),
-                        child: Text(
-                          recentMessages
-                              .map(
-                                (msg) =>
-                                    '${msg.role == MessageRole.user ? 'You' : 'AI'}: ${_oneLine(msg.content)}',
-                              )
-                              .join('\n'),
-                          maxLines: 6,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.firaCode(
-                            fontSize: 11,
-                            height: 1.35,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _buildClientContext(AppState state) {
-    final recentMessages = state.chatMessages.reversed
-        .take(8)
-        .toList()
-        .reversed
-        .map(
-          (msg) =>
-              '${msg.role == MessageRole.user ? 'User' : 'Assistant'}: ${msg.content}',
-        )
-        .join('\n');
-
-    return [
-      'Preferred context window: $_contextWindowTokens tokens',
-      if (state.githubUsername.isNotEmpty)
-        'GitHub user: ${state.githubUsername}',
-      if (state.roadmapTitle.isNotEmpty)
-        'Current roadmap: ${state.roadmapTitle}',
-      if (state.strengths.isNotEmpty)
-        'Strengths: ${state.strengths.take(5).join(', ')}',
-      if (state.gaps.isNotEmpty) 'Gaps: ${state.gaps.take(5).join(', ')}',
-      if (recentMessages.isNotEmpty) 'Recent chat:\n$recentMessages',
-    ].join('\n');
-  }
-
-  String _formatTokens(int tokens) {
-    if (tokens >= 1000) return '${tokens ~/ 1000}K tokens';
-    return '$tokens tokens';
-  }
-
-  String _oneLine(String value) {
-    final compact = value.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (compact.length <= 120) return compact;
-    return '${compact.substring(0, 117)}...';
   }
 }

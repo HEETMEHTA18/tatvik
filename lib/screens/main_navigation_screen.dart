@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
@@ -38,13 +39,12 @@ class WalkthroughStep {
   });
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends State<MainNavigationScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  late PageController _pageController;
-  double _pageOffset = 0.0;
   bool _isUpdatingUrl = false;
-  int? _targetPageIndex;
-  bool get _isChangingPageInternally => _targetPageIndex != null;
+  
+  late AnimationController _transitionController;
+  late Animation<double> _transitionAnimation;
 
   int _lastNotificationCount = 0;
   String? _lastNotificationId;
@@ -97,18 +97,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTabIndex;
-    _pageController = PageController(initialPage: _selectedIndex);
-    _pageOffset = _selectedIndex.toDouble();
-    _pageController.addListener(() {
-      if (_pageController.hasClients) {
-        setState(() {
-          _pageOffset = _pageController.page ?? 0.0;
-        });
-      }
-    });
-
     _appState = Provider.of<AppState>(context, listen: false);
+    
+    if (widget.initialTabIndex >= 0) {
+      _selectedIndex = widget.initialTabIndex;
+    } else {
+      _selectedIndex = _appState.currentTabIndex;
+    }
+
+    _transitionController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _transitionAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 40.0,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 60.0,
+      ),
+    ]).animate(_transitionController);
+
     _lastNotificationCount = _appState.notifications.length;
     if (_appState.notifications.isNotEmpty) {
       _lastNotificationId = _appState.notifications.first['id'] as String?;
@@ -121,18 +133,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Sync AppState with the initial tab from URL and check walkthrough status
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
-        _appState.setTabIndex(_selectedIndex);
+        _appState.setSelectedTab(_selectedIndex);
       }
       try {
         final prefs = await SharedPreferences.getInstance();
         final hasCompleted = prefs.getBool('has_completed_walkthrough') ?? false;
+        debugPrint('DEBUG WALKTHROUGH: hasCompleted = $hasCompleted, showWalkthrough = $_showWalkthrough');
         if (!hasCompleted && mounted) {
           setState(() {
             _showWalkthrough = true;
             _walkthroughStep = 0;
             _selectedIndex = 0;
           });
-          _pageController.jumpToPage(0);
+          _appState.setSelectedTab(0);
         }
       } catch (_) {}
     });
@@ -205,7 +218,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void dispose() {
     _appState.removeListener(_onAppStateChanged);
-    _pageController.dispose();
+    _transitionController.dispose();
     super.dispose();
   }
 
@@ -230,19 +243,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void didUpdateWidget(covariant MainNavigationScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialTabIndex != oldWidget.initialTabIndex) {
-      if (!_isChangingPageInternally) {
-        setState(() {
-          _selectedIndex = widget.initialTabIndex;
-        });
-        if (_pageController.hasClients && _pageController.page?.round() != _selectedIndex) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _pageController.hasClients) {
-              _pageController.jumpToPage(_selectedIndex);
-            }
-          });
-        }
-      }
+    if (widget.initialTabIndex >= 0 && widget.initialTabIndex != oldWidget.initialTabIndex) {
+      setState(() {
+        _selectedIndex = widget.initialTabIndex;
+      });
+      _appState.setSelectedTab(widget.initialTabIndex);
     }
   }
 
@@ -250,22 +255,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (_walkthroughStep < _walkthroughSteps.length - 1) {
       setState(() {
         _walkthroughStep++;
-        _selectedIndex = _walkthroughSteps[_walkthroughStep].tabIndex;
       });
-      _pageController.animateToPage(
-        _selectedIndex,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
+      _onTabSelected(_walkthroughSteps[_walkthroughStep].tabIndex);
     } else {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_completed_walkthrough', true);
       setState(() {
         _showWalkthrough = false;
-        _selectedIndex = 0;
       });
-      _pageController.jumpToPage(0);
+      _onTabSelected(0);
     }
+  }
+
+  void _onTabSelected(int index) {
+    if (_selectedIndex == index) return;
+    
+    // Apple HIG: light haptic response on tab selection
+    HapticFeedback.lightImpact();
+    
+    // Trigger transition overlay shutter animation
+    _transitionController.forward(from: 0.0);
+    
+    // Switch screens halfway through transition (at peak blur of transition)
+    Future.delayed(const Duration(milliseconds: 120), () {
+      if (mounted) {
+        setState(() {
+          _selectedIndex = index;
+        });
+        _appState.setSelectedTab(index);
+        _updateUrlSilently(index);
+      }
+    });
   }
 
   Widget _buildWalkthroughOverlay() {
@@ -362,9 +382,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             await prefs.setBool('has_completed_walkthrough', true);
                             setState(() {
                               _showWalkthrough = false;
-                              _selectedIndex = 0;
                             });
-                            _pageController.jumpToPage(0);
+                            _onTabSelected(0);
                           },
                           child: Text(
                             'SKIP TOUR',
@@ -409,106 +428,114 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double diff = (_pageOffset - _pageOffset.round()).abs();
-    final double transitionProgress = (diff * 2.0).clamp(0.0, 1.0);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return LiquidGlassBackground(
-      transitionProgress: transitionProgress,
+    return AnimatedBuilder(
+      animation: _transitionAnimation,
+      builder: (context, child) {
+        return LiquidGlassBackground(
+          transitionProgress: _transitionAnimation.value,
+          child: child!,
+        );
+      },
       child: Stack(
         children: [
           Scaffold(
             backgroundColor: Colors.transparent,
             extendBody: true,
-            body: PageView(
-          controller: _pageController,
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-          onPageChanged: (index) {
-            if (!_isChangingPageInternally) {
-              setState(() {
-                _selectedIndex = index;
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  Provider.of<AppState>(context, listen: false).setTabIndex(index);
-                  _updateUrlSilently(index);
-                }
-              });
-            }
-          },
-          children: _screens,
-        ),
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
+            ),
             bottomNavigationBar: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(left: 24, right: 24, bottom: 20),
-                child: GlassCard(
-                  borderRadius: 30,
-                  padding: EdgeInsets.zero,
-                  child: SizedBox(
-                    height: 70,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final totalWidth = constraints.maxWidth;
-                        final itemWidth = totalWidth / 5;
-                        return Stack(
-                          children: [
-                            // Sliding Glass Pill Indicator
-                            AnimatedPositioned(
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeOutBack,
-                              left: _selectedIndex * itemWidth + 8,
-                              top: 8,
-                              bottom: 8,
-                              width: itemWidth - 16,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(22),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 22,
-                                    sigmaY: 22,
-                                  ),
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(38),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.1),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(38),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: isDark ? 20.0 : 15.0,
+                        sigmaY: isDark ? 20.0 : 15.0,
+                      ),
+                      child: Container(
+                        height: 76,
+                        decoration: BoxDecoration(
+                          color: (isDark ? Colors.black : Colors.white).withValues(alpha: isDark ? 0.18 : 0.22),
+                          borderRadius: BorderRadius.circular(38),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.25),
+                            width: 1.5,
+                          ),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.white.withValues(alpha: isDark ? 0.12 : 0.25),
+                              Colors.white.withValues(alpha: isDark ? 0.03 : 0.08),
+                            ],
+                          ),
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final totalWidth = constraints.maxWidth;
+                            final itemWidth = totalWidth / 5;
+                            return Stack(
+                              children: [
+                                // Sliding Glass Pill Indicator
+                                AnimatedPositioned(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOutBack, // bouncy spring curve
+                                  left: _selectedIndex * itemWidth + 8,
+                                  top: 10,
+                                  bottom: 10,
+                                  width: itemWidth - 16,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          Colors.white.withValues(alpha: 0.22),
-                                          AppTheme.accent.withValues(alpha: 0.14),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(22),
+                                      color: AppTheme.accent.withValues(alpha: isDark ? 0.22 : 0.15),
+                                      borderRadius: BorderRadius.circular(28),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.35),
+                                        color: Colors.white.withValues(alpha: isDark ? 0.25 : 0.35),
                                         width: 1.2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppTheme.accent.withValues(alpha: 0.18),
-                                          blurRadius: 18,
-                                          offset: const Offset(0, 8),
+                                          color: AppTheme.accent.withValues(alpha: isDark ? 0.35 : 0.15),
+                                          blurRadius: 10,
+                                          spreadRadius: -2,
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            // The Items on Top
-                            Positioned.fill(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  _buildNavItem(0, 'HOME', Icons.grid_view_rounded, itemWidth),
-                                  _buildNavItem(1, 'EXPLORE', Icons.explore_outlined, itemWidth),
-                                  _buildNavItem(2, 'PROMPTS', Icons.psychology_outlined, itemWidth),
-                                  _buildNavItem(3, 'ROADMAP', Icons.route_outlined, itemWidth),
-                                  _buildNavItem(4, 'SETTINGS', Icons.settings_outlined, itemWidth),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                                // The Items on Top
+                                Positioned.fill(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildNavItem(0, 'HOME', Icons.grid_view_rounded, itemWidth),
+                                      _buildNavItem(1, 'EXPLORE', Icons.explore_outlined, itemWidth),
+                                      _buildNavItem(2, 'PROMPTS', Icons.psychology_outlined, itemWidth),
+                                      _buildNavItem(3, 'ROADMAP', Icons.route_outlined, itemWidth),
+                                      _buildNavItem(4, 'SETTINGS', Icons.settings_outlined, itemWidth),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -522,46 +549,47 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildNavItem(int index, String label, IconData icon, double width) {
-    final isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (_selectedIndex == index) return;
-        _targetPageIndex = index;
-        setState(() {
-          _selectedIndex = index;
-        });
-        Provider.of<AppState>(context, listen: false).setTabIndex(index);
-        _pageController.jumpToPage(index);
-        _targetPageIndex = null;
-        _updateUrlSilently(index);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: width,
-        height: 70,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
+  final isSelected = _selectedIndex == index;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  return GestureDetector(
+    onTap: () => _onTabSelected(index),
+    behavior: HitTestBehavior.opaque,
+    child: SizedBox(
+      width: width,
+      height: 76,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedScale(
+            scale: isSelected ? 1.15 : 0.95,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutBack,
+            child: Icon(
               icon,
-              color: isSelected ? AppTheme.accent : AppTheme.textSecondary,
+              color: isSelected
+                  ? (isDark ? Colors.white : AppTheme.accent)
+                  : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
               size: 24,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'JetBrains Mono',
-                fontSize: 9,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppTheme.accent : AppTheme.textSecondary,
-              ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'JetBrains Mono',
+              fontSize: 9,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected
+                  ? (isDark ? Colors.white : AppTheme.accent)
+                  : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _SimulatedPushNotificationBanner extends StatefulWidget {
@@ -696,3 +724,4 @@ class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotifica
     );
   }
 }
+

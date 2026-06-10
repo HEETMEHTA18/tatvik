@@ -18,10 +18,7 @@ class PromptHubScreen extends StatefulWidget {
 class _PromptHubScreenState extends State<PromptHubScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _playgroundController = TextEditingController();
-  final TextEditingController _loopIdeaController = TextEditingController();
   String _selectedWorkflow = 'All';
-  String _loopMode = 'Build';
-  List<String> _generatedLoopPrompts = [];
 
   @override
   void initState() {
@@ -41,126 +38,107 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
 
     // Filter prompts locally for responsiveness
     final filteredHistory = state.promptHistory.where((p) {
-      final matchesSearch =
-          p.originalPrompt.toLowerCase().contains(
-            _searchController.text.toLowerCase(),
-          ) ||
-          p.refinedPrompt.toLowerCase().contains(
-            _searchController.text.toLowerCase(),
-          ) ||
-          p.technologies.any(
-            (t) =>
-                t.toLowerCase().contains(_searchController.text.toLowerCase()),
-          );
-      final matchesWorkflow =
-          _selectedWorkflow == 'All' || p.workflow == _selectedWorkflow;
+      final matchesSearch = p.originalPrompt.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+          p.refinedPrompt.toLowerCase().contains(_searchController.text.toLowerCase()) ||
+          p.technologies.any((t) => t.toLowerCase().contains(_searchController.text.toLowerCase()));
+      final matchesWorkflow = _selectedWorkflow == 'All' || p.workflow == _selectedWorkflow;
       return matchesSearch && matchesWorkflow;
     }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text(
-          'PROMPT INTELLIGENCE',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(
+            'PROMPT INTELLIGENCE',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, letterSpacing: 1.2),
           ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_sync_rounded),
-            tooltip: 'Sync GitHub Prompts',
-            onPressed: () async {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Scanning GitHub repositories for .autodevs/prompts.md...',
-                  ),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              final message = await state.syncGithubPrompts();
-              if (context.mounted) {
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.cloud_sync_rounded),
+              tooltip: 'Sync GitHub Prompts',
+              onPressed: () async {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    backgroundColor: message.contains('failed')
-                        ? AppTheme.destructive
-                        : AppTheme.success,
+                  const SnackBar(
+                    content: Text('Scanning GitHub repositories for .autodevs/prompts.md...'),
+                    duration: Duration(seconds: 2),
                   ),
                 );
-              }
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              state.fetchPromptHistory(query: _searchController.text);
-              state.fetchPromptAnalytics();
-              state.fetchPromptRecommendations();
-            },
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
-        children: [
-          // CLI banner indicator
-          _buildCliStatusBanner(isDark),
-          const SizedBox(height: 20),
-
-          _buildPromptLoopBuilder(isDark),
-          const SizedBox(height: 25),
-
-          // Metrics Summary Section
-          _buildMetricsDashboard(state, isDark),
-          const SizedBox(height: 25),
-
-          // Real-time Playground section
-          _buildPlayground(state, isDark),
-          const SizedBox(height: 25),
-
-          // Skill Gaps and Recommendations Section
-          _buildRecommendationsSection(state, isDark),
-          const SizedBox(height: 25),
-
-          // Search and Filters
-          Text(
-            'Prompt Library',
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textMain,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildSearchAndFilters(state, isDark),
-          const SizedBox(height: 15),
-
-          // Prompt History List
-          if (state.isLoadingPromptHistory)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 40.0),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (filteredHistory.isEmpty)
-            _buildEmptyHistory(isDark)
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredHistory.length,
-              itemBuilder: (context, index) {
-                final prompt = filteredHistory[index];
-                return _buildPromptCard(prompt, isDark);
+                final message = await state.syncGithubPrompts();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: message.contains('failed') ? AppTheme.destructive : AppTheme.success,
+                    ),
+                  );
+                }
               },
             ),
-        ],
-      ),
-    );
+            IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () {
+                state.fetchPromptHistory(query: _searchController.text);
+                state.fetchPromptAnalytics();
+                state.fetchPromptRecommendations();
+              },
+            ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+          children: [
+            // CLI banner indicator
+            _buildCliStatusBanner(isDark),
+            const SizedBox(height: 20),
+
+            // Metrics Summary Section
+            _buildMetricsDashboard(state, isDark),
+            const SizedBox(height: 25),
+
+            // Real-time Playground section
+            _buildPlayground(state, isDark),
+            const SizedBox(height: 25),
+
+            // Skill Gaps and Recommendations Section
+            _buildRecommendationsSection(state, isDark),
+            const SizedBox(height: 25),
+
+            // Search and Filters
+            Text(
+              'Prompt Library',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMain,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSearchAndFilters(state, isDark),
+            const SizedBox(height: 15),
+
+            // Prompt History List
+            if (state.isLoadingPromptHistory)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (filteredHistory.isEmpty)
+              _buildEmptyHistory(isDark)
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredHistory.length,
+                itemBuilder: (context, index) {
+                  final prompt = filteredHistory[index];
+                  return _buildPromptCard(prompt, isDark);
+                },
+              ),
+          ],
+        ),
+      );
   }
 
   Widget _buildCliStatusBanner(bool isDark) {
@@ -180,11 +158,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                   color: AppTheme.accent.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.terminal_rounded,
-                  color: AppTheme.accent,
-                  size: 22,
-                ),
+                child: Icon(Icons.terminal_rounded, color: AppTheme.accent, size: 22),
               ),
               const SizedBox(width: 15),
               Expanded(
@@ -202,11 +176,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: AppTheme.accent,
-                          size: 16,
-                        ),
+                        Icon(Icons.info_outline_rounded, color: AppTheme.accent, size: 16),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -227,252 +197,6 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
     );
   }
 
-  Widget _buildPromptLoopBuilder(bool isDark) {
-    return GlassCard(
-      borderRadius: 24,
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.accent.withValues(alpha: 0.25),
-                        AppTheme.secondaryAccent.withValues(alpha: 0.14),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.28),
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.water_drop_rounded,
-                    color: AppTheme.accent,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Prompt Loop Builder',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textMain,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Drop a rough idea, dictate it with voice, or paste a tiny prompt. DevMentor turns it into a Ralph-style agent loop you can run repeatedly.',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          height: 1.45,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ['Build', 'Debug', 'Research', 'Ship'].map((mode) {
-                final selected = _loopMode == mode;
-                return ChoiceChip(
-                  label: Text(mode),
-                  selected: selected,
-                  selectedColor: AppTheme.accent.withValues(alpha: 0.22),
-                  backgroundColor: isDark
-                      ? const Color(0x12FFFFFF)
-                      : const Color(0x24FFFFFF),
-                  side: BorderSide(
-                    color: selected
-                        ? AppTheme.accent
-                        : AppTheme.border.withValues(alpha: 0.7),
-                  ),
-                  labelStyle: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? AppTheme.accent : AppTheme.textSecondary,
-                  ),
-                  onSelected: (_) => setState(() => _loopMode = mode),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _loopIdeaController,
-              minLines: 3,
-              maxLines: 5,
-              style: TextStyle(color: AppTheme.textMain, fontSize: 14),
-              decoration: InputDecoration(
-                hintText:
-                    'Example: Build an agent loop that scans my Flutter app, fixes UX issues, writes tests, and prepares release notes.',
-                hintStyle: TextStyle(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.68),
-                  fontSize: 13,
-                ),
-                filled: true,
-                fillColor: isDark
-                    ? const Color(0x14FFFFFF)
-                    : const Color(0x28FFFFFF),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: AppTheme.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: AppTheme.border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: AppTheme.accent),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _generatePromptLoop,
-                    icon: const Icon(Icons.all_inclusive_rounded, size: 18),
-                    label: Text(
-                      'GENERATE LOOP',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                IconButton.filledTonal(
-                  onPressed: _startLoopVoiceCapture,
-                  tooltip: 'Dictate idea',
-                  icon: const Icon(Icons.mic_rounded),
-                ),
-              ],
-            ),
-            if (_generatedLoopPrompts.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Text(
-                    'Generated agent loop',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textMain,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Copy loop',
-                    icon: Icon(Icons.copy_rounded, color: AppTheme.accent),
-                    onPressed: () {
-                      Clipboard.setData(
-                        ClipboardData(text: _generatedLoopPrompts.join('\n\n')),
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Prompt loop copied')),
-                      );
-                    },
-                  ),
-                ],
-              ),
-              ..._generatedLoopPrompts.asMap().entries.map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0x12FFFFFF)
-                          : const Color(0x30FFFFFF),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppTheme.border.withValues(alpha: 0.7),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${entry.key + 1}.',
-                          style: GoogleFonts.jetBrainsMono(
-                            color: AppTheme.accent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            entry.value,
-                            style: GoogleFonts.inter(
-                              fontSize: 12.5,
-                              height: 1.45,
-                              color: AppTheme.textMain,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _generatePromptLoop() {
-    final idea = _loopIdeaController.text.trim();
-    if (idea.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add a rough idea first')),
-      );
-      return;
-    }
-
-    final mode = _loopMode.toLowerCase();
-    setState(() {
-      _generatedLoopPrompts = [
-        'Planner agent: Convert this $mode goal into measurable acceptance criteria, risks, dependencies, and a 5-step execution plan. Goal: $idea',
-        'Context agent: Scan the relevant files, docs, routes, APIs, and tests. Return only facts, file paths, and unknowns that block implementation.',
-        'Builder agent: Implement the smallest production-ready change that satisfies the plan. Preserve existing behavior, style, accessibility, and platform constraints.',
-        'Reviewer agent: Inspect the diff for regressions, missing edge cases, security issues, App Store readiness, and unclear user experience. Return blocking findings first.',
-        'Verifier agent: Run the most relevant checks, summarize pass/fail output, and produce release notes plus the next loop input if more work remains.',
-      ];
-    });
-  }
-
-  void _startLoopVoiceCapture() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Voice capture is available through browser dictation where supported. Tap the field and use your keyboard microphone.',
-        ),
-      ),
-    );
-  }
-
   Widget _buildMetricsDashboard(AppState state, bool isDark) {
     return Row(
       children: [
@@ -481,10 +205,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           child: GlassCard(
             borderRadius: 20,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 20.0,
-                horizontal: 16.0,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               child: Column(
                 children: [
                   Text(
@@ -507,11 +228,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'CLI Synced',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppTheme.success,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -524,10 +241,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           child: GlassCard(
             borderRadius: 20,
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 20.0,
-                horizontal: 16.0,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               child: Column(
                 children: [
                   Text(
@@ -550,11 +264,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Grade: ${_getScoreGrade(state.averagePromptScore.toInt())}',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -575,11 +285,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.auto_awesome,
-                  color: AppTheme.secondaryAccent,
-                  size: 20,
-                ),
+                Icon(Icons.auto_awesome, color: AppTheme.secondaryAccent, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Prompt Refiner & Scorer',
@@ -597,21 +303,13 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
               maxLines: 3,
               style: TextStyle(color: AppTheme.textMain, fontSize: 14),
               decoration: InputDecoration(
-                hintText:
-                    'Type a basic prompt to refine... (e.g., "how to write a json parser")',
-                hintStyle: TextStyle(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                  fontSize: 13,
-                ),
+                hintText: 'Type a basic prompt to refine... (e.g., "how to write a json parser")',
+                hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.7), fontSize: 13),
                 filled: true,
-                fillColor: isDark
-                    ? const Color(0x10FFFFFF)
-                    : const Color(0x08000000),
+                fillColor: isDark ? const Color(0x10FFFFFF) : const Color(0x08000000),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                    color: AppTheme.border.withValues(alpha: 0.5),
-                  ),
+                  borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.5)),
                 ),
                 contentPadding: const EdgeInsets.all(12),
               ),
@@ -640,11 +338,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           _playgroundController.clear();
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Prompt analyzed and saved to history!',
-                                ),
-                              ),
+                              const SnackBar(content: Text('Prompt analyzed and saved to history!')),
                             );
                           }
                         }
@@ -653,10 +347,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
                     : Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -665,9 +356,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'Score & Upgrade',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -698,7 +387,10 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
         const SizedBox(height: 4),
         Text(
           'Personalized roadmaps derived from your prompt weaknesses.',
-          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: AppTheme.textSecondary,
+          ),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -752,31 +444,18 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         ),
                         const SizedBox(height: 8),
                         Row(
-                          children: tags
-                              .map(
-                                (tag) => Container(
-                                  margin: const EdgeInsets.only(right: 6),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.accent.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    tag,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppTheme.accent,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                          children: tags.map((tag) => Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              tag,
+                              style: TextStyle(fontSize: 10, color: AppTheme.accent, fontWeight: FontWeight.bold),
+                            ),
+                          )).toList(),
                         ),
                       ],
                     ),
@@ -791,16 +470,8 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
   }
 
   Widget _buildSearchAndFilters(AppState state, bool isDark) {
-    final workflows = [
-      'All',
-      'Feature Building',
-      'Debugging',
-      'Refactoring',
-      'Testing',
-      'DevOps',
-      'Architecture',
-    ];
-
+    final workflows = ['All', 'Feature Building', 'Debugging', 'Refactoring', 'Testing', 'DevOps', 'Architecture'];
+    
     return Column(
       children: [
         // Search TextField
@@ -810,14 +481,10 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           style: TextStyle(color: AppTheme.textMain),
           decoration: InputDecoration(
             hintText: 'Search prompt text, tech, or project...',
-            hintStyle: TextStyle(
-              color: AppTheme.textSecondary.withValues(alpha: 0.7),
-            ),
+            hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.7)),
             prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
             filled: true,
-            fillColor: isDark
-                ? const Color(0x10FFFFFF)
-                : const Color(0x08000000),
+            fillColor: isDark ? const Color(0x10FFFFFF) : const Color(0x08000000),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,
@@ -839,21 +506,14 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                 onTap: () => setState(() => _selectedWorkflow = w),
                 child: Container(
                   margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.accent
-                        : (isDark
-                              ? const Color(0x15FFFFFF)
-                              : const Color(0x0F000000)),
+                    color: isSelected 
+                        ? AppTheme.accent 
+                        : (isDark ? const Color(0x15FFFFFF) : const Color(0x0F000000)),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(
-                      color: isSelected
-                          ? Colors.transparent
-                          : AppTheme.border.withValues(alpha: 0.3),
+                      color: isSelected ? Colors.transparent : AppTheme.border.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Center(
@@ -861,12 +521,8 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                       w,
                       style: GoogleFonts.outfit(
                         fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        color: isSelected
-                            ? Colors.white
-                            : AppTheme.textSecondary,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
                       ),
                     ),
                   ),
@@ -886,11 +542,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
         padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 20.0),
         child: Column(
           children: [
-            Icon(
-              Icons.search_off_rounded,
-              color: AppTheme.textSecondary,
-              size: 48,
-            ),
+            Icon(Icons.search_off_rounded, color: AppTheme.textSecondary, size: 48),
             const SizedBox(height: 16),
             Text(
               'No Prompts Found',
@@ -932,10 +584,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                   children: [
                     // Workflow badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
@@ -952,23 +601,14 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                     ),
                     // Score Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getScoreColor(
-                          prompt.score,
-                        ).withValues(alpha: 0.12),
+                        color: _getScoreColor(prompt.score).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.star_rounded,
-                            color: _getScoreColor(prompt.score),
-                            size: 14,
-                          ),
+                          Icon(Icons.star_rounded, color: _getScoreColor(prompt.score), size: 14),
                           const SizedBox(width: 4),
                           Text(
                             '${prompt.score}',
@@ -1002,51 +642,29 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                     // Tech Stack tags
                     Expanded(
                       child: Row(
-                        children: prompt.technologies
-                            .take(2)
-                            .map(
-                              (tech) => Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: AppTheme.border.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                  ),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  tech,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.textSecondary,
-                                  ),
-                                ),
-                              ),
-                            )
-                            .toList(),
+                        children: prompt.technologies.take(2).map((tech) => Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            tech,
+                            style: TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                          ),
+                        )).toList(),
                       ),
                     ),
                     // Project info
                     if (prompt.projectName != null)
                       Row(
                         children: [
-                          Icon(
-                            Icons.folder_open,
-                            size: 12,
-                            color: AppTheme.textSecondary,
-                          ),
+                          Icon(Icons.folder_open, size: 12, color: AppTheme.textSecondary),
                           const SizedBox(width: 4),
                           Text(
                             prompt.projectName!,
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
                           ),
                         ],
                       ),
@@ -1076,9 +694,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
             child: Container(
               height: MediaQuery.of(context).size.height * 0.82,
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xE0121214)
-                    : const Color(0xE0F8F9FA),
+                color: isDark ? const Color(0xE0121214) : const Color(0xE0F8F9FA),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -1120,9 +736,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              prompt.projectName != null
-                                  ? 'Project: ${prompt.projectName}'
-                                  : 'Playground Prompt',
+                              prompt.projectName != null ? 'Project: ${prompt.projectName}' : 'Playground Prompt',
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -1137,13 +751,8 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           height: 50,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                              color: _getScoreColor(prompt.score),
-                              width: 2,
-                            ),
-                            color: _getScoreColor(
-                              prompt.score,
-                            ).withValues(alpha: 0.1),
+                            border: Border.all(color: _getScoreColor(prompt.score), width: 2),
+                            color: _getScoreColor(prompt.score).withValues(alpha: 0.1),
                           ),
                           child: Center(
                             child: Text(
@@ -1167,30 +776,19 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         // Original Prompt Card
                         Text(
                           'ORIGINAL PROMPT',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0x0FFFFFFF)
-                                : const Color(0x09000000),
+                            color: isDark ? const Color(0x0FFFFFFF) : const Color(0x09000000),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppTheme.border.withValues(alpha: 0.3),
-                            ),
+                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
                           ),
                           child: Text(
                             prompt.originalPrompt,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppTheme.textMain,
-                            ),
+                            style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMain),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -1201,25 +799,15 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           children: [
                             Text(
                               'UPGRADED PROMPT (AI REFINED)',
-                              style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.success,
-                              ),
+                              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.success),
                             ),
                             IconButton(
                               icon: const Icon(Icons.copy_rounded, size: 18),
                               color: AppTheme.success,
                               onPressed: () {
-                                Clipboard.setData(
-                                  ClipboardData(text: prompt.refinedPrompt),
-                                );
+                                Clipboard.setData(ClipboardData(text: prompt.refinedPrompt));
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Upgraded prompt copied to clipboard!',
-                                    ),
-                                  ),
+                                  const SnackBar(content: Text('Upgraded prompt copied to clipboard!')),
                                 );
                               },
                             ),
@@ -1231,20 +819,14 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           decoration: BoxDecoration(
                             color: AppTheme.success.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: AppTheme.success.withValues(alpha: 0.3),
-                            ),
+                            border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 prompt.refinedPrompt,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: AppTheme.textMain,
-                                  height: 1.4,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textMain, height: 1.4),
                               ),
                             ],
                           ),
@@ -1254,45 +836,24 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         // Tech tags
                         Text(
                           'EXTRACTED TECHNOLOGIES',
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: prompt.technologies
-                              .map(
-                                (tech) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.accent.withValues(
-                                      alpha: 0.08,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: AppTheme.accent.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    tech,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppTheme.accent,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                          children: prompt.technologies.map((tech) => Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+                            ),
+                            child: Text(
+                              tech,
+                              style: TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.bold),
+                            ),
+                          )).toList(),
                         ),
                         const SizedBox(height: 40),
                       ],
@@ -1307,11 +868,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
     );
   }
 
-  void _showCliInstructionsBottomSheet(
-    BuildContext context,
-    AppState state,
-    bool isDark,
-  ) {
+  void _showCliInstructionsBottomSheet(BuildContext context, AppState state, bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1327,9 +884,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
             child: Container(
               height: MediaQuery.of(context).size.height * 0.85,
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xE0121214)
-                    : const Color(0xE0F8F9FA),
+                color: isDark ? const Color(0xE0121214) : const Color(0xE0F8F9FA),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(30),
                   topRight: Radius.circular(30),
@@ -1381,17 +936,14 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         _buildInstructionStep(
                           stepNumber: '1',
                           title: 'Setup GitHub .autodevs/prompts.md',
-                          description:
-                              'Track coding prompts in your repositories. The app will fetch and analyze them.',
+                          description: 'Track coding prompts in your repositories. The app will fetch and analyze them.',
                           isDark: isDark,
                         ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.black.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.5),
+                            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: AppTheme.border),
                           ),
@@ -1400,54 +952,37 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                             children: [
                               Text(
                                 '1. Create a folder named `.autodevs` in the root of your repository.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMain,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 '2. Inside it, create a file named `prompts.md`.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMain,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 '3. List your prompts in markdown format:',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMain,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
                               ),
                               const SizedBox(height: 10),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF1E1E1E)
-                                      : const Color(0xFFF1F2F4),
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   '- [project-name] implement email service\n'
                                   '- [refactor] optimize database queries\n'
                                   '- how to center widgets in Flutter',
-                                  style: GoogleFonts.firaCode(
-                                    fontSize: 12,
-                                    color: AppTheme.textMain,
-                                  ),
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 '4. In the DevMentor app, enter your GitHub handle in settings, then tap the Sync GitHub Prompts cloud button at the top of the Prompts tab.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textSecondary,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
                               ),
                             ],
                           ),
@@ -1458,17 +993,14 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         _buildInstructionStep(
                           stepNumber: '2',
                           title: 'Real-time Terminal Integration',
-                          description:
-                              'Use the AutoDevs CLI simulator to capture prompts directly from your shell/IDE.',
+                          description: 'Use the AutoDevs CLI simulator to capture prompts directly from your shell/IDE.',
                           isDark: isDark,
                         ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.black.withValues(alpha: 0.3)
-                                : Colors.white.withValues(alpha: 0.5),
+                            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: AppTheme.border),
                           ),
@@ -1477,34 +1009,21 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                             children: [
                               Text(
                                 'Your Authentication Token:',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.textSecondary,
-                                ),
+                                style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
                               ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Expanded(
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 10,
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: isDark
-                                            ? const Color(0xFF1E1E1E)
-                                            : const Color(0xFFF1F2F4),
+                                        color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        state.token ??
-                                            'Login to view your auth token',
-                                        style: GoogleFonts.firaCode(
-                                          fontSize: 11,
-                                          color: AppTheme.textMain,
-                                        ),
+                                        state.token ?? 'Login to view your auth token',
+                                        style: GoogleFonts.firaCode(fontSize: 11, color: AppTheme.textMain),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -1512,24 +1031,13 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   IconButton(
-                                    icon: Icon(
-                                      Icons.copy_rounded,
-                                      color: AppTheme.accent,
-                                    ),
+                                    icon: Icon(Icons.copy_rounded, color: AppTheme.accent),
                                     onPressed: state.token == null
                                         ? null
                                         : () {
-                                            Clipboard.setData(
-                                              ClipboardData(text: state.token!),
-                                            );
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  'Auth token copied to clipboard!',
-                                                ),
-                                              ),
+                                            Clipboard.setData(ClipboardData(text: state.token!));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Auth token copied to clipboard!')),
                                             );
                                           },
                                   ),
@@ -1538,63 +1046,43 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 'Set environment variable in your terminal:',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMain,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
                               ),
                               const SizedBox(height: 8),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF1E1E1E)
-                                      : const Color(0xFFF1F2F4),
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'export DEVMENTOR_TOKEN="your_copied_token"',
-                                  style: GoogleFonts.firaCode(
-                                    fontSize: 12,
-                                    color: AppTheme.textMain,
-                                  ),
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
                                 ),
                               ),
                               const SizedBox(height: 16),
                               Text(
                                 'Run the CLI script:',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: AppTheme.textMain,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textMain),
                               ),
                               const SizedBox(height: 8),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF1E1E1E)
-                                      : const Color(0xFFF1F2F4),
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F2F4),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
                                   'python autodevs_cli_simulator.py "how to create centered container" devmentor-app',
-                                  style: GoogleFonts.firaCode(
-                                    fontSize: 12,
-                                    color: AppTheme.textMain,
-                                  ),
+                                  style: GoogleFonts.firaCode(fontSize: 12, color: AppTheme.textMain),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Text(
                                 'Prompts sent through the CLI are parsed, refined, scored by AI, and instantly updated in the Prompt Library.',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: AppTheme.textSecondary,
-                                  fontStyle: FontStyle.italic,
-                                ),
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, fontStyle: FontStyle.italic),
                               ),
                             ],
                           ),
@@ -1630,11 +1118,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
           alignment: Alignment.center,
           child: Text(
             stepNumber,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
         const SizedBox(width: 12),
@@ -1644,19 +1128,12 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
             children: [
               Text(
                 title,
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textMain,
-                ),
+                style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textMain),
               ),
               const SizedBox(height: 2),
               Text(
                 description,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
+                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
               ),
             ],
           ),

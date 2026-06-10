@@ -8,6 +8,65 @@ import 'package:devmentor/routes/route_paths.dart';
 import 'package:devmentor/screens/main_navigation_screen.dart';
 
 void main() {
+  testWidgets('Navigation tab switching test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({'has_completed_walkthrough': true});
+    final appState = AppState();
+    
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) {
+            final tabName = state.uri.queryParameters['tab'];
+            final tabIndex = RoutePaths.tabIndexFromName(tabName);
+            return MainNavigationScreen(
+              key: const ValueKey('main_nav'),
+              initialTabIndex: tabIndex,
+            );
+          },
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<AppState>.value(
+        value: appState,
+        child: MaterialApp.router(
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    // Initial load: Wait 1 second for dependencies and initial frame
+    await tester.pump(const Duration(seconds: 1));
+    
+    // Expect Home screen to render (Dashboard)
+    expect(find.text('Dashboard'), findsOneWidget);
+    
+    // Tap EXPLORE
+    final exploreTab = find.text('EXPLORE');
+    expect(exploreTab, findsOneWidget);
+    await tester.tap(exploreTab);
+    
+    // Wait for 120ms delayed tab switch and transition to finish
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    
+    // Tap PROMPTS
+    final promptsTab = find.text('PROMPTS');
+    expect(promptsTab, findsOneWidget);
+    await tester.tap(promptsTab);
+    
+    // Wait for 120ms delayed tab switch and transition to finish
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+
+    // Verify that the prompts screen is now showing
+    expect(find.text('PROMPT INTELLIGENCE'), findsOneWidget);
+    expect(find.text('Dashboard'), findsNothing);
+  });
+
   testWidgets('Navigation tab query renders prompts tab', (
     WidgetTester tester,
   ) async {
@@ -40,10 +99,10 @@ void main() {
 
     await tester.pump(const Duration(seconds: 1));
     debugPrint(
-      'PageView size in test: ${tester.getSize(find.byType(PageView))}',
+      'IndexedStack size in test: ${tester.getSize(find.byType(IndexedStack))}',
     );
 
-    expect(find.byType(PageView), findsOneWidget);
+    expect(find.byType(IndexedStack), findsOneWidget);
     final promptsTab = find.text('PROMPTS');
     expect(promptsTab, findsOneWidget);
 

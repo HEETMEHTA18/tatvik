@@ -9,6 +9,7 @@ import '../models/mentor_message.dart';
 import '../core/config/app_config.dart';
 import '../models/prompt_item.dart';
 
+
 class AppState extends ChangeNotifier {
   AppState() {
     initPreferences();
@@ -16,13 +17,14 @@ class AppState extends ChangeNotifier {
 
   bool showLinkGitHubPrompt = false;
   bool isPreferencesLoaded = false;
+  final ValueNotifier<int> authStateNotifier = ValueNotifier<int>(0);
 
   Future<void> initPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final storedToken = prefs.getString('auth_token');
       final storedUsername = prefs.getString('github_username');
-
+      
       pushNotifications = prefs.getBool('pref_notifications') ?? true;
       aiInsights = prefs.getBool('pref_ai') ?? true;
       weeklyReport = prefs.getBool('pref_report') ?? false;
@@ -50,6 +52,7 @@ class AppState extends ChangeNotifier {
     } finally {
       isPreferencesLoaded = true;
       notifyListeners();
+      authStateNotifier.value++;
     }
   }
 
@@ -83,17 +86,10 @@ class AppState extends ChangeNotifier {
 
   List<Map<String, dynamic>> activityData = List.generate(70, (index) {
     final date = DateTime.now().subtract(Duration(days: 69 - index));
-    final dateStr =
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     return {
       'date': dateStr,
-      'count': (index % 7 == 0)
-          ? 1
-          : (index % 3 == 0)
-          ? 2
-          : (index % 2 == 0)
-          ? 4
-          : 8,
+      'count': (index % 7 == 0) ? 1 : (index % 3 == 0) ? 2 : (index % 2 == 0) ? 4 : 8
     };
   });
   String selectedActivityYear = 'Last 14 Weeks';
@@ -163,6 +159,7 @@ class AppState extends ChangeNotifier {
   String preferredStack = "Flutter, FastAPI, PostgreSQL";
   bool isSavingMemory = false;
 
+
   // Notifications List & Methods
   List<Map<String, dynamic>> notifications = [
     {
@@ -172,11 +169,10 @@ class AppState extends ChangeNotifier {
       'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
       'isRead': false,
       'type': 'welcome',
-    },
+    }
   ];
 
-  int get unreadNotificationsCount =>
-      notifications.where((n) => n['isRead'] == false).length;
+  int get unreadNotificationsCount => notifications.where((n) => n['isRead'] == false).length;
 
   void markAllNotificationsAsRead() {
     for (var n in notifications) {
@@ -199,39 +195,31 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+
   // User Data
   String username = 'Alex Johnson';
   double developerScore = 8.7;
   int stars = 234;
   int commits = 89;
   int repos = 12;
-  List<String> strengths = [
-    'Strong coding consistency',
-    'Well-documented repositories',
-  ];
-  List<String> gaps = [
-    'Backend experience is holding back your score',
-    'System design patterns',
-  ];
+  List<String> strengths = ['Strong coding consistency', 'Well-documented repositories'];
+  List<String> gaps = ['Backend experience is holding back your score', 'System design patterns'];
 
   // Repositories
   List<Repository> allRepositories = [
     Repository(
       name: 'express-api-starter',
       owner: 'node-app',
-      description:
-          'A minimal and flexible Node.js REST API starter with Express and TypeScript.',
+      description: 'A minimal and flexible Node.js REST API starter with Express and TypeScript.',
       difficulty: 'Beginner',
       impactScore: 92,
       tags: ['TypeScript', 'Express', 'Node.js'],
-      whyRecommended:
-          'Matched to your skill gaps. Curated to build backend experience.',
+      whyRecommended: 'Matched to your skill gaps. Curated to build backend experience.',
     ),
     Repository(
       name: 'microservices-demo',
       owner: 'google-cloud',
-      description:
-          'Sample cloud-native application with 10 microservices showcasing best practices.',
+      description: 'Sample cloud-native application with 10 microservices showcasing best practices.',
       difficulty: 'Advanced',
       impactScore: 88,
       tags: ['Go', 'Kubernetes', 'Docker', 'GRPC'],
@@ -240,8 +228,7 @@ class AppState extends ChangeNotifier {
     Repository(
       name: 'nestjs-realworld',
       owner: 'nestjs',
-      description:
-          'Exemplary Fullstack Medium.com clone powered by NestJS & React.',
+      description: 'Exemplary Fullstack Medium.com clone powered by NestJS & React.',
       difficulty: 'Intermediate',
       impactScore: 98,
       tags: ['TypeScript', 'NestJS', 'Backend', 'Fullstack'],
@@ -309,7 +296,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/roadmap/current'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -382,69 +371,47 @@ class AppState extends ChangeNotifier {
   List<Map<String, dynamic>> chatSessions = [];
   String? _currentChatSessionId;
 
-  Future<void> sendMessage(
-    String text, {
-    int? contextWindowTokens,
-    String? clientContext,
-  }) async {
+  Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    chatMessages.add(
-      MentorMessage(
-        content: text,
-        role: MessageRole.user,
-        timestamp: DateTime.now(),
-      ),
-    );
+    chatMessages.add(MentorMessage(
+      content: text,
+      role: MessageRole.user,
+      timestamp: DateTime.now(),
+    ));
     notifyListeners();
 
     try {
-      final requestBody = <String, dynamic>{'message': text};
-      if (contextWindowTokens != null) {
-        requestBody['context_window_tokens'] = contextWindowTokens;
-      }
-      if (clientContext != null && clientContext.trim().isNotEmpty) {
-        requestBody['client_context'] = clientContext.trim();
-      }
-
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/mentor/chat'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(requestBody),
+        body: jsonEncode({'message': text}),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final reply =
-            data['assistant_message'] ??
-            'Sorry, I could not generate a response.';
-        chatMessages.add(
-          MentorMessage(
-            content: reply,
-            role: MessageRole.assistant,
-            timestamp: DateTime.now(),
-          ),
-        );
-      } else {
-        chatMessages.add(
-          MentorMessage(
-            content: 'Error: Failed to connect to AI Mentor service.',
-            role: MessageRole.assistant,
-            timestamp: DateTime.now(),
-          ),
-        );
-      }
-    } catch (e) {
-      chatMessages.add(
-        MentorMessage(
-          content: 'Error: $e',
+        final reply = data['assistant_message'] ?? 'Sorry, I could not generate a response.';
+        chatMessages.add(MentorMessage(
+          content: reply,
           role: MessageRole.assistant,
           timestamp: DateTime.now(),
-        ),
-      );
+        ));
+      } else {
+        chatMessages.add(MentorMessage(
+          content: 'Error: Failed to connect to AI Mentor service.',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ));
+      }
+    } catch (e) {
+      chatMessages.add(MentorMessage(
+        content: 'Error: $e',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ));
     }
     notifyListeners();
     await saveChatHistory();
@@ -456,8 +423,7 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
 
       // Ensure current session has an ID
-      _currentChatSessionId ??= DateTime.now().millisecondsSinceEpoch
-          .toString();
+      _currentChatSessionId ??= DateTime.now().millisecondsSinceEpoch.toString();
 
       // Derive a title from the first user message, or use a default
       String title = 'New Chat';
@@ -481,9 +447,7 @@ class AppState extends ChangeNotifier {
       };
 
       // Update or insert in chatSessions list
-      final idx = chatSessions.indexWhere(
-        (s) => s['id'] == _currentChatSessionId,
-      );
+      final idx = chatSessions.indexWhere((s) => s['id'] == _currentChatSessionId);
       if (idx >= 0) {
         chatSessions[idx] = session;
       } else {
@@ -517,9 +481,7 @@ class AppState extends ChangeNotifier {
           );
           if (session.isNotEmpty && session['messages'] != null) {
             final msgs = (session['messages'] as List<dynamic>)
-                .map(
-                  (m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)),
-                )
+                .map((m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)))
                 .toList();
             if (msgs.isNotEmpty) {
               chatMessages = msgs;
@@ -601,8 +563,7 @@ class AppState extends ChangeNotifier {
         _currentChatSessionId = null;
         chatMessages = [
           MentorMessage(
-            content:
-                'Hello! I am your DevMentor. How can I help you grow today?',
+            content: 'Hello! I am your DevMentor. How can I help you grow today?',
             role: MessageRole.assistant,
             timestamp: DateTime.now(),
           ),
@@ -642,8 +603,14 @@ class AppState extends ChangeNotifier {
   int get currentTabIndex => _currentTabIndex;
 
   void setTabIndex(int index) {
-    _currentTabIndex = index;
-    notifyListeners();
+    setSelectedTab(index);
+  }
+
+  void setSelectedTab(int index) {
+    if (_currentTabIndex != index) {
+      _currentTabIndex = index;
+      notifyListeners();
+    }
   }
 
   String _themeModeSetting = 'dark'; // 'dark' is default
@@ -651,8 +618,7 @@ class AppState extends ChangeNotifier {
 
   bool get isDarkTheme {
     if (_themeModeSetting == 'system') {
-      return ui.PlatformDispatcher.instance.platformBrightness !=
-          ui.Brightness.light;
+      return ui.PlatformDispatcher.instance.platformBrightness != ui.Brightness.light;
     }
     return _themeModeSetting == 'dark';
   }
@@ -693,7 +659,7 @@ class AppState extends ChangeNotifier {
     try {
       final userUri = Uri.parse('https://api.github.com/users/$ghUsername');
       final userResponse = await http.get(userUri);
-
+      
       if (userResponse.statusCode == 200) {
         final userData = jsonDecode(userResponse.body);
         username = userData['name'] ?? userData['login'] ?? 'Alex Johnson';
@@ -701,11 +667,9 @@ class AppState extends ChangeNotifier {
         avatarUrl = userData['avatar_url'];
       }
 
-      final reposUri = Uri.parse(
-        'https://api.github.com/users/$ghUsername/repos?per_page=100',
-      );
+      final reposUri = Uri.parse('https://api.github.com/users/$ghUsername/repos?per_page=100');
       final reposResponse = await http.get(reposUri);
-
+      
       if (reposResponse.statusCode == 200) {
         final List<dynamic> reposData = jsonDecode(reposResponse.body);
         int totalStars = 0;
@@ -719,24 +683,15 @@ class AppState extends ChangeNotifier {
             langCounts[lang] = (langCounts[lang] ?? 0) + 1;
           }
 
-          newRepos.add(
-            Repository(
-              name: r['name'] ?? '',
-              owner: r['owner']?['login'] ?? '',
-              description: r['description'] ?? 'No description provided.',
-              difficulty: (r['stargazers_count'] as num) > 50
-                  ? 'Advanced'
-                  : ((r['stargazers_count'] as num) > 5
-                        ? 'Intermediate'
-                        : 'Beginner'),
-              impactScore: ((r['stargazers_count'] as num) * 5 + 40)
-                  .clamp(40, 100)
-                  .toInt(),
-              tags: lang != null ? [lang] : ['Repo'],
-              whyRecommended:
-                  'Based on your GitHub activity and repository engagement.',
-            ),
-          );
+          newRepos.add(Repository(
+            name: r['name'] ?? '',
+            owner: r['owner']?['login'] ?? '',
+            description: r['description'] ?? 'No description provided.',
+            difficulty: (r['stargazers_count'] as num) > 50 ? 'Advanced' : ((r['stargazers_count'] as num) > 5 ? 'Intermediate' : 'Beginner'),
+            impactScore: ((r['stargazers_count'] as num) * 5 + 40).clamp(40, 100).toInt(),
+            tags: lang != null ? [lang] : ['Repo'],
+            whyRecommended: 'Based on your GitHub activity and repository engagement.',
+          ));
         }
 
         stars = totalStars;
@@ -747,12 +702,7 @@ class AppState extends ChangeNotifier {
         }
 
         // Calculate dynamic Developer Score
-        developerScore = double.parse(
-          ((totalStars * 0.15 + reposData.length * 0.4 + 5.0).clamp(
-            1.0,
-            10.0,
-          )).toStringAsFixed(1),
-        );
+        developerScore = double.parse(((totalStars * 0.15 + reposData.length * 0.4 + 5.0).clamp(1.0, 10.0)).toStringAsFixed(1));
 
         // Determine strengths and gaps dynamically
         strengths = [];
@@ -768,19 +718,10 @@ class AppState extends ChangeNotifier {
         bool hasFrontend = false;
         for (var lang in langCounts.keys) {
           final l = lang.toLowerCase();
-          if (l == 'typescript' ||
-              l == 'javascript' ||
-              l == 'html' ||
-              l == 'css' ||
-              l == 'dart') {
+          if (l == 'typescript' || l == 'javascript' || l == 'html' || l == 'css' || l == 'dart') {
             hasFrontend = true;
           }
-          if (l == 'go' ||
-              l == 'rust' ||
-              l == 'python' ||
-              l == 'java' ||
-              l == 'c#' ||
-              l == 'ruby') {
+          if (l == 'go' || l == 'rust' || l == 'python' || l == 'java' || l == 'c#' || l == 'ruby') {
             hasBackend = true;
           }
         }
@@ -857,7 +798,7 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
 
     await fetchGithubData(githubUsername);
-
+    
     if (token != null) {
       try {
         final response = await http.post(
@@ -866,13 +807,15 @@ class AppState extends ChangeNotifier {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({'username': githubUsername}),
+          body: jsonEncode({
+            'username': githubUsername,
+          }),
         );
         if (response.statusCode == 200) {
           debugPrint('Backend sync-username succeeded');
           showLinkGitHubPrompt = false;
           notifyListeners();
-
+          
           await fetchActivityData();
           await fetchDeveloperDna();
           await fetchProfileRoast();
@@ -898,6 +841,7 @@ class AppState extends ChangeNotifier {
     showLinkGitHubPrompt = false;
     githubUsernameLocked = true;
     notifyListeners();
+    authStateNotifier.value++;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -922,6 +866,7 @@ class AppState extends ChangeNotifier {
   void setEmailSession(String sessionToken) async {
     token = sessionToken;
     notifyListeners();
+    authStateNotifier.value++;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -936,7 +881,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/users/me'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body);
@@ -987,6 +934,7 @@ class AppState extends ChangeNotifier {
     avatarUrl = null;
     showLinkGitHubPrompt = false;
     notifyListeners();
+    authStateNotifier.value++;
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -1001,6 +949,7 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
+
   Future<void> fetchActivityData() async {
     isLoadingActivity = true;
     notifyListeners();
@@ -1010,14 +959,14 @@ class AppState extends ChangeNotifier {
           : '${AppConfig.apiBaseUrl}/github/activity?year=$selectedActivityYear';
       final response = await http.get(
         Uri.parse(urlString),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> rawList = data['activity'] ?? [];
-        activityData = rawList
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+        activityData = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
       }
     } catch (e) {
       debugPrint('Error fetching activity data: $e');
@@ -1038,7 +987,7 @@ class AppState extends ChangeNotifier {
       final cachedJson = prefs.getString('dna_response_cache');
       final cachedTime = prefs.getInt('dna_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-
+      
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         dnaArchetype = data['archetype'];
@@ -1058,7 +1007,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/dna'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -1072,17 +1023,13 @@ class AppState extends ChangeNotifier {
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('dna_response_cache', bodyText);
-          await prefs.setInt(
-            'dna_cache_timestamp',
-            DateTime.now().millisecondsSinceEpoch,
-          );
+          await prefs.setInt('dna_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
         } catch (_) {}
 
         notifications.insert(0, {
           'id': 'dna_${DateTime.now().millisecondsSinceEpoch}',
           'title': 'DNA Archetype Identified: $dnaArchetype',
-          'body':
-              'Your alignment score is $dnaScore%. Click to inspect details.',
+          'body': 'Your alignment score is $dnaScore%. Click to inspect details.',
           'timestamp': DateTime.now(),
           'isRead': false,
           'type': 'dna',
@@ -1103,7 +1050,7 @@ class AppState extends ChangeNotifier {
       final cachedJson = prefs.getString('roast_response_cache');
       final cachedTime = prefs.getInt('roast_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-
+      
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         profileRoast = data['roast'];
@@ -1120,7 +1067,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/roast'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -1131,10 +1080,7 @@ class AppState extends ChangeNotifier {
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('roast_response_cache', bodyText);
-          await prefs.setInt(
-            'roast_cache_timestamp',
-            DateTime.now().millisecondsSinceEpoch,
-          );
+          await prefs.setInt('roast_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
         } catch (_) {}
 
         notifications.insert(0, {
@@ -1170,16 +1116,10 @@ class AppState extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         resumeAtsScore = data['ats_score'];
-        resumeMissingTech = List<String>.from(
-          data['missing_technologies'] ?? [],
-        );
+        resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
         resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
-        resumeProjectImprovements = List<String>.from(
-          data['project_improvements'] ?? [],
-        );
-        resumeMindsetUpgrades = List<String>.from(
-          data['mindset_upgrades'] ?? [],
-        );
+        resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
+        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
       }
     } catch (e) {
@@ -1201,9 +1141,11 @@ class AppState extends ChangeNotifier {
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      request.files.add(
-        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
-      );
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+      ));
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -1211,16 +1153,10 @@ class AppState extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         resumeAtsScore = data['ats_score'];
-        resumeMissingTech = List<String>.from(
-          data['missing_technologies'] ?? [],
-        );
+        resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
         resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
-        resumeProjectImprovements = List<String>.from(
-          data['project_improvements'] ?? [],
-        );
-        resumeMindsetUpgrades = List<String>.from(
-          data['mindset_upgrades'] ?? [],
-        );
+        resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
+        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
       }
     } catch (e) {
@@ -1247,9 +1183,7 @@ class AppState extends ChangeNotifier {
         final data = jsonDecode(response.body);
         evaluatedProjectScore = data['score'];
         evaluatedProjectExplanation = data['explanation'];
-        evaluatedProjectUpgradePath = List<String>.from(
-          data['upgrade_path'] ?? [],
-        );
+        evaluatedProjectUpgradePath = List<String>.from(data['upgrade_path'] ?? []);
       }
     } catch (e) {
       debugPrint('Error evaluating project: $e');
@@ -1294,7 +1228,7 @@ class AppState extends ChangeNotifier {
       final cachedJson = prefs.getString('weekly_report_response_cache');
       final cachedTime = prefs.getInt('weekly_report_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-
+      
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         weeklyExplored = data['repositories_explored'];
@@ -1313,7 +1247,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/weekly-report'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -1326,17 +1262,13 @@ class AppState extends ChangeNotifier {
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('weekly_report_response_cache', bodyText);
-          await prefs.setInt(
-            'weekly_report_cache_timestamp',
-            DateTime.now().millisecondsSinceEpoch,
-          );
+          await prefs.setInt('weekly_report_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
         } catch (_) {}
 
         notifications.insert(0, {
           'id': 'weekly_${DateTime.now().millisecondsSinceEpoch}',
           'title': 'AI Weekly Report Ready',
-          'body':
-              'You improved by $weeklyImprovement% this week. Click to check chart.',
+          'body': 'You improved by $weeklyImprovement% this week. Click to check chart.',
           'timestamp': DateTime.now(),
           'isRead': false,
           'type': 'weekly_report',
@@ -1357,7 +1289,9 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/learning-paths'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -1378,20 +1312,20 @@ class AppState extends ChangeNotifier {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/opportunities'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         techOpportunities = data['opportunities'];
 
         if (techOpportunities != null && techOpportunities!.isNotEmpty) {
-          final firstOppTitle =
-              techOpportunities!.first['title'] ?? 'AI Trend Project';
+          final firstOppTitle = techOpportunities!.first['title'] ?? 'AI Trend Project';
           notifications.insert(0, {
             'id': 'opp_${DateTime.now().millisecondsSinceEpoch}',
             'title': 'New Build Opportunity',
-            'body':
-                'Trending: "$firstOppTitle". Click to view recommended stack.',
+            'body': 'Trending: "$firstOppTitle". Click to view recommended stack.',
             'timestamp': DateTime.now(),
             'isRead': false,
             'type': 'opportunity',
@@ -1428,9 +1362,7 @@ class AppState extends ChangeNotifier {
         copilotIssueExplanation = data['issue_explanation'];
         copilotCodebaseExplanation = data['codebase_explanation'];
         copilotFilesToEdit = List<String>.from(data['files_to_edit'] ?? []);
-        copilotImplementationPlan = List<String>.from(
-          data['implementation_plan'] ?? [],
-        );
+        copilotImplementationPlan = List<String>.from(data['implementation_plan'] ?? []);
       }
     } catch (e) {
       debugPrint('Error running copilot: $e');
@@ -1453,7 +1385,10 @@ class AppState extends ChangeNotifier {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'personal_goal': goal, 'preferred_stack': stack}),
+        body: jsonEncode({
+          'personal_goal': goal,
+          'preferred_stack': stack,
+        }),
       );
       if (response.statusCode == 200) {
         // Force refresh all AI features to match the new goals
@@ -1509,10 +1444,8 @@ class AppState extends ChangeNotifier {
         promptHistory = [
           PromptItem(
             id: '1',
-            originalPrompt:
-                'write a python script to scan files for secrets like api keys using regex',
-            refinedPrompt:
-                'Write a Python script that scans files in a directory for potential secrets (e.g., API keys, passwords, and private keys) using regular expressions.\n\n- Provide a command-line interface where the user can pass a target directory path.\n- Define regex patterns for common secret formats (e.g. AWS Keys, JWTs, generic secrets).\n- Output a clean list of findings including file path, line number, and a masked version of the matched secret.',
+            originalPrompt: 'write a python script to scan files for secrets like api keys using regex',
+            refinedPrompt: 'Write a Python script that scans files in a directory for potential secrets (e.g., API keys, passwords, and private keys) using regular expressions.\n\n- Provide a command-line interface where the user can pass a target directory path.\n- Define regex patterns for common secret formats (e.g. AWS Keys, JWTs, generic secrets).\n- Output a clean list of findings including file path, line number, and a masked version of the matched secret.',
             score: 88,
             technologies: ['Python', 'Security'],
             workflow: 'Feature Building',
@@ -1521,10 +1454,8 @@ class AppState extends ChangeNotifier {
           ),
           PromptItem(
             id: '2',
-            originalPrompt:
-                'flutter button is not showing centered, how to center it',
-            refinedPrompt:
-                'I have a Flutter ElevatedButton that is not centered. How can I align it in the center of the screen?\n\n- Show examples using Center widget, Column with MainAxisAlignment.center, and Align.\n- Explain when to use each approach.',
+            originalPrompt: 'flutter button is not showing centered, how to center it',
+            refinedPrompt: 'I have a Flutter ElevatedButton that is not centered. How can I align it in the center of the screen?\n\n- Show examples using Center widget, Column with MainAxisAlignment.center, and Align.\n- Explain when to use each approach.',
             score: 72,
             technologies: ['Flutter', 'Dart'],
             workflow: 'Debugging',
@@ -1533,10 +1464,8 @@ class AppState extends ChangeNotifier {
           ),
           PromptItem(
             id: '3',
-            originalPrompt:
-                'optimize sql query select * from users join posts where posts.created_at is recent',
-            refinedPrompt:
-                'Explain how to optimize this SQL query:\n\n```sql\nSELECT * FROM users JOIN posts ON users.id = posts.user_id WHERE posts.created_at >= NOW() - INTERVAL \'7 days\';\n```\n\nProvide recommendations on indexes, query structure, and select fields instead of using `*`.',
+            originalPrompt: 'optimize sql query select * from users join posts where posts.created_at is recent',
+            refinedPrompt: 'Explain how to optimize this SQL query:\n\n```sql\nSELECT * FROM users JOIN posts ON users.id = posts.user_id WHERE posts.created_at >= NOW() - INTERVAL \'7 days\';\n```\n\nProvide recommendations on indexes, query structure, and select fields instead of using `*`.',
             score: 82,
             technologies: ['SQL', 'PostgreSQL'],
             workflow: 'Refactoring',
@@ -1551,17 +1480,15 @@ class AppState extends ChangeNotifier {
 
       String url = '${AppConfig.apiBaseUrl}/prompts/history';
       List<String> params = [];
-      if (query != null && query.isNotEmpty) {
-        params.add('q=${Uri.encodeComponent(query)}');
-      }
-      if (workflow != null && workflow.isNotEmpty) {
-        params.add('workflow=${Uri.encodeComponent(workflow)}');
-      }
+      if (query != null && query.isNotEmpty) params.add('q=${Uri.encodeComponent(query)}');
+      if (workflow != null && workflow.isNotEmpty) params.add('workflow=${Uri.encodeComponent(workflow)}');
       if (params.isNotEmpty) url += '?${params.join('&')}';
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -1588,7 +1515,9 @@ class AppState extends ChangeNotifier {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'github_username': githubUsername}),
+        body: jsonEncode({
+          'github_username': githubUsername,
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -1597,8 +1526,7 @@ class AppState extends ChangeNotifier {
         fetchPromptHistory();
         fetchPromptAnalytics();
         fetchPromptRecommendations();
-        return data['message'] ??
-            'Successfully synchronized prompts from GitHub.';
+        return data['message'] ?? 'Successfully synchronized prompts from GitHub.';
       } else {
         final data = jsonDecode(response.body);
         final String? msg = data['error']?['message'] ?? data['detail'];
@@ -1644,25 +1572,21 @@ class AppState extends ChangeNotifier {
 
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/prompts/analytics'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         totalPrompts = data['total_prompts'] ?? 0;
         averagePromptScore = (data['average_score'] as num?)?.toDouble() ?? 0.0;
-        promptWorkflowCounts = Map<String, int>.from(
-          data['workflow_counts'] ?? {},
-        );
+        promptWorkflowCounts = Map<String, int>.from(data['workflow_counts'] ?? {});
         topPromptTechnologies = List<Map<String, dynamic>>.from(
-          (data['top_technologies'] ?? []).map(
-            (e) => Map<String, dynamic>.from(e),
-          ),
+          (data['top_technologies'] ?? []).map((e) => Map<String, dynamic>.from(e))
         );
         promptScoreHistory = List<Map<String, dynamic>>.from(
-          (data['score_history'] ?? []).map(
-            (e) => Map<String, dynamic>.from(e),
-          ),
+          (data['score_history'] ?? []).map((e) => Map<String, dynamic>.from(e))
         );
       }
     } catch (e) {
@@ -1682,17 +1606,15 @@ class AppState extends ChangeNotifier {
         promptRecommendations = [
           {
             'title': 'Mastering Flutter Layout Constraints',
-            'description':
-                'Based on your debugging prompts about Button alignments, you could benefit from understanding Flutter box constraints layout rules.',
+            'description': 'Based on your debugging prompts about Button alignments, you could benefit from understanding Flutter box constraints layout rules.',
             'tags': ['Flutter', 'Layouts'],
-            'url': 'https://flutter.dev/docs/development/ui/layout/constraints',
+            'url': 'https://flutter.dev/docs/development/ui/layout/constraints'
           },
           {
             'title': 'Security Scanners & Secret Scanning in CI/CD',
-            'description':
-                'You have been writing script prompts to scan files for secrets. Check out how tools like GitGuardian or TruffleHog automate this.',
+            'description': 'You have been writing script prompts to scan files for secrets. Check out how tools like GitGuardian or TruffleHog automate this.',
             'tags': ['DevOps', 'Security'],
-            'url': 'https://github.com/trufflesecurity/trufflehog',
+            'url': 'https://github.com/trufflesecurity/trufflehog'
           },
         ];
         isLoadingPromptRecommendations = false;
@@ -1702,14 +1624,14 @@ class AppState extends ChangeNotifier {
 
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/prompts/recommendations'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        promptRecommendations = List<dynamic>.from(
-          data['recommendations'] ?? [],
-        );
+        promptRecommendations = List<dynamic>.from(data['recommendations'] ?? []);
       }
     } catch (e) {
       debugPrint('Error fetching prompt recommendations: $e');
@@ -1719,11 +1641,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> submitPromptEvent(
-    String originalPrompt, {
-    String? projectName,
-    String? fileContext,
-  }) async {
+  Future<void> submitPromptEvent(String originalPrompt, {String? projectName, String? fileContext}) async {
     if (originalPrompt.trim().isEmpty) return;
     isSubmittingPromptEvent = true;
     notifyListeners();
@@ -1734,8 +1652,7 @@ class AppState extends ChangeNotifier {
         final newPrompt = PromptItem(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           originalPrompt: originalPrompt,
-          refinedPrompt:
-              'Refined Version of:\n$originalPrompt\n\n- Added context\n- Clearly defined inputs, processing steps, and expected outputs.',
+          refinedPrompt: 'Refined Version of:\n$originalPrompt\n\n- Added context\n- Clearly defined inputs, processing steps, and expected outputs.',
           score: 85,
           technologies: ['Dart', 'General'],
           workflow: 'Feature Building',
@@ -1744,9 +1661,8 @@ class AppState extends ChangeNotifier {
         );
         promptHistory.insert(0, newPrompt);
         totalPrompts += 1;
-        averagePromptScore =
-            ((averagePromptScore * (totalPrompts - 1) + 85) / totalPrompts);
-
+        averagePromptScore = ((averagePromptScore * (totalPrompts - 1) + 85) / totalPrompts);
+        
         notifications.insert(0, {
           'id': 'prompt_${DateTime.now().millisecondsSinceEpoch}',
           'title': 'Prompt Telemetry Synced! 🚀',
@@ -1755,7 +1671,7 @@ class AppState extends ChangeNotifier {
           'isRead': false,
           'type': 'prompt_intelligence',
         });
-
+        
         isSubmittingPromptEvent = false;
         notifyListeners();
         return;
@@ -1778,11 +1694,11 @@ class AppState extends ChangeNotifier {
         final data = jsonDecode(response.body);
         final newItem = PromptItem.fromJson(data);
         promptHistory.insert(0, newItem);
-
+        
         // Refresh analytics & recommendations to update profile dna
         await fetchPromptAnalytics();
         await fetchPromptRecommendations();
-
+        
         notifications.insert(0, {
           'id': 'prompt_${newItem.id}',
           'title': 'New CLI Prompt Recorded 🚀',
@@ -1800,3 +1716,5 @@ class AppState extends ChangeNotifier {
     }
   }
 }
+
+

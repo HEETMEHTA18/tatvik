@@ -12,10 +12,6 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_expire_minutes: int = 10080  # 7 days (60 * 24 * 7)
     redis_url: str = "redis://localhost:6379/0"
-    ai_provider: str = "auto"
-    groq_model: str = "llama-3.1-8b-instant"
-    gemini_model: str = "gemini-2.5-flash-lite"
-    ai_request_timeout_seconds: float = 30.0
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
