@@ -9,28 +9,31 @@ from app.models.entities import GithubProfile, Repository, PromptHistory
 
 logger = logging.getLogger(__name__)
 
+
 def seed_database(db: Session):
     try:
-        old_uid = 'd57475f9-1f44-4508-81c0-f4ec33dacb06'
-        new_uid = '05947977-be13-4144-8e2f-e769d87613dc'
-        
+        old_uid = "d57475f9-1f44-4508-81c0-f4ec33dacb06"
+        new_uid = "05947977-be13-4144-8e2f-e769d87613dc"
+
         user_ids = [old_uid, new_uid]
-        
+
         # 1. Seed users if they don't exist
         for idx, uid in enumerate(user_ids):
             user = db.scalar(select(User).where(User.id == uid))
             if not user:
-                email = 'HEETMEHTA18@github.com' if idx == 0 else 'heet18_alt@github.com'
+                email = (
+                    "HEETMEHTA18@github.com" if idx == 0 else "heet18_alt@github.com"
+                )
                 db_user = User(
                     id=uid,
                     email=email,
-                    name='Heet Mehta',
-                    username='HEETMEHTA18',
-                    avatar_url='https://avatars.githubusercontent.com/u/181580508?v=4',
-                    hashed_password='$pbkdf2-sha256$29000$Tcl5r5XSGuN8j7GWklIKIQ$V.eYJg3plEInhvPAf/E/EVFHlPyLoqi8NG4oG8bVFVY',
+                    name="Heet Mehta",
+                    username="HEETMEHTA18",
+                    avatar_url="https://avatars.githubusercontent.com/u/181580508?v=4",
+                    hashed_password="$pbkdf2-sha256$29000$Tcl5r5XSGuN8j7GWklIKIQ$V.eYJg3plEInhvPAf/E/EVFHlPyLoqi8NG4oG8bVFVY",
                     is_active=True,
                     personal_goal="Become a Senior Flutter & Full Stack Developer",
-                    preferred_stack="Flutter, Dart, FastAPI, Python"
+                    preferred_stack="Flutter, Dart, FastAPI, Python",
                 )
                 db.add(db_user)
                 logger.info(f"Seeded user: {uid}")
@@ -39,14 +42,16 @@ def seed_database(db: Session):
 
         # 2. Seed GitHub Profiles
         for uid in user_ids:
-            profile = db.scalar(select(GithubProfile).where(GithubProfile.user_id == uid))
+            profile = db.scalar(
+                select(GithubProfile).where(GithubProfile.user_id == uid)
+            )
             if not profile:
                 db_profile = GithubProfile(
                     id=str(uuid.uuid4()),
                     user_id=uid,
-                    login='HEETMEHTA18',
-                    access_token='gho_' + 'pwtSZHJkvasok5MZRtIieRi5tt0y7J3pBM0R',
-                    synced_at=datetime.utcnow()
+                    login="HEETMEHTA18",
+                    access_token="gho_" + "pwtSZHJkvasok5MZRtIieRi5tt0y7J3pBM0R",
+                    synced_at=datetime.utcnow(),
                 )
                 db.add(db_profile)
                 logger.info(f"Seeded github profile for user: {uid}")
@@ -60,13 +65,13 @@ def seed_database(db: Session):
                     {
                         "full_name": "HEETMEHTA18/devmentor",
                         "name": "devmentor",
-                        "description": "Premium developer mentor coach with prompt intelligence telemetry and iOS liquid glass navigation."
+                        "description": "Premium developer mentor coach with prompt intelligence telemetry and iOS liquid glass navigation.",
                     },
                     {
                         "full_name": "HEETMEHTA18/autodev",
                         "name": "autodev",
-                        "description": "AutoDev AI Agent framework for automated CLI development telemetry."
-                    }
+                        "description": "AutoDev AI Agent framework for automated CLI development telemetry.",
+                    },
                 ]
                 for r in repos:
                     db_repo = Repository(
@@ -83,14 +88,16 @@ def seed_database(db: Session):
                         stars_count=10,
                         forks_count=2,
                         watchers_count=5,
-                        open_issues_count=0
+                        open_issues_count=0,
                     )
                     db.add(db_repo)
                 logger.info(f"Seeded default repositories for user: {uid}")
 
         # 4. Seed Prompt History if empty
         for uid in user_ids:
-            exists = db.scalar(select(PromptHistory).where(PromptHistory.user_id == uid))
+            exists = db.scalar(
+                select(PromptHistory).where(PromptHistory.user_id == uid)
+            )
             if not exists:
                 prompts = [
                     {
@@ -100,7 +107,7 @@ def seed_database(db: Session):
                         "technologies": "Flutter, Dart, CSS",
                         "workflow": "Feature Building",
                         "project": "devmentor",
-                        "days_ago": 1
+                        "days_ago": 1,
                     },
                     {
                         "original": "How can I prevent the walkthrough tutorial overlay from intercepting pointer events in my widget test?",
@@ -109,7 +116,7 @@ def seed_database(db: Session):
                         "technologies": "Flutter, Dart, Testing",
                         "workflow": "Testing",
                         "project": "devmentor",
-                        "days_ago": 2
+                        "days_ago": 2,
                     },
                     {
                         "original": "Why does tester.pumpAndSettle() time out in my Flutter widget tests when testing pages with a repeating background animation, and how do I fix it?",
@@ -118,7 +125,7 @@ def seed_database(db: Session):
                         "technologies": "Flutter, Dart, Testing",
                         "workflow": "Debugging",
                         "project": "devmentor",
-                        "days_ago": 3
+                        "days_ago": 3,
                     },
                     {
                         "original": "Write a FastAPI endpoint /api/v1/prompts/sync-github to scan public and private GitHub repositories for .autodevs/prompts.md.",
@@ -127,7 +134,7 @@ def seed_database(db: Session):
                         "technologies": "FastAPI, Python, GitHub API",
                         "workflow": "Feature Building",
                         "project": "devmentor",
-                        "days_ago": 4
+                        "days_ago": 4,
                     },
                     {
                         "original": "Create a responsive custom glass container widget in Flutter that applies light source gradient reflections, box shadows, and a high-contrast theme border.",
@@ -136,7 +143,7 @@ def seed_database(db: Session):
                         "technologies": "Flutter, Dart",
                         "workflow": "Feature Building",
                         "project": "devmentor",
-                        "days_ago": 5
+                        "days_ago": 5,
                     },
                     {
                         "original": "Optimize my PWA manifest.json configuration to support custom Apple touch icon sizes (180x180, 192x192, 512x512) and configure the app shortcut entries.",
@@ -145,7 +152,7 @@ def seed_database(db: Session):
                         "technologies": "HTML, PWA, JSON",
                         "workflow": "DevOps",
                         "project": "devmentor",
-                        "days_ago": 6
+                        "days_ago": 6,
                     },
                     {
                         "original": "How do I write a bash script to run my dev server in the background and monitor its status via healthcheck endpoints?",
@@ -154,10 +161,10 @@ def seed_database(db: Session):
                         "technologies": "Bash, Shell, Linux",
                         "workflow": "DevOps",
                         "project": "devmentor",
-                        "days_ago": 7
-                    }
+                        "days_ago": 7,
+                    },
                 ]
-                
+
                 for p in prompts:
                     db_prompt = PromptHistory(
                         id=str(uuid.uuid4()),
@@ -171,7 +178,7 @@ def seed_database(db: Session):
                         created_at=datetime.utcnow() - timedelta(days=p["days_ago"]),
                         session_id=str(uuid.uuid4()),
                         prompt_id=str(uuid.uuid4()),
-                        response="This is a generated AI response for the refined prompt."
+                        response="This is a generated AI response for the refined prompt.",
                     )
                     db.add(db_prompt)
                 logger.info(f"Seeded prompt history for user: {uid}")
