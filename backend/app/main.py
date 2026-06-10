@@ -70,6 +70,17 @@ def startup_event():
                 )
     except Exception as e:
         logger.error(f"Error executing startup database migration: {e}")
+        
+    try:
+        from app.db.seed import seed_database
+        from app.db.session import SessionLocal
+        db = SessionLocal()
+        try:
+            seed_database(db)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error seeding database on startup: {e}")
 
     asyncio.create_task(periodic_news_scanner())
 
