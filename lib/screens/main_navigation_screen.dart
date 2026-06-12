@@ -511,25 +511,38 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                               children: [
                                 // Sliding Glass Pill Indicator
                                 AnimatedPositioned(
-                                  duration: const Duration(milliseconds: 220),
-                                  curve: Curves.easeOutCubic,
+                                  duration: const Duration(milliseconds: 380),
+                                  curve: Curves.easeOutBack,
                                   left: _selectedIndex * itemWidth + 8,
                                   top: 10,
                                   bottom: 10,
                                   width: itemWidth - 16,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: AppTheme.accent.withValues(alpha: isDark ? 0.22 : 0.15),
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          AppTheme.accent.withValues(alpha: isDark ? 0.35 : 0.22),
+                                          AppTheme.accent.withValues(alpha: isDark ? 0.15 : 0.08),
+                                        ],
+                                      ),
                                       borderRadius: BorderRadius.circular(28),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: isDark ? 0.25 : 0.35),
-                                        width: 1.2,
+                                        color: Colors.white.withValues(alpha: isDark ? 0.40 : 0.50),
+                                        width: 1.5,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppTheme.accent.withValues(alpha: isDark ? 0.35 : 0.15),
-                                          blurRadius: 10,
-                                          spreadRadius: -2,
+                                          color: AppTheme.accent.withValues(alpha: isDark ? 0.45 : 0.20),
+                                          blurRadius: 14,
+                                          spreadRadius: -1,
+                                        ),
+                                        BoxShadow(
+                                          color: Colors.white.withValues(alpha: isDark ? 0.12 : 0.25),
+                                          blurRadius: 4,
+                                          offset: const Offset(-2, -2),
+                                          spreadRadius: 0,
                                         ),
                                       ],
                                     ),
@@ -566,47 +579,53 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   }
 
   Widget _buildNavItem(int index, String label, IconData icon, double width) {
-  final isSelected = _selectedIndex == index;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = _selectedIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-  return GestureDetector(
-    onTap: () => _onTabSelected(index),
-    behavior: HitTestBehavior.opaque,
-    child: SizedBox(
-      width: width,
-      height: 76,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedScale(
-            scale: isSelected ? 1.15 : 0.95,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutBack,
-            child: Icon(
-              icon,
-              color: isSelected
-                  ? (isDark ? Colors.white : AppTheme.accent)
-                  : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
-              size: 24,
+    return GestureDetector(
+      onTapDown: (_) => _onTabSelected(index),
+      onTap: () {}, // Accessibility support
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: width,
+        height: 76,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              scale: isSelected ? 1.22 : 0.90,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.elasticOut,
+              child: Icon(
+                icon,
+                color: isSelected
+                    ? (isDark ? Colors.white : AppTheme.accent)
+                    : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
+                size: 24,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'JetBrains Mono',
-              fontSize: 9,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected
-                  ? (isDark ? Colors.white : AppTheme.accent)
-                  : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
+            const SizedBox(height: 4),
+            AnimatedScale(
+              scale: isSelected ? 1.05 : 0.95,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.elasticOut,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: 9,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? (isDark ? Colors.white : AppTheme.accent)
+                      : (isDark ? Colors.white70 : AppTheme.textSecondary).withValues(alpha: 0.6),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _SimulatedPushNotificationBanner extends StatefulWidget {

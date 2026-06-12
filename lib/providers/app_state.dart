@@ -97,16 +97,33 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> loadCachedGithubPromptsMarkdown() async {
+  Future<void> loadCachedGithubPromptsMarkdown({String? owner, String? repo}) async {
+    final searchOwner = owner ?? selectedRepoOwner;
+    final searchRepo = repo ?? selectedRepoName;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedMarkdown = prefs.getString('github_prompts_markdown_cache');
-      final cachedUpdatedAt = prefs.getInt('github_prompts_markdown_updated_at');
+      final cachedMarkdown = prefs.getString('github_prompts_markdown_cache_${searchOwner}_$searchRepo');
+      final cachedUpdatedAt = prefs.getInt('github_prompts_markdown_updated_at_${searchOwner}_$searchRepo');
       if (cachedMarkdown != null && cachedMarkdown.isNotEmpty) {
         githubPromptsMarkdown = cachedMarkdown;
         if (cachedUpdatedAt != null) {
           githubPromptsMarkdownUpdatedAt = DateTime.fromMillisecondsSinceEpoch(cachedUpdatedAt);
         }
+      } else {
+        // Fallback to old key if it is the default repo
+        if (searchOwner == 'HeetMehta18' && searchRepo == 'AutoDevs') {
+          final oldMarkdown = prefs.getString('github_prompts_markdown_cache');
+          final oldUpdatedAt = prefs.getInt('github_prompts_markdown_updated_at');
+          if (oldMarkdown != null && oldMarkdown.isNotEmpty) {
+            githubPromptsMarkdown = oldMarkdown;
+            if (oldUpdatedAt != null) {
+              githubPromptsMarkdownUpdatedAt = DateTime.fromMillisecondsSinceEpoch(oldUpdatedAt);
+            }
+            return;
+          }
+        }
+        githubPromptsMarkdown = '';
+        githubPromptsMarkdownUpdatedAt = null;
       }
     } catch (e) {
       debugPrint('Error loading cached prompts.md: $e');
@@ -193,13 +210,33 @@ class AppState extends ChangeNotifier {
     savePromptRepoSources();
   }
 
-  Future<String> refreshGithubPromptsMarkdown({bool force = false}) async {
+  String selectedRepoOwner = 'HeetMehta18';
+  String selectedRepoName = 'AutoDevs';
+  bool isPushingPrompts = false;
+
+  Future<String> refreshGithubPromptsMarkdown({String? owner, String? repo, bool force = false}) async {
     if (isLoadingGithubPromptsMarkdown) {
       return 'prompts.md is already syncing.';
     }
 
+    if (owner != null && repo != null) {
+      selectedRepoOwner = owner;
+      selectedRepoName = repo;
+    }
+
     if (token == null) {
-      return 'Sign in to sync prompts.md from GitHub.';
+      // Offline/Mock mode content simulator
+      githubPromptsMarkdown = '''# Prompts for $selectedRepoName
+
+This is simulated offline prompts.md content.
+
+- [$selectedRepoName] Implement Apple Liquid Glass Navigation
+- [$selectedRepoName] Fix Touch responsiveness of Bottom Nav Bar on iOS PWA
+- [$selectedRepoName] Setup GitHub .autodevs/prompts.md sync pipelines
+''';
+      githubPromptsMarkdownUpdatedAt = DateTime.now();
+      notifyListeners();
+      return 'Mock Mode: Simulated prompts.md loading.';
     }
 
     final now = DateTime.now();
@@ -212,7 +249,7 @@ class AppState extends ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/repos/$_githubPromptsOwner/$_githubPromptsRepo/contents/.autodevs/prompts.md'),
+        Uri.parse('https://api.github.com/repos/$selectedRepoOwner/$selectedRepoName/contents/.autodevs/prompts.md'),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/vnd.github.v3+json',
@@ -234,8 +271,8 @@ class AppState extends ChangeNotifier {
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('github_prompts_markdown_cache', markdownText);
-          await prefs.setInt('github_prompts_markdown_updated_at', now.millisecondsSinceEpoch);
+          await prefs.setString('github_prompts_markdown_cache_${selectedRepoOwner}_$selectedRepoName', markdownText);
+          await prefs.setInt('github_prompts_markdown_updated_at_${selectedRepoOwner}_$selectedRepoName', now.millisecondsSinceEpoch);
         } catch (_) {}
 
         return 'prompts.md synced from GitHub.';
@@ -248,6 +285,50 @@ class AppState extends ChangeNotifier {
     } finally {
       isLoadingGithubPromptsMarkdown = false;
       notifyListeners();
+    }
+  }
+
+  Future<String> pushUpgradedPromptsToGithub(String projectName, String owner, String repo) async {
+    isPushingPrompts = true;
+    notifyListeners();
+
+    try {
+      if (token == null) {
+        // Mock success
+        await Future.delayed(const Duration(seconds: 2));
+        isPushingPrompts = false;
+        notifyListeners();
+        return 'Successfully pushed prompts to GitHub (Mock Mode).';
+      }
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/prompts/push-github'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'project_name': projectName,
+          'owner': owner,
+          'name': repo,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        isPushingPrompts = false;
+        notifyListeners();
+        return data['message'] ?? 'Successfully pushed prompts to GitHub.';
+      } else {
+        isPushingPrompts = false;
+        notifyListeners();
+        final String? msg = data['error']?['message'] ?? data['detail'];
+        return 'Push failed: ${msg ?? 'Server returned error ${response.statusCode}'}';
+      }
+    } catch (e) {
+      isPushingPrompts = false;
+      notifyListeners();
+      return 'Push failed: $e';
     }
   }
 

@@ -147,15 +147,122 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
             else if (filteredHistory.isEmpty)
               _buildEmptyHistory(isDark)
             else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: filteredHistory.length,
-                itemBuilder: (context, index) {
-                  final prompt = filteredHistory[index];
-                  return _buildPromptCard(prompt, isDark);
-                },
-              ),
+              ...(() {
+                final Map<String, List<PromptItem>> groupedHistory = {};
+                for (final p in filteredHistory) {
+                  final proj = p.projectName ?? 'Unassigned';
+                  groupedHistory.putIfAbsent(proj, () => []).add(p);
+                }
+
+                return groupedHistory.entries.map((entry) {
+                  final projectName = entry.key;
+                  final prompts = entry.value;
+
+                  Map<String, String>? matchingSource;
+                  for (final source in state.promptRepoSources) {
+                    if (source['name']?.toLowerCase() == projectName.toLowerCase()) {
+                      matchingSource = source;
+                      break;
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.folder_open_rounded, color: AppTheme.accent, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  projectName.toUpperCase(),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textMain,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.accent.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${prompts.length}',
+                                    style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (projectName != 'Unassigned')
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
+                                  foregroundColor: AppTheme.accent,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.3)),
+                                  ),
+                                ),
+                                icon: state.isPushingPrompts 
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.publish_rounded, size: 14),
+                                label: Text(
+                                  'Push to GitHub',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                                onPressed: state.isPushingPrompts
+                                    ? null
+                                    : () async {
+                                        final owner = matchingSource != null 
+                                            ? matchingSource['owner']! 
+                                            : state.githubUsername;
+                                        final repo = matchingSource != null 
+                                            ? matchingSource['name']! 
+                                            : projectName;
+                                            
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Pushing upgraded prompts for $projectName to $owner/$repo...')),
+                                        );
+                                        final result = await state.pushUpgradedPromptsToGithub(
+                                          projectName,
+                                          owner,
+                                          repo,
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(result),
+                                              backgroundColor: result.contains('failed') 
+                                                  ? AppTheme.destructive 
+                                                  : AppTheme.success,
+                                            ),
+                                          );
+                                        }
+                                      },
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ...prompts.map((prompt) => _buildPromptCard(prompt, isDark)),
+                      ],
+                    ),
+                  );
+                }).toList();
+              })(),
           ],
         ),
       );
@@ -430,15 +537,64 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           if (!mounted) {
                             return;
                           }
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('prompts.md copied to clipboard')),
-                            );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('prompts.md copied to clipboard')),
+                          );
                         },
                   icon: const Icon(Icons.copy_rounded),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(
+                  'Select Repo: ',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0x10FFFFFF) : const Color(0x08000000),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<Map<String, String>>(
+                        value: state.promptRepoSources.firstWhere(
+                          (r) => r['owner'] == state.selectedRepoOwner && r['name'] == state.selectedRepoName,
+                          orElse: () => state.promptRepoSources.first,
+                        ),
+                        isExpanded: true,
+                        dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                        items: state.promptRepoSources.map((repo) {
+                          return DropdownMenuItem<Map<String, String>>(
+                            value: repo,
+                            child: Text('${repo['owner']}/${repo['name']}'),
+                          );
+                        }).toList(),
+                        onChanged: (newRepo) async {
+                          if (newRepo != null) {
+                            await state.loadCachedGithubPromptsMarkdown(
+                              owner: newRepo['owner'],
+                              repo: newRepo['name'],
+                            );
+                            await state.refreshGithubPromptsMarkdown(
+                              owner: newRepo['owner'],
+                              repo: newRepo['name'],
+                            );
+                            setState(() {});
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
             TextField(
               controller: _githubPromptsSearchController,
               onChanged: (value) => setState(() {}),
