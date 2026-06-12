@@ -728,7 +728,9 @@ class GithubPushRequest(BaseModel):
     project_name: str
     owner: str
     name: str
-    commit_message: Optional[str] = "chore: upgrade prompts via DevMentor Prompt Intelligence"
+    commit_message: Optional[str] = (
+        "chore: upgrade prompts via DevMentor Prompt Intelligence"
+    )
 
 
 @router.post("/push-github")
@@ -754,8 +756,7 @@ async def push_github_prompts(
     if profile:
         access_token = profile.access_token
         if access_token and (
-            access_token.startswith("gho_pwtSZHJk")
-            or access_token.startswith("mock_")
+            access_token.startswith("gho_pwtSZHJk") or access_token.startswith("mock_")
         ):
             is_mock = True
     else:
