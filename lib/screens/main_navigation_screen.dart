@@ -274,29 +274,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
     // Apple HIG: light haptic response on tab selection
     HapticFeedback.lightImpact();
     
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
-    if (isMobileBrowser) {
-      setState(() {
-        _selectedIndex = index;
-      });
-      _appState.setSelectedTab(index);
-      _updateUrlSilently(index);
-      return;
-    }
-    
-    // Trigger transition overlay shutter animation
-    _transitionController.forward(from: 0.0);
-    
-    // Switch screens halfway through transition (at peak blur of transition)
-    Future.delayed(const Duration(milliseconds: 120), () {
-      if (mounted) {
-        setState(() {
-          _selectedIndex = index;
-        });
-        _appState.setSelectedTab(index);
-        _updateUrlSilently(index);
-      }
+    setState(() {
+      _selectedIndex = index;
     });
+    _appState.setSelectedTab(index);
+    _updateUrlSilently(index);
+    
+    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    if (!isMobileBrowser) {
+      // Trigger transition overlay shutter animation in parallel for visual polish
+      _transitionController.forward(from: 0.0);
+    }
   }
 
   Widget _buildWalkthroughOverlay() {
@@ -582,13 +570,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
     final isSelected = _selectedIndex == index;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTapDown: (_) => _onTabSelected(index),
-      onTap: () {}, // Accessibility support
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
+    return InkWell(
+      onTap: () => _onTabSelected(index),
+      borderRadius: BorderRadius.circular(28),
+      highlightColor: Colors.transparent,
+      splashColor: AppTheme.accent.withValues(alpha: 0.08),
+      child: Container(
         width: width,
         height: 76,
+        alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

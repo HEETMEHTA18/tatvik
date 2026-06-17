@@ -235,6 +235,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                   [],
                   null,
                   appState,
+                  m.recommendations,
                 );
               },
             ),
@@ -307,6 +308,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     List<String> tasks,
     String? currentProject,
     AppState state,
+    List<String> recommendations,
   ) {
     return IntrinsicHeight(
       child: Row(
@@ -356,8 +358,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              title,
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                title,
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -388,6 +390,50 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                 color: AppTheme.textSecondary,
                                 fontSize: 13,
                               ),
+                        ),
+                      ],
+                      if (recommendations.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'SMART RECOMMENDATIONS',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.accent,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: recommendations.map((rec) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppTheme.accent.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 10, color: AppTheme.accent),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    rec,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.textMain,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
                         ),
                       ],
                     ],

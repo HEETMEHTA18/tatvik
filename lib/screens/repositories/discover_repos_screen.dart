@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/animated_copy_button.dart';
 import '../../providers/app_state.dart';
 import '../../models/repository.dart';
 
@@ -19,11 +21,15 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
   int _activeTab = 0;
   final _resumeController = TextEditingController();
   final _projectController = TextEditingController();
+  final _jobTitleController = TextEditingController();
+  final _jobDescController = TextEditingController();
 
   @override
   void dispose() {
     _resumeController.dispose();
     _projectController.dispose();
+    _jobTitleController.dispose();
+    _jobDescController.dispose();
     super.dispose();
   }
 
@@ -45,12 +51,15 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
         tabContent = _buildReposTab(context, appState, repos);
         break;
       case 1:
-        tabContent = _buildResumeTab(context, appState);
+        tabContent = _buildFollowingTab(context, appState);
         break;
       case 2:
-        tabContent = _buildProjectTab(context, appState);
+        tabContent = _buildResumeTab(context, appState);
         break;
       case 3:
+        tabContent = _buildProjectTab(context, appState);
+        break;
+      case 4:
         tabContent = _buildOpportunitiesTab(context, appState);
         break;
       default:
@@ -64,10 +73,12 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
           _activeTab == 0
               ? 'Recommended Repos'
               : _activeTab == 1
-                  ? 'AI Resume Reviewer'
+                  ? 'Following Activity'
                   : _activeTab == 2
-                      ? 'AI Project Evaluator'
-                      : 'Opportunity Scanner',
+                      ? 'AI Resume Reviewer'
+                      : _activeTab == 3
+                          ? 'AI Project Evaluator'
+                          : 'Opportunity Scanner',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
       ),
@@ -97,19 +108,23 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
   }
 
   Widget _buildTabBar() {
-    final tabs = ['REPOS', 'RESUME', 'EVALUATOR', 'OPPS'];
+    final tabs = ['REPOS', 'FOLLOWING', 'RESUME', 'EVALUATOR', 'OPPS'];
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
+      margin: const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
       child: GlassCard(
         borderRadius: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(tabs.length, (index) {
             final isSelected = _activeTab == index;
             return Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _activeTab = index),
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _activeTab = index);
+                },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
@@ -122,7 +137,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                     child: Text(
                       tabs[index],
                       style: GoogleFonts.jetBrainsMono(
-                        fontSize: 9,
+                        fontSize: 8.5,
                         fontWeight: FontWeight.bold,
                         color: isSelected 
                             ? (AppTheme.isDark ? Colors.black : Colors.white) 
@@ -340,8 +355,271 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
               ),
             ),
           ],
+          _buildResumeTailorSection(context, state),
         ],
       ),
+    );
+  }
+
+  Widget _buildResumeTailorSection(BuildContext context, AppState state) {
+    if (state.lastUploadedResumeText == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        _buildSectionHeader(context, 'Tailor & Sync Resume'),
+        const SizedBox(height: 12),
+        GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.auto_awesome_rounded, color: AppTheme.accent, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI TAILORING & GOOGLE DRIVE SYNC',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Provide the target job title and description to tailor your resume for this position and automatically sync it to your Google Drive.',
+                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _jobTitleController,
+                style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: 'Target Job Title',
+                  labelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  hintText: 'e.g. Senior Flutter Engineer',
+                  hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5), fontSize: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppTheme.border),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _jobDescController,
+                maxLines: 4,
+                style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: 'Job Description / Requirements',
+                  labelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  hintText: 'Paste target job requirements and key responsibilities here...',
+                  hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5), fontSize: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: AppTheme.border),
+                  ),
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: state.isGeneratingResume
+                      ? null
+                      : () {
+                          final title = _jobTitleController.text.trim();
+                          final desc = _jobDescController.text.trim();
+                          if (title.isNotEmpty && desc.isNotEmpty) {
+                            state.generateTailoredResume(
+                              resumeText: state.lastUploadedResumeText!,
+                              jobTitle: title,
+                              jobDescription: desc,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Please fill out both job title and description.'),
+                                backgroundColor: AppTheme.destructive,
+                              ),
+                            );
+                          }
+                        },
+                  icon: state.isGeneratingResume
+                      ? const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cloud_upload_outlined, size: 18),
+                  label: Text(
+                    state.isGeneratingResume ? 'TAILORING...' : 'TAILOR & SYNC TO GDRIVE',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: AppTheme.isDark ? Colors.black : Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              if (state.generatedResumeText != null) ...[
+                const SizedBox(height: 24),
+                const Divider(color: Colors.white12),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ATS MATCH FORECAST',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      '${state.generatedResumeAtsForecast}%',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.success,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (state.googleDriveSyncInfo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, color: AppTheme.success, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Successfully synced to Google Drive!',
+                                style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: AppTheme.success,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'File: ${state.googleDriveSyncInfo!['file_name']}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.open_in_new_rounded, color: AppTheme.accent, size: 18),
+                          onPressed: () async {
+                            final link = state.googleDriveSyncInfo!['web_view_link'];
+                            if (link != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Simulating Google Drive open: $link'),
+                                  backgroundColor: AppTheme.accent,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                Text(
+                  'APPLIED OPTIMIZATIONS',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...?state.generatedResumeOptimizations?.map((opt) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('• ', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Text(
+                              opt,
+                              style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textMain),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'GENERATED RESUME (MARKDOWN)',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    AnimatedCopyButton(
+                      text: state.generatedResumeText ?? '',
+                      size: 16,
+                      color: AppTheme.accent,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 250),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      state.generatedResumeText ?? '',
+                      style: GoogleFonts.jetBrainsMono(fontSize: 11, color: AppTheme.textMain),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -919,6 +1197,199 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
           const SizedBox(width: 6),
           Text(label, style: GoogleFonts.inter(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFollowingTab(BuildContext context, AppState appState) {
+    if (appState.isLoadingFollowingActivity) {
+      return Center(
+        child: CircularProgressIndicator(color: AppTheme.accent),
+      );
+    }
+
+    if (appState.followingActivity.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+            const SizedBox(height: 16),
+            Text(
+              'No activities found from users you follow',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMain,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Follow developers on GitHub to see their events here.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => appState.fetchFollowingActivity(),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Refresh Feed'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => appState.fetchFollowingActivity(),
+      color: AppTheme.accent,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: appState.followingActivity.length,
+        itemBuilder: (context, index) {
+          final event = appState.followingActivity[index];
+          final actor = event['actor'] ?? {};
+          final repo = event['repo'] ?? {};
+          final type = event['type'] ?? 'PushEvent';
+          final action = event['action'] ?? '';
+          final title = event['title'] ?? 'Activity';
+          final body = event['body'] ?? '';
+          final createdAtStr = event['created_at'] ?? '';
+          
+          DateTime? date;
+          if (createdAtStr.isNotEmpty) {
+            date = DateTime.tryParse(createdAtStr);
+          }
+          final displayTime = date != null 
+              ? '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}' 
+              : '';
+
+          // Determine Icon and color based on event type
+          IconData eventIcon = Icons.code;
+          Color eventColor = AppTheme.accent;
+          String typeLabel = 'Push';
+
+          if (type == 'PullRequestEvent') {
+            typeLabel = action == 'merged' ? 'PR Merged' : 'PR Opened';
+            eventIcon = action == 'merged' ? Icons.merge_type : Icons.call_merge;
+            eventColor = action == 'merged' ? Colors.purple : Colors.green;
+          } else if (type == 'ReleaseEvent') {
+            typeLabel = 'Release';
+            eventIcon = Icons.new_releases;
+            eventColor = Colors.orange;
+          }
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              borderRadius: 16,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: actor['avatar_url'] != null 
+                            ? NetworkImage(actor['avatar_url']) 
+                            : null,
+                        radius: 18,
+                        child: actor['avatar_url'] == null 
+                            ? const Icon(Icons.person, size: 18) 
+                            : null,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              actor['login'] ?? 'Unknown User',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppTheme.textMain,
+                              ),
+                            ),
+                            Text(
+                              repo['name'] ?? '',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: eventColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: eventColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(eventIcon, size: 12, color: eventColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              typeLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: eventColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
+                  if (body.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      body,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Text(
+                      displayTime,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: AppTheme.textSecondary.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

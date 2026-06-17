@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/prompt_item.dart';
 import '../../providers/app_state.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/animated_copy_button.dart';
 
 class PromptHubScreen extends StatefulWidget {
   const PromptHubScreen({super.key});
@@ -528,20 +529,10 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         )
                       : const Icon(Icons.refresh_rounded),
                 ),
-                IconButton(
-                  tooltip: 'Copy prompts.md',
-                  onPressed: markdown == null
-                      ? null
-                      : () async {
-                          await Clipboard.setData(ClipboardData(text: markdown));
-                          if (!mounted) {
-                            return;
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('prompts.md copied to clipboard')),
-                          );
-                        },
-                  icon: const Icon(Icons.copy_rounded),
+                AnimatedCopyButton(
+                  text: markdown ?? '',
+                  size: 18,
+                  color: AppTheme.textMain,
                 ),
               ],
             ),
@@ -1258,15 +1249,11 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                               'UPGRADED PROMPT (AI REFINED)',
                               style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.success),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.copy_rounded, size: 18),
+                            AnimatedCopyButton(
+                              text: prompt.refinedPrompt,
+                              size: 18,
                               color: AppTheme.success,
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: prompt.refinedPrompt));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Upgraded prompt copied to clipboard!')),
-                                );
-                              },
+                              successColor: AppTheme.success,
                             ),
                           ],
                         ),

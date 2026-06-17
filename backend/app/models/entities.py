@@ -18,6 +18,19 @@ class GithubProfile(Base):
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class GoogleProfile(Base):
+    __tablename__ = "google_profiles"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    access_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    refresh_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+
 class Repository(Base):
     __tablename__ = "repositories"
     id: Mapped[str] = mapped_column(

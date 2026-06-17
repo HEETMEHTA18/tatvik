@@ -2,6 +2,7 @@ import json
 import logging
 import httpx
 import io
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -10,7 +11,7 @@ from pypdf import PdfReader
 
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
-from app.models.entities import Repository, TechNews, GithubProfile, DeveloperScore
+from app.models.entities import Repository, TechNews, GithubProfile, DeveloperScore, AutoDevSession, PromptHistory
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,7 @@ async def get_github_roast(
 
     prompt += (
         "Write a brutal but hilarious review/roast of their GitHub profile. "
+        "The roast MUST be extremely concise, strictly between 30 and 50 words maximum (this is a hard constraint). "
         "Importantly, roast them in terms of their goal/target stack! For example, if they want to be a 'Blockchain developer' "
         "but they have no smart contracts or Web3 repos, make fun of that discrepancy. If they want to be a 'Flutter developer' "
         "but they only have Python repositories, call them out on that. Make the roast and the 3 quick tips highly related to "
@@ -196,7 +198,7 @@ async def get_github_roast(
         "Keep it highly entertaining but constructive. Also provide 3 quick tips to make their profile look elite.\n\n"
         "Return a JSON object with keys:\n"
         "{\n"
-        '  "roast": "Brutal roast text goes here...",\n'
+        '  "roast": "Brutal roast text goes here (MUST be between 30 and 50 words)...",\n'
         '  "tips": ["constructive tip 1", "constructive tip 2", "constructive tip 3"]\n'
         "}"
     )
@@ -343,12 +345,13 @@ async def upload_developer_resume(
     try:
         review_data = await call_ai_json(prompt)
         if review_data:
+            review_data["extracted_text"] = resume_text
             return review_data
     except Exception:
         pass
 
     # Mock fallback
-    return {
+    res = {
         "ats_score": 74,
         "missing_technologies": [
             "Docker / Containers",
@@ -376,6 +379,8 @@ async def upload_developer_resume(
             "Study Docker/Kubernetes and setup automated multi-stage builds in GitHub Actions.",
         ],
     }
+    res["extracted_text"] = resume_text
+    return res
 
 
 @router.post("/evaluate-project")
@@ -474,24 +479,104 @@ async def get_weekly_report(
     goal = user.personal_goal if user else None
     preferred_stack = user.preferred_stack if user else None
 
-    prompt = f"Analyze these repositories: {repo_list_str}. "
-    if goal:
-        prompt += f"The user's target career goal/topic is: {goal}. "
-    if preferred_stack:
-        prompt += f"The target tech stack is: {preferred_stack}. "
+    # Calculate actual stats from database for the last 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
 
-    prompt += (
-        "Generate a weekly developer progress report. "
-        "Ensure the assessment and progress metrics are framed relative to their target career goal and stack. "
-        "Provide repositories explored (int), skills learned (int), overall improvement percentage (int), "
-        "and a list of 7 integers representing daily commit counts/learning hours (Mon-Sun).\n\n"
-        "Return a JSON object with keys:\n"
-        "{\n"
-        '  "repositories_explored": int,\n'
-        '  "skills_learned": int,\n'
-        '  "improvement_percentage": int,\n'
-        '  "chart_data": [int, int, int, int, int, int, int]\n'
-        "}"
+    # 1. Repos worked on
+    proj_stmt = select(AutoDevSession.project_name).where(
+        AutoDevSession.user_id == user_id,
+        AutoDevSession.start_time >= seven_days_ago
+    )
+    active_projects = db.scalars(proj_stmt).all()
+    unique_active_projects = set(active_projects)
+    repos_explored = len(unique_active_projects)
+    if repos_explored == 0:
+        repos_explored = len(repos) if repos else 1
+
+    # 2. Unique skills/technologies used
+    tech_stmt = select(PromptHistory.technologies).where(
+        PromptHistory.user_id == user_id,
+        PromptHistory.created_at >= seven_days_ago
+    )
+    technologies_list = db.scalars(tech_stmt).all()
+    skills_set = set()
+    for tech_str in technologies_list:
+        if tech_str:
+            for item in tech_str.split(","):
+                item_stripped = item.strip()
+                if item_stripped:
+                    skills_set.add(item_stripped.lower())
+
+    sess_tech_stmt = select(AutoDevSession.languages, AutoDevSession.frameworks).where(
+        AutoDevSession.user_id == user_id,
+        AutoDevSession.start_time >= seven_days_ago
+    )
+    sess_tech = db.execute(sess_tech_stmt).all()
+    for row in sess_tech:
+        langs, frames = row
+        if langs:
+            for item in langs.split(","):
+                item_stripped = item.strip()
+                if item_stripped:
+                    skills_set.add(item_stripped.lower())
+        if frames:
+            for item in frames.split(","):
+                item_stripped = item.strip()
+                if item_stripped:
+                    skills_set.add(item_stripped.lower())
+
+    skills_learned = len(skills_set)
+    if skills_learned == 0:
+        skills_learned = 2
+
+    # 3. Daily activity breakdown (Mon-Sun)
+    chart_data = [0] * 7
+    prompts_stmt = select(PromptHistory.created_at).where(
+        PromptHistory.user_id == user_id,
+        PromptHistory.created_at >= seven_days_ago
+    )
+    prompt_times = db.scalars(prompts_stmt).all()
+    for pt in prompt_times:
+        wd = pt.weekday()  # Monday=0, Sunday=6
+        chart_data[wd] += 1
+
+    if sum(chart_data) == 0:
+        sess_times_stmt = select(AutoDevSession.start_time).where(
+            AutoDevSession.user_id == user_id,
+            AutoDevSession.start_time >= seven_days_ago
+        )
+        sess_times = db.scalars(sess_times_stmt).all()
+        for st in sess_times:
+            wd = st.weekday()
+            chart_data[wd] += 1
+
+    if sum(chart_data) == 0:
+        chart_data = [2, 4, 1, 0, 3, 2, 1]
+
+    # 4. Improvement percentage
+    improvement_percentage = min(25, 3 + repos_explored * 2 + skills_learned)
+
+    prompt = (
+        f"You are a Senior Engineering Director and Career Coach.\n"
+        f"Analyze this developer's weekly progress and growth feedback:\n"
+        f"- Target Stack: {preferred_stack or 'Not specified'}\n"
+        f"- Career Goal: {goal or 'Not specified'}\n"
+        f"- Repositories Explored: {repos_explored}\n"
+        f"- Skills/Technologies Used: {', '.join(skills_set) if skills_set else 'General coding'}\n"
+        f"- Daily Activity Counts (Mon-Sun): {chart_data}\n"
+        f"- Calculated Weekly Improvement: {improvement_percentage}%\n\n"
+        f"Based on this actual development activity, generate a JSON response explaining "
+        f"their achievements and suggesting specific next steps in their roadmap. Use "
+        f"the exact values computed above.\n\n"
+        f"Return a JSON object with keys:\n"
+        f"{{\n"
+        f'  "repositories_explored": {repos_explored},\n'
+        f'  "skills_learned": {skills_learned},\n'
+        f'  "improvement_percentage": {improvement_percentage},\n'
+        f'  "chart_data": {chart_data},\n'
+        f'  "achievements": "A short summary of their achievements this week (e.g. Mastered Flutter pop leak diagnosis)",\n'
+        f'  "next_steps": ["Specific next step 1 matching their stack", "Specific next step 2"]\n'
+        f"}}"
     )
 
     try:
@@ -502,10 +587,12 @@ async def get_weekly_report(
         pass
 
     return {
-        "repositories_explored": 3,
-        "skills_learned": 2,
-        "improvement_percentage": 7,
-        "chart_data": [12, 19, 3, 5, 2, 3, 10],
+        "repositories_explored": repos_explored,
+        "skills_learned": skills_learned,
+        "improvement_percentage": improvement_percentage,
+        "chart_data": chart_data,
+        "achievements": "Continuous development integration and active skill building.",
+        "next_steps": ["Integrate new libraries in your active repositories", "Explore system optimization guidelines"]
     }
 
 
@@ -696,3 +783,61 @@ async def open_source_copilot(payload: CopilotRequest):
             "Step 4: Run the test suite and verify the fix works without breaking other modules.",
         ],
     }
+
+
+class ResumeGenerateRequest(BaseModel):
+    resume_text: str
+    job_title: str
+    job_description: str
+
+
+@router.post("/resume-generate")
+async def generate_tailored_resume(
+    payload: ResumeGenerateRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    prompt = (
+        f"You are an expert resume writer. Tailor this developer's resume to match the job title '{payload.job_title}' "
+        f"and job description:\n{payload.job_description}\n\n"
+        f"Original Resume:\n{payload.resume_text}\n\n"
+        "Generate a tailored, high-impact professional resume in clean Markdown format. "
+        "Enhance the experience bullets to be quantified, add relevant keywords from the job description, "
+        "and optimize for ATS matching.\n\n"
+        "Return a JSON object with keys:\n"
+        "{\n"
+        '  "tailored_resume": "Markdown-formatted resume text here",\n'
+        '  "applied_optimizations": ["optimization 1", "optimization 2", "optimization 3"],\n'
+        '  "ats_match_forecast": int\n'
+        "}"
+    )
+
+    try:
+        gen_data = await call_ai_json(prompt)
+    except Exception:
+        gen_data = {}
+
+    if not gen_data or "tailored_resume" not in gen_data:
+        gen_data = {
+            "tailored_resume": f"# Tailored Resume - {payload.job_title}\n\n## Professional Summary\nResult-driven Developer with expertise in building scalable applications and matching target specifications for {payload.job_title}.\n\n## Experience\n- Lead Developer: Spearheaded optimization efforts increasing performance by 40%.\n- Software Engineer: Implemented core API features aligned with enterprise standards.\n",
+            "applied_optimizations": [
+                f"Aligned experience bullet points with keyword requirements for {payload.job_title}",
+                "Quantified achievements to highlight business value and tech scale",
+                "Formatted skills section to optimize ATS scanning"
+            ],
+            "ats_match_forecast": 92
+        }
+
+    # Sync to Google Drive and local workspace fallback
+    from app.services.google_drive_service import GoogleDriveService
+    filename = f"Tailored_Resume_{payload.job_title.replace(' ', '_')}.md"
+    sync_result = await GoogleDriveService.upload_file_to_drive(
+        user_id=user_id,
+        filename=filename,
+        content=gen_data["tailored_resume"],
+        db=db,
+    )
+    gen_data["google_drive_sync"] = sync_result
+
+    return gen_data
+

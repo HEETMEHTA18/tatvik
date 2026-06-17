@@ -13,6 +13,7 @@ router = APIRouter()
 
 class MentorMessageRequest(BaseModel):
     message: str
+    resume_context: str | None = None
 
 
 async def search_github_repositories(
@@ -145,8 +146,8 @@ async def mentor_chat(
     # 5. Build the system prompt with strict concise plaintext rules
     system_prompt = (
         "You are DevMentor, a highly specialized developer growth coach. Your role is strictly to analyze "
-        "the user's GitHub activity, repositories, commits, and skill gaps, and provide career roadmaps "
-        "and development mentoring. You MUST NOT answer any general knowledge, coding help unrelated to their "
+        "the user's GitHub activity, repositories, commits, skill gaps, and uploaded resume, and provide career roadmaps, "
+        "resume feedback, and development mentoring. You MUST NOT answer any general knowledge, coding help unrelated to their "
         "profile, or non-mentoring questions. If the user asks anything outside of DevMentor guidance, "
         "politely decline and steer them back to their career development.\n\n"
         "CRITICAL RESPONSE STYLE GUIDELINES:\n"
@@ -159,6 +160,12 @@ async def mentor_chat(
         "what's happening in tech, or roadmaps, you MUST use the real data provided below to answer them. DO NOT "
         "make up mock names or links. Provide the real repository names, stars, descriptions, and hyperlinks.\n\n"
         f"Context - Synced User Repositories: {repo_list_str}\n"
+    )
+
+    if payload.resume_context:
+        system_prompt += f"\nContext - User's Uploaded Resume (use this to help tailor suggestions, discuss their background, or answer job/resume questions):\n{payload.resume_context}\n"
+
+    system_prompt += (
         f"{github_context}"
         f"{news_context}\n"
         "Always recommend actionable learning steps based on these real-time tech trends and repositories."

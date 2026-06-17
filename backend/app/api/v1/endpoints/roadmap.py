@@ -67,7 +67,9 @@ async def generate_roadmap(
 
     prompt += (
         f"\nGenerate a customized, highly professional, realistic 5-step career roadmap for them to reach the next level.\n"
-        f"The milestones must be highly specific to their tech stack (based on their repositories and target preferred stack).\n"
+        f"The milestones must be highly specific to their tech stack (based on their repositories and target preferred stack) "
+        f"and must incorporate modern emerging tech industry recommendations (like Generative AI integration, LLM APIs, Edge computing, "
+        f"Rust-based tooling, WebAssembly, Tailwind v4, Flutter WebAssembly, and Serverless architectures).\n"
         f"Do NOT output generic, unrelated, or random tasks. Focus strictly on their target technologies and goals.\n\n"
         f"Return your response strictly as a JSON object with these exact keys:\n"
         f"{{\n"
@@ -75,7 +77,8 @@ async def generate_roadmap(
         f'  "milestones": [\n'
         f"    {{\n"
         f'      "title": "Milestone Title (e.g. Master State Management & Performance)",\n'
-        f'      "description": "Specific actions to take (e.g. Optimize rendering, implement BLoC/Riverpod, write integration tests)"\n'
+        f'      "description": "Specific actions to take (e.g. Optimize rendering, implement BLoC/Riverpod, write integration tests)",\n'
+        f'      "recommendations": ["Generative AI APIs (Gemini/OpenAI)", "Tailwind v4", "Riverpod"]\n'
         f"    }}\n"
         f"  ]\n"
         f"}}"
@@ -97,24 +100,29 @@ async def generate_roadmap(
         title = "Senior Developer Career Path"
         milestones = [
             {
-                "title": "Master Core Architecture",
-                "description": "Learn clean design patterns, state management, and write unit tests.",
+                "title": "Master Core Architecture & AI Integration",
+                "description": "Learn clean design patterns, state management, and integrate local LLM/Generative AI APIs.",
+                "recommendations": ["Generative AI APIs (Gemini/OpenAI)", "LangChain / LangGraph", "Riverpod / Hydrated BLoC"],
             },
             {
-                "title": "Advanced Framework Implementations",
-                "description": "Build high-performance components and optimize layout render passes.",
+                "title": "Advanced Frameworks & WebAssembly",
+                "description": "Build high-performance components, compile to WebAssembly, and optimize rendering passes.",
+                "recommendations": ["Flutter WebAssembly", "Tailwind CSS v4", "Vite & Next.js App Router"],
             },
             {
-                "title": "Testing & Quality Assurance",
-                "description": "Achieve 80%+ coverage with unit, widget, and integration tests.",
+                "title": "Modern Cloud & Edge Deployments",
+                "description": "Automate build pipelines and deploy serverless/edge functions globally.",
+                "recommendations": ["Cloudflare Workers / Vercel Edge", "Docker Containerization", "GitHub Actions CI/CD"],
             },
             {
-                "title": "CI/CD & Cloud Deployments",
-                "description": "Automate build and deployment pipelines using GitHub Actions or Codemagic.",
+                "title": "High-Performance Databases & Backend Scaling",
+                "description": "Build hyper-scalable microservices using modern compile-to-native languages and lightweight datastores.",
+                "recommendations": ["Rust Axum / Go Fiber", "PostgreSQL / Supabase", "Redis caching & Pub/Sub"],
             },
             {
-                "title": "System Design & Scaling",
-                "description": "Understand distributed system patterns, offline storage synchronization, and local caching.",
+                "title": "System Security & AI Agent Automation",
+                "description": "Secure applications using modern OAuth 2.0 / JWT and deploy automated agent workflows.",
+                "recommendations": ["OAuth 2.0 / OpenID Connect", "Docker / DevContainers", "LangChain Agents"],
             },
         ]
 

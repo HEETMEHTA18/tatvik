@@ -2,11 +2,13 @@ class RoadmapMilestone {
   final String title;
   final String description;
   final bool isCompleted;
+  final List<String> recommendations;
 
   RoadmapMilestone({
     required this.title,
     required this.description,
     this.isCompleted = false,
+    this.recommendations = const [],
   });
 }
 
