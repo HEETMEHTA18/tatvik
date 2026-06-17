@@ -64,6 +64,22 @@ class GithubService:
 
             repos_data = repos_response.json()
 
+            # Fetch total commits using Search Commits API
+            total_commits = 0
+            try:
+                commits_response = await client.get(
+                    f"https://api.github.com/search/commits?q=author:{login}",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Accept": "application/vnd.github.v3+json",
+                    },
+                    timeout=8.0,
+                )
+                if commits_response.status_code == 200:
+                    total_commits = commits_response.json().get("total_count", 0)
+            except Exception as ce:
+                logger.warning(f"Failed to fetch total commits for user {login}: {ce}")
+
             # Fetch existing repositories for the user to avoid duplicate key issues or delete and recreate
             # Delete existing repos for clean sync to avoid primary key/unique issues on full_name across users
             existing_repos_stmt = select(Repository).where(
@@ -127,9 +143,9 @@ class GithubService:
                 )
 
             # Calculate a basic Developer Score and save it
-            # Developer score formula (0 to 10 scale)
+            # Developer score formula (0 to 10 scale) using commits count
             developer_score_val = round(
-                min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1
+                min(max(total_stars * 0.2 + len(repos_data) * 0.3 + total_commits * 0.01 + 3.0, 1.0), 10.0), 1
             )
 
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
@@ -200,6 +216,22 @@ class GithubService:
 
             repos_data = repos_response.json()
 
+            # Fetch total commits using Search Commits API
+            total_commits = 0
+            try:
+                commits_response = await client.get(
+                    f"https://api.github.com/search/commits?q=author:{login}",
+                    headers={
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "DevMentor-App",
+                    },
+                    timeout=8.0,
+                )
+                if commits_response.status_code == 200:
+                    total_commits = commits_response.json().get("total_count", 0)
+            except Exception as ce:
+                logger.warning(f"Failed to fetch total commits for user {login}: {ce}")
+
             # Delete existing repos for clean sync
             existing_repos_stmt = select(Repository).where(
                 Repository.user_id == user_id
@@ -261,9 +293,9 @@ class GithubService:
                     }
                 )
 
-            # Calculate a basic Developer Score and save it
+            # Calculate a basic Developer Score and save it using commits count
             developer_score_val = round(
-                min(max(total_stars * 0.15 + len(repos_data) * 0.4 + 5.0, 1.0), 10.0), 1
+                min(max(total_stars * 0.2 + len(repos_data) * 0.3 + total_commits * 0.01 + 3.0, 1.0), 10.0), 1
             )
 
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
@@ -280,5 +312,6 @@ class GithubService:
                 "login": login,
                 "repos_count": len(repos_data),
                 "total_stars": total_stars,
-                "developer_score": score_rec.score,
+                "total_commits": total_commits,
+                "developer_score": developer_score_val,
             }

@@ -17,6 +17,7 @@ Comprehensive project documentation can be found in the [docs/](docs/) directory
 - [Setup Guide](docs/setup-guide.md)
 - [Development Checklist](docs/development-checklist.md)
 - [Implementation Plan](docs/implementation-plan.md)
+- [Resume Tailoring & Google Drive Integration](docs/resume-tailoring-integration.md)
 
 ## Tech Stack
 - **Frontend:** Flutter (Material 3, Riverpod, GoRouter)

@@ -204,65 +204,166 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildScoreSection(BuildContext context, AppState state) {
+    final scoreProgress = (state.developerScore / 10.0).clamp(0.0, 1.0);
+    
+    Color scoreColor = Colors.redAccent;
+    if (state.developerScore >= 8.0) {
+      scoreColor = AppTheme.accent;
+    } else if (state.developerScore >= 6.0) {
+      scoreColor = Colors.orangeAccent;
+    }
+
     return GlassCard(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('DEVELOPER SCORE', style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 12),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${state.developerScore}', style: Theme.of(context).textTheme.displayLarge),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16, left: 8),
-                child: Row(
+              Text('DEVELOPER SCORE', style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.bold,
+              )),
+              Icon(Icons.query_stats, color: AppTheme.accent.withValues(alpha: 0.8), size: 20),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: CircularProgressIndicator(
+                      value: scoreProgress,
+                      strokeWidth: 8,
+                      backgroundColor: Colors.white10,
+                      valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                    ),
+                  ),
+                  Container(
+                    width: 74,
+                    height: 74,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          scoreColor.withValues(alpha: 0.4),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${state.developerScore}',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                        Text(
+                          '/10',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.arrow_drop_up, color: AppTheme.success, size: 24),
                     Text(
-                      '0.3',
-                      style: GoogleFonts.jetBrainsMono(
-                        color: AppTheme.success,
+                      state.developerScore >= 8.0 
+                          ? 'Elite Developer Profile' 
+                          : state.developerScore >= 6.0 
+                              ? 'Pro Developer Profile' 
+                              : 'Rising Developer Profile',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Score is dynamically calculated based on repository stars, active commits, and repo contribution depth.',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                        height: 1.4,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.star_outline_rounded, color: AppTheme.accent),
-              ),
             ],
           ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatItem(context, '${state.stars}', 'STARS'),
-              _buildStatItem(context, '${state.commits}', 'COMMITS'),
-              _buildStatItem(context, '${state.repos}', 'REPOS'),
-            ],
+          const SizedBox(height: 28),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatItem(context, '${state.stars}', 'STARS', Icons.star_border),
+                Container(width: 1, height: 30, color: Colors.white12),
+                _buildStatItem(context, '${state.commits}', 'COMMITS', Icons.history),
+                Container(width: 1, height: 30, color: Colors.white12),
+                _buildStatItem(context, '${state.repos}', 'REPOS', Icons.folder_open),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String value, String label) {
+  Widget _buildStatItem(BuildContext context, String value, String label, IconData icon) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textMain)),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppTheme.accent),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMain,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textSecondary,
+          ),
+        ),
       ],
     );
   }
@@ -1252,6 +1353,61 @@ class HomeScreen extends StatelessWidget {
                   }),
                 ),
               ),
+              if (state.weeklyAchievements != null || (state.weeklyNextSteps != null && state.weeklyNextSteps!.isNotEmpty)) ...[
+                const Divider(height: 32, color: Colors.white12),
+                if (state.weeklyAchievements != null) ...[
+                  Text(
+                    'WEEKLY ACHIEVEMENTS',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.blue,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    state.weeklyAchievements!,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textMain,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                if (state.weeklyNextSteps != null && state.weeklyNextSteps!.isNotEmpty) ...[
+                  Text(
+                    'NEXT ACTION STEPS',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.accent,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ...state.weeklyNextSteps!.map((step) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.arrow_right_rounded, color: AppTheme.accent, size: 18),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            step,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                ],
+              ],
             ],
           ),
         ),
@@ -1469,169 +1625,173 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.7,
-              decoration: BoxDecoration(
-                color: AppTheme.isDark ? const Color(0xE6121214) : const Color(0xE6F8F9FA),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(30),
-                  topRight: Radius.circular(30),
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  width: 1,
-                ),
+        return Consumer<AppState>(
+          builder: (context, state, child) {
+            return ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
               ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  decoration: BoxDecoration(
+                    color: AppTheme.isDark ? const Color(0xE6121214) : const Color(0xE6F8F9FA),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'NOTIFICATION CENTER',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textMain,
-                        ),
-                      ),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          TextButton(
-                            onPressed: () {
-                              state.markAllNotificationsAsRead();
-                            },
-                            child: Text(
-                              'Read All',
-                              style: TextStyle(color: AppTheme.accent, fontSize: 12),
+                          Text(
+                            'NOTIFICATION CENTER',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textMain,
                             ),
                           ),
-                          TextButton(
-                            onPressed: () {
-                              state.clearNotifications();
-                              Navigator.pop(context);
-                            },
-                            child: Text(
-                              'Clear All',
-                              style: TextStyle(color: AppTheme.destructive, fontSize: 12),
-                            ),
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  state.markAllNotificationsAsRead();
+                                },
+                                child: Text(
+                                  'Read All',
+                                  style: TextStyle(color: AppTheme.accent, fontSize: 12),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  state.clearNotifications();
+                                  Navigator.pop(context);
+                                },
+                                child: Text(
+                                  'Clear All',
+                                  style: TextStyle(color: AppTheme.destructive, fontSize: 12),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: state.notifications.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No notifications yet.',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                            ),
-                          )
-                        : ListView.builder(
-                            itemCount: state.notifications.length,
-                            itemBuilder: (context, index) {
-                              final notification = state.notifications[index];
-                              final isRead = notification['isRead'] ?? false;
-                              final type = notification['type'] ?? 'welcome';
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: state.notifications.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'No notifications yet.',
+                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                ),
+                              )
+                            : ListView.builder(
+                                itemCount: state.notifications.length,
+                                itemBuilder: (context, index) {
+                                  final notification = state.notifications[index];
+                                  final isRead = notification['isRead'] ?? false;
+                                  final type = notification['type'] ?? 'welcome';
 
-                              IconData icon = Icons.info_outline;
-                              Color color = AppTheme.accent;
-                              if (type == 'dna') {
-                                icon = Icons.psychology_rounded;
-                                color = AppTheme.success;
-                              } else if (type == 'roast') {
-                                icon = Icons.fireplace_rounded;
-                                color = AppTheme.destructive;
-                              } else if (type == 'weekly_report') {
-                                icon = Icons.trending_up_rounded;
-                                color = AppTheme.blue;
-                              } else if (type == 'opportunity') {
-                                icon = Icons.insights_rounded;
-                                color = AppTheme.peach;
-                              }
+                                  IconData icon = Icons.info_outline;
+                                  Color color = AppTheme.accent;
+                                  if (type == 'dna') {
+                                    icon = Icons.psychology_rounded;
+                                    color = AppTheme.success;
+                                  } else if (type == 'roast') {
+                                    icon = Icons.fireplace_rounded;
+                                    color = AppTheme.destructive;
+                                  } else if (type == 'weekly_report') {
+                                    icon = Icons.trending_up_rounded;
+                                    color = AppTheme.blue;
+                                  } else if (type == 'opportunity') {
+                                    icon = Icons.insights_rounded;
+                                    color = AppTheme.peach;
+                                  }
 
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                child: InkWell(
-                                  onTap: () {
-                                    state.markNotificationAsRead(notification['id']);
-                                    _showNotificationDetail(context, notification);
-                                  },
-                                  child: GlassCard(
-                                    padding: const EdgeInsets.all(16),
-                                    borderRadius: 16,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: color.withValues(alpha: 0.15),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Icon(icon, color: color, size: 20),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    child: InkWell(
+                                      onTap: () {
+                                        state.markNotificationAsRead(notification['id']);
+                                        _showNotificationDetail(context, notification);
+                                      },
+                                      child: GlassCard(
+                                        padding: const EdgeInsets.all(16),
+                                        borderRadius: 16,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: color.withValues(alpha: 0.15),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(icon, color: color, size: 20),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      notification['title'] ?? '',
-                                                      style: TextStyle(
-                                                        fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                                                        color: AppTheme.textMain,
-                                                        fontSize: 13,
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          notification['title'] ?? '',
+                                                          style: TextStyle(
+                                                            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                                                            color: AppTheme.textMain,
+                                                            fontSize: 13,
+                                                          ),
+                                                        ),
                                                       ),
+                                                      if (!isRead)
+                                                        Container(
+                                                          width: 6, height: 6,
+                                                          decoration: const BoxDecoration(
+                                                            color: Colors.red,
+                                                            shape: BoxShape.circle,
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    notification['body'] ?? '',
+                                                    style: TextStyle(
+                                                      color: AppTheme.textSecondary,
+                                                      fontSize: 11,
                                                     ),
                                                   ),
-                                                  if (!isRead)
-                                                    Container(
-                                                      width: 6, height: 6,
-                                                      decoration: const BoxDecoration(
-                                                        color: Colors.red,
-                                                        shape: BoxShape.circle,
-                                                      ),
-                                                    ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                notification['body'] ?? '',
-                                                style: TextStyle(
-                                                  color: AppTheme.textSecondary,
-                                                  fontSize: 11,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

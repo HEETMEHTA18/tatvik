@@ -249,23 +249,19 @@ This is simulated offline prompts.md content.
 
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/repos/$selectedRepoOwner/$selectedRepoName/contents/.autodevs/prompts.md'),
+        Uri.parse('${AppConfig.apiBaseUrl}/github/file-content?owner=$selectedRepoOwner&repo=$selectedRepoName'),
         headers: {
           'Authorization': 'Bearer $token',
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'DevMentor-App',
         },
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final encodedContent = (data['content'] as String? ?? '').replaceAll('\n', '').replaceAll('\r', '');
-        if (encodedContent.isEmpty) {
+        final markdownText = data['content'] as String? ?? '';
+        if (markdownText.isEmpty) {
           return 'GitHub returned an empty prompts.md file.';
         }
 
-        final markdownBytes = base64Decode(encodedContent);
-        final markdownText = utf8.decode(markdownBytes);
         githubPromptsMarkdown = markdownText;
         githubPromptsMarkdownUpdatedAt = now;
 
@@ -334,6 +330,7 @@ This is simulated offline prompts.md content.
 
   void _triggerFallbackFetches() {
     fetchGithubData(githubUsername);
+    fetchFollowingActivity();
     if (token == null) return;
     fetchActivityData();
     fetchDeveloperDna();
@@ -377,6 +374,9 @@ This is simulated offline prompts.md content.
   String selectedActivityYear = 'Last 14 Weeks';
   bool isLoadingActivity = false;
 
+  List<Map<String, dynamic>> followingActivity = [];
+  bool isLoadingFollowingActivity = false;
+
   // Developer DNA
   String? dnaArchetype;
   int? dnaScore;
@@ -390,7 +390,7 @@ This is simulated offline prompts.md content.
   List<String>? roastTips;
   bool isLoadingRoast = false;
 
-  // Resume Review
+  // Resume Review & Tailoring
   int? resumeAtsScore;
   List<String>? resumeMissingTech;
   List<String>? resumeWeakBullets;
@@ -398,6 +398,20 @@ This is simulated offline prompts.md content.
   List<String>? resumeMindsetUpgrades;
   List<String>? resumeSkillUpgrades;
   bool isReviewingResume = false;
+  String? lastUploadedResumeText;
+  String? lastUploadedResumeFileName;
+
+  // Tailored Resume Generation
+  bool isGeneratingResume = false;
+  String? generatedResumeText;
+  List<String>? generatedResumeOptimizations;
+  int? generatedResumeAtsForecast;
+  Map<String, dynamic>? googleDriveSyncInfo;
+
+  // Google Drive Integration Status
+  bool isGoogleDriveConnected = false;
+  String? googleDriveEmail;
+  bool isCheckingGoogleDriveStatus = false;
 
   // Project Evaluator
   int? evaluatedProjectScore;
@@ -418,6 +432,8 @@ This is simulated offline prompts.md content.
   int? weeklySkills;
   int? weeklyImprovement;
   List<int>? weeklyChartData;
+  String? weeklyAchievements;
+  List<String>? weeklyNextSteps;
   bool isLoadingWeeklyReport = false;
 
   // Learning Paths (Duolingo style)
@@ -479,44 +495,16 @@ This is simulated offline prompts.md content.
 
 
   // User Data
-  String username = 'Alex Johnson';
-  double developerScore = 8.7;
-  int stars = 234;
-  int commits = 89;
-  int repos = 12;
-  List<String> strengths = ['Strong coding consistency', 'Well-documented repositories'];
-  List<String> gaps = ['Backend experience is holding back your score', 'System design patterns'];
+  String username = '';
+  double developerScore = 0.0;
+  int stars = 0;
+  int commits = 0;
+  int repos = 0;
+  List<String> strengths = [];
+  List<String> gaps = [];
 
-  // Repositories
-  List<Repository> allRepositories = [
-    Repository(
-      name: 'express-api-starter',
-      owner: 'node-app',
-      description: 'A minimal and flexible Node.js REST API starter with Express and TypeScript.',
-      difficulty: 'Beginner',
-      impactScore: 92,
-      tags: ['TypeScript', 'Express', 'Node.js'],
-      whyRecommended: 'Matched to your skill gaps. Curated to build backend experience.',
-    ),
-    Repository(
-      name: 'microservices-demo',
-      owner: 'google-cloud',
-      description: 'Sample cloud-native application with 10 microservices showcasing best practices.',
-      difficulty: 'Advanced',
-      impactScore: 88,
-      tags: ['Go', 'Kubernetes', 'Docker', 'GRPC'],
-      whyRecommended: 'Perfect for understanding distributed systems.',
-    ),
-    Repository(
-      name: 'nestjs-realworld',
-      owner: 'nestjs',
-      description: 'Exemplary Fullstack Medium.com clone powered by NestJS & React.',
-      difficulty: 'Intermediate',
-      impactScore: 98,
-      tags: ['TypeScript', 'NestJS', 'Backend', 'Fullstack'],
-      whyRecommended: 'Builds comprehensive full-stack knowledge.',
-    ),
-  ];
+  // Repositories — populated from real GitHub data
+  List<Repository> allRepositories = [];
 
   String _repoFilter = 'All';
   String get repoFilter => _repoFilter;
@@ -531,26 +519,11 @@ This is simulated offline prompts.md content.
     return allRepositories.where((r) => r.difficulty == _repoFilter).toList();
   }
 
-  // Roadmap
-  List<RoadmapMilestone> milestones = [
-    RoadmapMilestone(
-      title: 'Master TypeScript Fundamentals',
-      description: 'Completed',
-      isCompleted: true,
-    ),
-    RoadmapMilestone(
-      title: 'Build Full-Stack Projects',
-      description: 'In Progress',
-      isCompleted: false,
-    ),
-    RoadmapMilestone(
-      title: 'Learn System Design',
-      description: 'Next — 2 months',
-      isCompleted: false,
-    ),
-  ];
+  // Roadmap — populated dynamically from GitHub language analysis
+  List<RoadmapMilestone> milestones = [];
 
   double get roadmapProgress {
+    if (milestones.isEmpty) return 0.0;
     int completed = milestones.where((m) => m.isCompleted).length;
     return (completed / milestones.length);
   }
@@ -592,6 +565,10 @@ This is simulated offline prompts.md content.
             title: m['title'] ?? '',
             description: m['description'] ?? '',
             isCompleted: m['isCompleted'] ?? false,
+            recommendations: (m['recommendations'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                const [],
           );
         }).toList();
       }
@@ -630,6 +607,10 @@ This is simulated offline prompts.md content.
             title: m['title'] ?? '',
             description: m['description'] ?? '',
             isCompleted: m['isCompleted'] ?? false,
+            recommendations: (m['recommendations'] as List<dynamic>?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                const [],
           );
         }).toList();
       }
@@ -670,7 +651,11 @@ This is simulated offline prompts.md content.
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'message': text}),
+        body: jsonEncode({
+          'message': text,
+          if (lastUploadedResumeText != null && lastUploadedResumeText!.isNotEmpty)
+            'resume_context': lastUploadedResumeText,
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -691,6 +676,64 @@ This is simulated offline prompts.md content.
     } catch (e) {
       chatMessages.add(MentorMessage(
         content: 'Error: $e',
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ));
+    }
+    notifyListeners();
+    await saveChatHistory();
+  }
+
+  Future<void> sendPdfMessage(List<int> fileBytes, String filename) async {
+    chatMessages.add(MentorMessage(
+      content: '📄 Uploaded PDF: $filename',
+      role: MessageRole.user,
+      timestamp: DateTime.now(),
+    ));
+    notifyListeners();
+
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.apiBaseUrl}/advanced/resume-upload'),
+      );
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: filename,
+      ));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final extractedText = data['extracted_text'] ?? '';
+        
+        chatMessages.add(MentorMessage(
+          content: 'I have parsed your PDF resume. Here is a quick summary of my analysis:\n\n'
+              '• **ATS Alignment Score**: ${data['ats_score']}/100\n'
+              '• **Missing Key Technologies**: ${List<String>.from(data['missing_technologies'] ?? []).join(', ')}\n'
+              '• **Weak Bullet Points**: ${List<String>.from(data['weak_bullet_points'] ?? []).join(', ')}\n\n'
+              'How would you like to improve this resume? You can ask me to re-write any weak bullet points, suggest new projects, or help practice for interviews based on these requirements!',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ));
+        lastUploadedResumeText = extractedText;
+        lastUploadedResumeFileName = filename;
+      } else {
+        chatMessages.add(MentorMessage(
+          content: 'Failed to process the PDF resume. Please make sure it is a valid PDF file.',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ));
+      }
+    } catch (e) {
+      chatMessages.add(MentorMessage(
+        content: 'Error processing PDF: $e',
         role: MessageRole.assistant,
         timestamp: DateTime.now(),
       ));
@@ -940,6 +983,24 @@ This is simulated offline prompts.md content.
     notifyListeners();
 
     try {
+      int commitsCount = 0;
+      final commitsUri = Uri.parse('https://api.github.com/search/commits?q=author:$ghUsername');
+      try {
+        final commitsResponse = await http.get(
+          commitsUri,
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'DevMentor-App',
+          },
+        );
+        if (commitsResponse.statusCode == 200) {
+          final commitsData = jsonDecode(commitsResponse.body);
+          commitsCount = commitsData['total_count'] ?? 0;
+        }
+      } catch (e) {
+        debugPrint('Error fetching commits count: $e');
+      }
+
       final userUri = Uri.parse('https://api.github.com/users/$ghUsername');
       final userResponse = await http.get(userUri);
       
@@ -978,14 +1039,14 @@ This is simulated offline prompts.md content.
         }
 
         stars = totalStars;
-        commits = reposData.length * 15; // Estimate commits for prototype
+        commits = commitsCount > 0 ? commitsCount : (reposData.length * 15);
 
         if (newRepos.isNotEmpty) {
           allRepositories = newRepos;
         }
 
-        // Calculate dynamic Developer Score
-        developerScore = double.parse(((totalStars * 0.15 + reposData.length * 0.4 + 5.0).clamp(1.0, 10.0)).toStringAsFixed(1));
+        // Calculate dynamic Developer Score with real commits
+        developerScore = double.parse(((totalStars * 0.2 + reposData.length * 0.3 + commits * 0.01 + 3.0).clamp(1.0, 10.0)).toStringAsFixed(1));
 
         // Determine strengths and gaps dynamically
         strengths = [];
@@ -1100,9 +1161,32 @@ This is simulated offline prompts.md content.
         if (response.statusCode == 200) {
           debugPrint('Backend sync-username succeeded');
           showLinkGitHubPrompt = false;
+
+          // Parse real GitHub metrics from backend sync response
+          try {
+            final syncData = jsonDecode(response.body);
+            final details = syncData['details'] ?? {};
+            if (details['total_stars'] != null) {
+              stars = (details['total_stars'] as num).toInt();
+            }
+            if (details['total_commits'] != null) {
+              commits = (details['total_commits'] as num).toInt();
+            }
+            if (details['repos_count'] != null) {
+              repos = (details['repos_count'] as num).toInt();
+            }
+            if (details['developer_score'] != null) {
+              developerScore = (details['developer_score'] as num).toDouble();
+            }
+            debugPrint('Real GitHub metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+          } catch (parseError) {
+            debugPrint('Error parsing sync response: $parseError');
+          }
+
           notifyListeners();
           
           await fetchActivityData();
+          await fetchFollowingActivity();
           await fetchDeveloperDna();
           await fetchProfileRoast();
           await fetchWeeklyReport();
@@ -1144,8 +1228,48 @@ This is simulated offline prompts.md content.
       await prefs.setBool('pref_github_locked', true);
     } catch (_) {}
 
-    fetchGithubData(githubUsername);
+    await fetchGithubData(githubUsername);
+
+    // Sync through backend to get authoritative real data
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/github/sync-username'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'username': githubUsername,
+        }),
+      );
+      if (response.statusCode == 200) {
+        try {
+          final syncData = jsonDecode(response.body);
+          final details = syncData['details'] ?? {};
+          if (details['total_stars'] != null) {
+            stars = (details['total_stars'] as num).toInt();
+          }
+          if (details['total_commits'] != null) {
+            commits = (details['total_commits'] as num).toInt();
+          }
+          if (details['repos_count'] != null) {
+            repos = (details['repos_count'] as num).toInt();
+          }
+          if (details['developer_score'] != null) {
+            developerScore = (details['developer_score'] as num).toDouble();
+          }
+          debugPrint('OAuth sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+        } catch (parseError) {
+          debugPrint('Error parsing OAuth sync response: $parseError');
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error in OAuth backend sync: $e');
+    }
+
     fetchActivityData();
+    fetchFollowingActivity();
     fetchDeveloperDna();
     fetchProfileRoast();
     fetchWeeklyReport();
@@ -1200,8 +1324,42 @@ This is simulated offline prompts.md content.
             }
           } catch (_) {}
 
-          fetchGithubData(githubUsername);
+          await fetchGithubData(githubUsername);
+
+          // Sync through backend for real metrics
+          try {
+            final syncResponse = await http.post(
+              Uri.parse('${AppConfig.apiBaseUrl}/github/sync-username'),
+              headers: {
+                'Authorization': 'Bearer $token',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({'username': githubUsername}),
+            );
+            if (syncResponse.statusCode == 200) {
+              final syncData = jsonDecode(syncResponse.body);
+              final details = syncData['details'] ?? {};
+              if (details['total_stars'] != null) {
+                stars = (details['total_stars'] as num).toInt();
+              }
+              if (details['total_commits'] != null) {
+                commits = (details['total_commits'] as num).toInt();
+              }
+              if (details['repos_count'] != null) {
+                repos = (details['repos_count'] as num).toInt();
+              }
+              if (details['developer_score'] != null) {
+                developerScore = (details['developer_score'] as num).toDouble();
+              }
+              debugPrint('Profile sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+              notifyListeners();
+            }
+          } catch (syncErr) {
+            debugPrint('Error in profile backend sync: $syncErr');
+          }
+
           fetchActivityData();
+          fetchFollowingActivity();
           fetchDeveloperDna();
           fetchProfileRoast();
           fetchWeeklyReport();
@@ -1227,6 +1385,8 @@ This is simulated offline prompts.md content.
         await _persistSessionSnapshot();
         _triggerFallbackFetches();
       }
+    } finally {
+      await checkGoogleDriveStatus();
     }
   }
 
@@ -1283,6 +1443,31 @@ This is simulated offline prompts.md content.
   void setActivityYear(String year) {
     selectedActivityYear = year;
     fetchActivityData();
+  }
+
+  Future<void> fetchFollowingActivity() async {
+    isLoadingFollowingActivity = true;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/github/following-activity?username=$githubUsername'),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> rawEvents = data['events'] ?? [];
+        followingActivity = rawEvents.map((e) => Map<String, dynamic>.from(e)).toList();
+      } else {
+        debugPrint('Failed to load following activity: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error fetching following activity: $e');
+    } finally {
+      isLoadingFollowingActivity = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchDeveloperDna({bool force = false}) async {
@@ -1425,6 +1610,7 @@ This is simulated offline prompts.md content.
         resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
         resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
+        lastUploadedResumeText = resumeText;
       }
     } catch (e) {
       debugPrint('Error reviewing resume: $e');
@@ -1462,12 +1648,165 @@ This is simulated offline prompts.md content.
         resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
         resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
+        lastUploadedResumeText = data['extracted_text'];
+        lastUploadedResumeFileName = filename;
       }
     } catch (e) {
       debugPrint('Error uploading resume: $e');
     } finally {
       isReviewingResume = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> generateTailoredResume({
+    required String resumeText,
+    required String jobTitle,
+    required String jobDescription,
+  }) async {
+    isGeneratingResume = true;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/advanced/resume-generate'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'resume_text': resumeText,
+          'job_title': jobTitle,
+          'job_description': jobDescription,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        generatedResumeText = data['tailored_resume'];
+        generatedResumeOptimizations = List<String>.from(data['applied_optimizations'] ?? []);
+        generatedResumeAtsForecast = data['ats_match_forecast'];
+        googleDriveSyncInfo = Map<String, dynamic>.from(data['google_drive_sync'] ?? {});
+      }
+    } catch (e) {
+      debugPrint('Error generating resume: $e');
+    } finally {
+      isGeneratingResume = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> checkGoogleDriveStatus() async {
+    if (token == null) return;
+    isCheckingGoogleDriveStatus = true;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/auth/google/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        isGoogleDriveConnected = data['connected'] ?? false;
+        googleDriveEmail = data['email'];
+      }
+    } catch (e) {
+      debugPrint('Error checking Google Drive status: $e');
+    } finally {
+      isCheckingGoogleDriveStatus = false;
+      notifyListeners();
+    }
+  }
+
+  String getGoogleDriveAuthorizeUrl() {
+    return '${AppConfig.apiBaseUrl}/auth/google/authorize?token=$token';
+  }
+
+  Future<void> generateAndSyncResumeFromChat({
+    required String jobTitle,
+    required String jobDescription,
+  }) async {
+    if (lastUploadedResumeText == null || lastUploadedResumeText!.isEmpty) {
+      chatMessages.add(MentorMessage(
+        content: "Error: Please upload a PDF resume first before tailoring.",
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ));
+      notifyListeners();
+      return;
+    }
+
+    chatMessages.add(MentorMessage(
+      content: "Tailor my resume for $jobTitle:\n\n**Job Description:**\n$jobDescription",
+      role: MessageRole.user,
+      timestamp: DateTime.now(),
+    ));
+    
+    // Add a loading message
+    final loadingMsgIndex = chatMessages.length;
+    chatMessages.add(MentorMessage(
+      content: "⏳ Tailoring resume and syncing with Google Drive...",
+      role: MessageRole.assistant,
+      timestamp: DateTime.now(),
+    ));
+    notifyListeners();
+
+    try {
+      await generateTailoredResume(
+        resumeText: lastUploadedResumeText!,
+        jobTitle: jobTitle,
+        jobDescription: jobDescription,
+      );
+
+      if (generatedResumeText != null) {
+        String syncMsg = "";
+        if (googleDriveSyncInfo != null) {
+          final status = googleDriveSyncInfo!['status'];
+          final fileName = googleDriveSyncInfo!['file_name'] ?? '';
+          final webLink = googleDriveSyncInfo!['web_view_link'];
+          
+          if (status == 'success') {
+            syncMsg = "✅ **Successfully Synced to Google Drive!**\n"
+                      "• **File Name**: `$fileName`\n"
+                      "• **Link**: [Open Google Drive File]($webLink)";
+          } else {
+            final msg = googleDriveSyncInfo!['message'] ?? 'Saved to local workspace.';
+            final localPath = googleDriveSyncInfo!['file_path'] ?? '';
+            syncMsg = "⚠️ **Saved to Local Workspace Only**\n"
+                      "• *Reason*: $msg\n"
+                      "• *File path*: `$localPath`\n"
+                      "• *Action*: Please link Google Drive in the status bar/input area to sync automatically next time.";
+          }
+        }
+
+        chatMessages[loadingMsgIndex] = MentorMessage(
+          content: "### 📄 Tailored Resume Generated!\n\n"
+                   "• **Target Role**: $jobTitle\n"
+                   "• **ATS Forecast Score**: ${generatedResumeAtsForecast ?? 0}%\n\n"
+                   "#### **Applied Optimizations:**\n"
+                   "${(generatedResumeOptimizations ?? []).map((o) => '• $o').join('\n')}\n\n"
+                   "$syncMsg",
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        );
+      } else {
+        chatMessages[loadingMsgIndex] = MentorMessage(
+          content: "Error: Failed to generate tailored resume. Please try again.",
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        );
+      }
+    } catch (e) {
+      chatMessages[loadingMsgIndex] = MentorMessage(
+        content: "Error: $e",
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      );
+    } finally {
+      notifyListeners();
+      await saveChatHistory();
     }
   }
 
@@ -1539,6 +1878,8 @@ This is simulated offline prompts.md content.
         weeklySkills = data['skills_learned'];
         weeklyImprovement = data['improvement_percentage'];
         weeklyChartData = List<int>.from(data['chart_data'] ?? []);
+        weeklyAchievements = data['achievements'];
+        weeklyNextSteps = data['next_steps'] != null ? List<String>.from(data['next_steps']) : null;
         notifyListeners();
         return;
       }
@@ -1562,6 +1903,8 @@ This is simulated offline prompts.md content.
         weeklySkills = data['skills_learned'];
         weeklyImprovement = data['improvement_percentage'];
         weeklyChartData = List<int>.from(data['chart_data'] ?? []);
+        weeklyAchievements = data['achievements'];
+        weeklyNextSteps = data['next_steps'] != null ? List<String>.from(data['next_steps']) : null;
 
         try {
           final prefs = await SharedPreferences.getInstance();

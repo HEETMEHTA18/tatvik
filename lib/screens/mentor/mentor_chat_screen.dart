@@ -1,15 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
 import '../../widgets/liquid_glass_background.dart';
+import '../../widgets/animated_copy_button.dart';
 import '../../utils/speech_helper.dart';
 
 class MentorChatScreen extends StatefulWidget {
@@ -110,6 +113,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           ),
           body: Column(
             children: [
+              if (appState.lastUploadedResumeText != null && appState.lastUploadedResumeText!.isNotEmpty)
+                _buildResumeStatusBar(appState),
               Expanded(
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
@@ -144,6 +149,305 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildResumeStatusBar(AppState state) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: state.isGoogleDriveConnected
+            ? AppTheme.accent.withValues(alpha: 0.08)
+            : Colors.amber.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: state.isGoogleDriveConnected
+              ? AppTheme.accent.withValues(alpha: 0.2)
+              : Colors.amber.withValues(alpha: 0.3),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.description_rounded,
+            color: state.isGoogleDriveConnected ? AppTheme.accent : Colors.amber,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  state.lastUploadedResumeFileName ?? 'Active Resume PDF',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  state.isGoogleDriveConnected
+                      ? 'Connected to Google Drive (${state.googleDriveEmail ?? ''})'
+                      : 'Google Drive disconnected (saves locally)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton.icon(
+            onPressed: () => _showTailorDialog(state),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 14),
+            label: Text(
+              'Tailor & Sync',
+              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTailorDialog(AppState state) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: AlertDialog(
+            backgroundColor: const Color(0xCC0D0E15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: BorderSide(color: AppTheme.border),
+            ),
+            title: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
+                const SizedBox(width: 12),
+                Text(
+                  'Tailor Resume',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Provide the job details to automatically tailor your resume and sync the output to Google Drive.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: titleController,
+                      style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                      decoration: InputDecoration(
+                        labelText: 'Job Title',
+                        labelStyle: TextStyle(color: AppTheme.textSecondary),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.border),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.accent),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty ? 'Please enter job title' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: descController,
+                      style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        labelText: 'Job Description',
+                        labelStyle: TextStyle(color: AppTheme.textSecondary),
+                        alignLabelWithHint: true,
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.border),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppTheme.accent),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty ? 'Please enter job description' : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.pop(context);
+                    state.generateAndSyncResumeFromChat(
+                      jobTitle: titleController.text.trim(),
+                      jobDescription: descController.text.trim(),
+                    );
+                    _scrollToBottom();
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text('Tailor & Sync'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAttachmentOptions(AppState state) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xEE0D0E15),
+      elevation: 10,
+      barrierColor: Colors.black54,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Attachment Options',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
+                    child: Icon(Icons.picture_as_pdf_rounded, color: AppTheme.accent),
+                  ),
+                  title: Text(
+                    'Upload PDF Resume',
+                    style: TextStyle(color: AppTheme.textMain, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'Upload a new resume to guide the mentoring sessions',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.custom,
+                      allowedExtensions: ['pdf'],
+                      withData: true,
+                    );
+                    if (result != null && result.files.isNotEmpty) {
+                      final file = result.files.first;
+                      if (file.bytes != null) {
+                        await state.sendPdfMessage(file.bytes!, file.name);
+                        _scrollToBottom();
+                      }
+                    }
+                  },
+                ),
+                const Divider(color: Colors.white12, height: 24),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: state.isGoogleDriveConnected
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : Colors.amber.withValues(alpha: 0.15),
+                    child: Icon(
+                      state.isGoogleDriveConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                      color: state.isGoogleDriveConnected ? Colors.green : Colors.amber,
+                    ),
+                  ),
+                  title: Text(
+                    state.isGoogleDriveConnected ? 'Google Drive Connected' : 'Connect Google Drive',
+                    style: TextStyle(color: AppTheme.textMain, fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    state.isGoogleDriveConnected
+                        ? 'Email: ${state.googleDriveEmail ?? ''}'
+                        : 'Connect Google Drive to auto-sync tailored resumes',
+                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                  trailing: state.isGoogleDriveConnected
+                      ? null
+                      : Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    if (!state.isGoogleDriveConnected) {
+                      final url = state.getGoogleDriveAuthorizeUrl();
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -374,20 +678,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   // Chat Action Buttons (translucent, clean ChatGPT style)
                   Row(
                     children: [
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.copy_rounded, size: 15),
+                      AnimatedCopyButton(
+                        text: msg.content,
+                        size: 15,
                         color: AppTheme.textSecondary,
-                        tooltip: 'Copy Response',
-                        onPressed: () {
-                          Clipboard.setData(ClipboardData(text: msg.content));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Copied response to clipboard'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        },
                       ),
                       const SizedBox(width: 8),
                       IconButton(
@@ -412,20 +706,40 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildInputArea(AppState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0x0F0A0A0F) : const Color(0x0CFFFFFF),
-            border: Border(top: BorderSide(color: AppTheme.border, width: 1.0)),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
+    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: isMobileBrowser ? 0.0 : 20.0,
+              sigmaY: isMobileBrowser ? 0.0 : 20.0,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0x330D0E15) : const Color(0x40FFFFFF),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: AppTheme.border, width: 1.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: Icon(Icons.attach_file_rounded, color: AppTheme.textSecondary, size: 20),
+                    tooltip: 'Attachment Options',
+                    onPressed: () => _showAttachmentOptions(state),
+                  ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -436,13 +750,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       decoration: InputDecoration(
                         hintText: 'Message AI Mentor...',
                         hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: isDark ? const Color(0x1AFFFFFF) : const Color(0x08000000),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                       ),
                       onSubmitted: (val) {
                         if (val.trim().isNotEmpty) {
@@ -454,7 +763,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       final text = _controller.text.trim();
@@ -470,6 +779,13 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.accent,
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.accent.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
                     ),
