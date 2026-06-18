@@ -837,7 +837,7 @@ async def generate_tailored_resume(
     # Sync to Google Drive and local workspace fallback
     from app.services.google_drive_service import GoogleDriveService
 
-    filename = f"Tailored_Resume_{payload.job_title.replace(' ', '_')}.md"
+    filename = f"Tailored_Resume_{payload.job_title.replace(' ', '_')}.pdf"
     sync_result = await GoogleDriveService.upload_file_to_drive(
         user_id=user_id,
         filename=filename,

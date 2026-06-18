@@ -62,9 +62,12 @@ class GoogleDriveService:
         cls, user_id: str, filename: str, content: str, db: Session
     ) -> dict:
         """
-        Uploads a markdown/text file to Google Drive.
+        Uploads a tailored resume file to Google Drive.
+        If the filename ends in .pdf, compiles the Markdown content into PDF bytes and uploads.
         Falls back to local file sync if Google integration is not authenticated.
         """
+        is_pdf = filename.lower().endswith(".pdf")
+
         # Save to local google_drive_sync folder in the workspace first
         workspace_dir = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -72,8 +75,31 @@ class GoogleDriveService:
         sync_dir = os.path.join(workspace_dir, "google_drive_sync")
         os.makedirs(sync_dir, exist_ok=True)
         file_path = os.path.join(sync_dir, filename)
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
+
+        if is_pdf:
+            from app.services.pdf_generator_service import PDFGeneratorService
+
+            try:
+                upload_bytes = PDFGeneratorService.markdown_to_pdf(content)
+            except Exception as e:
+                logger.error(f"Failed to generate PDF: {e}")
+                # Fallback to plain text
+                upload_bytes = content.encode("utf-8")
+                filename = filename.replace(".pdf", ".txt")
+                file_path = os.path.join(sync_dir, filename)
+                is_pdf = False
+        else:
+            upload_bytes = content.encode("utf-8")
+
+        try:
+            if is_pdf:
+                with open(file_path, "wb") as f:
+                    f.write(upload_bytes)
+            else:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+        except Exception as e:
+            logger.error(f"Failed to save local file sync backup: {e}")
 
         access_token = await cls.get_or_refresh_token(user_id, db)
         if not access_token:
@@ -89,26 +115,31 @@ class GoogleDriveService:
             }
 
         try:
-            metadata = {"name": filename, "mimeType": "text/markdown"}
-            boundary = "google_drive_upload_boundary_devmentor"
+            mime_type = "application/pdf" if is_pdf else "text/markdown"
+            metadata = {"name": filename, "mimeType": mime_type}
+            boundary = b"google_drive_upload_boundary_devmentor"
             headers = {
                 "Authorization": f"Bearer {access_token}",
-                "Content-Type": f"multipart/related; boundary={boundary}",
+                "Content-Type": f"multipart/related; boundary={boundary.decode()}",
             }
             body = (
-                f"\r\n--{boundary}\r\n"
-                "Content-Type: application/json; charset=UTF-8\r\n\r\n"
-                f"{json.dumps(metadata)}\r\n"
-                f"--{boundary}\r\n"
-                "Content-Type: text/markdown; charset=UTF-8\r\n\r\n"
-                f"{content}\r\n"
-                f"--{boundary}--\r\n"
+                b"\r\n--" + boundary + b"\r\n"
+                b"Content-Type: application/json; charset=UTF-8\r\n\r\n"
+                + json.dumps(metadata).encode("utf-8")
+                + b"\r\n"
+                b"--"
+                + boundary
+                + b"\r\n"
+                + f"Content-Type: {mime_type}\r\n\r\n".encode()
+                + upload_bytes
+                + b"\r\n"
+                b"--" + boundary + b"--\r\n"
             )
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
                     headers=headers,
-                    content=body.encode("utf-8"),
+                    content=body,
                     timeout=15.0,
                 )
                 if response.status_code == 200:

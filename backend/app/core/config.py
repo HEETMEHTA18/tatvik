@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     gemini_api_key: str = ""
     groq_api_key: str = ""
+    GOOGLE_CLIENT_ID: str = "google-client-id"
+    GOOGLE_CLIENT_SECRET: str = "google-client-secret"
 
 
 settings = Settings()

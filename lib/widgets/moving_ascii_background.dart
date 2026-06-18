@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -88,7 +89,9 @@ class _MovingAsciiBackgroundState extends State<MovingAsciiBackground>
   @override
   void initState() {
     super.initState();
+    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
     _ticker = createTicker((elapsed) {
+      if (isMobileBrowser) return;
       if (_lastElapsed == Duration.zero) {
         _lastElapsed = elapsed;
         return;
@@ -99,7 +102,9 @@ class _MovingAsciiBackgroundState extends State<MovingAsciiBackground>
         _updateParticles(delta);
       }
     });
-    _ticker.start();
+    if (!isMobileBrowser) {
+      _ticker.start();
+    }
   }
 
   @override

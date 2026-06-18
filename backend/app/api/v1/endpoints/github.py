@@ -625,3 +625,89 @@ async def github_file_content(
             raise he
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/public-stats/{username}")
+async def get_public_stats(username: str):
+    import httpx
+
+    # Strip any leading '@'
+    clean_username = username.strip().replace("@", "")
+    if not clean_username:
+        raise HTTPException(status_code=400, detail="Invalid username")
+
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "DevMentor-App",
+    }
+
+    async with httpx.AsyncClient() as client:
+        # 1. Fetch main profile
+        try:
+            profile_response = await client.get(
+                f"https://api.github.com/users/{clean_username}",
+                headers=headers,
+                timeout=8.0,
+            )
+            if profile_response.status_code == 404:
+                raise HTTPException(status_code=404, detail="GitHub user not found")
+            elif profile_response.status_code != 200:
+                raise HTTPException(
+                    status_code=profile_response.status_code,
+                    detail=f"GitHub API error: {profile_response.text}",
+                )
+
+            profile_data = profile_response.json()
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status_code=502, detail=f"Failed to contact GitHub: {str(e)}"
+            )
+
+        # 2. Fetch commits count (ignore failures)
+        commits_count = 0
+        try:
+            commits_response = await client.get(
+                f"https://api.github.com/search/commits?q=author:{clean_username}",
+                headers=headers,
+                timeout=6.0,
+            )
+            if commits_response.status_code == 200:
+                commits_count = commits_response.json().get("total_count", 0)
+        except Exception:
+            pass
+
+        # 3. Fetch repositories to count stars (ignore failures)
+        total_stars = 0
+        repos_list = []
+        try:
+            repos_response = await client.get(
+                f"https://api.github.com/users/{clean_username}/repos?per_page=100",
+                headers=headers,
+                timeout=8.0,
+            )
+            if repos_response.status_code == 200:
+                repos_data = repos_response.json()
+                for repo in repos_data:
+                    stars = repo.get("stargazers_count", 0)
+                    total_stars += stars
+                    repos_list.append(
+                        {
+                            "name": repo.get("name"),
+                            "stargazers_count": stars,
+                            "language": repo.get("language"),
+                            "description": repo.get("description"),
+                            "owner": {"login": repo.get("owner", {}).get("login")},
+                        }
+                    )
+        except Exception:
+            pass
+
+        return {
+            "login": profile_data.get("login"),
+            "name": profile_data.get("name") or profile_data.get("login"),
+            "avatar_url": profile_data.get("avatar_url"),
+            "public_repos": profile_data.get("public_repos", 0),
+            "total_stars": total_stars,
+            "total_commits": commits_count,
+            "repos": repos_list,
+        }

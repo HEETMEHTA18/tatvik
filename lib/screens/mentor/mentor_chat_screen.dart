@@ -168,58 +168,66 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           width: 1.0,
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.description_rounded,
-            color: state.isGoogleDriveConnected ? AppTheme.accent : Colors.amber,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  state.lastUploadedResumeFileName ?? 'Active Resume PDF',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textMain,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  state.isGoogleDriveConnected
-                      ? 'Connected to Google Drive (${state.googleDriveEmail ?? ''})'
-                      : 'Google Drive disconnected (saves locally)',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: () => _showTailorDialog(state),
-            icon: const Icon(Icons.auto_awesome_rounded, size: 14),
-            label: Text(
-              'Tailor & Sync',
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+          Row(
+            children: [
+              Icon(
+                Icons.description_rounded,
+                color: state.isGoogleDriveConnected ? AppTheme.accent : Colors.amber,
+                size: 20,
               ),
-              elevation: 0,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      state.lastUploadedResumeFileName ?? 'Active Resume PDF',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textMain,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      state.isGoogleDriveConnected
+                          ? 'Connected to Google Drive (${state.googleDriveEmail ?? ''})'
+                          : 'Google Drive disconnected (saves locally)',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showTailorDialog(state),
+              icon: const Icon(Icons.auto_awesome_rounded, size: 14),
+              label: Text(
+                'Tailor & Sync',
+                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
             ),
           ),
         ],
