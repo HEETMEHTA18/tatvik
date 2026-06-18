@@ -102,27 +102,47 @@ async def generate_roadmap(
             {
                 "title": "Master Core Architecture & AI Integration",
                 "description": "Learn clean design patterns, state management, and integrate local LLM/Generative AI APIs.",
-                "recommendations": ["Generative AI APIs (Gemini/OpenAI)", "LangChain / LangGraph", "Riverpod / Hydrated BLoC"],
+                "recommendations": [
+                    "Generative AI APIs (Gemini/OpenAI)",
+                    "LangChain / LangGraph",
+                    "Riverpod / Hydrated BLoC",
+                ],
             },
             {
                 "title": "Advanced Frameworks & WebAssembly",
                 "description": "Build high-performance components, compile to WebAssembly, and optimize rendering passes.",
-                "recommendations": ["Flutter WebAssembly", "Tailwind CSS v4", "Vite & Next.js App Router"],
+                "recommendations": [
+                    "Flutter WebAssembly",
+                    "Tailwind CSS v4",
+                    "Vite & Next.js App Router",
+                ],
             },
             {
                 "title": "Modern Cloud & Edge Deployments",
                 "description": "Automate build pipelines and deploy serverless/edge functions globally.",
-                "recommendations": ["Cloudflare Workers / Vercel Edge", "Docker Containerization", "GitHub Actions CI/CD"],
+                "recommendations": [
+                    "Cloudflare Workers / Vercel Edge",
+                    "Docker Containerization",
+                    "GitHub Actions CI/CD",
+                ],
             },
             {
                 "title": "High-Performance Databases & Backend Scaling",
                 "description": "Build hyper-scalable microservices using modern compile-to-native languages and lightweight datastores.",
-                "recommendations": ["Rust Axum / Go Fiber", "PostgreSQL / Supabase", "Redis caching & Pub/Sub"],
+                "recommendations": [
+                    "Rust Axum / Go Fiber",
+                    "PostgreSQL / Supabase",
+                    "Redis caching & Pub/Sub",
+                ],
             },
             {
                 "title": "System Security & AI Agent Automation",
                 "description": "Secure applications using modern OAuth 2.0 / JWT and deploy automated agent workflows.",
-                "recommendations": ["OAuth 2.0 / OpenID Connect", "Docker / DevContainers", "LangChain Agents"],
+                "recommendations": [
+                    "OAuth 2.0 / OpenID Connect",
+                    "Docker / DevContainers",
+                    "LangChain Agents",
+                ],
             },
         ]
 

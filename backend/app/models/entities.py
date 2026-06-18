@@ -30,7 +30,6 @@ class GoogleProfile(Base):
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-
 class Repository(Base):
     __tablename__ = "repositories"
     id: Mapped[str] = mapped_column(

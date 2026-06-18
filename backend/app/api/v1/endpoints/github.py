@@ -455,9 +455,6 @@ async def github_day_activity(
     }
 
 
-
-
-
 @router.get("/following-activity")
 async def github_following_activity(
     username: Optional[str] = None,
@@ -470,10 +467,10 @@ async def github_following_activity(
 
     stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
     profile = db.scalar(stmt)
-    
+
     access_token = profile.access_token if profile else None
     login = username or (profile.login if profile else None)
-    
+
     if not login:
         user_stmt = select(User).where(User.id == user_id)
         user = db.scalar(user_stmt)
@@ -491,7 +488,7 @@ async def github_following_activity(
         headers["Authorization"] = f"Bearer {access_token}"
 
     url = f"https://api.github.com/users/{login}/received_events?per_page=30"
-    
+
     async with httpx.AsyncClient() as client:
         try:
             res = await client.get(url, headers=headers, timeout=12.0)
@@ -504,21 +501,25 @@ async def github_following_activity(
                     repo = event.get("repo", {})
                     payload = event.get("payload", {})
                     created_at = event.get("created_at")
-                    
+
                     title = ""
                     description = ""
                     action_type = "general"
-                    
+
                     if event_type == "WatchEvent":
                         title = f"{actor.get('login')} starred {repo.get('name')}"
                         action_type = "star"
                     elif event_type == "PushEvent":
                         commits = payload.get("commits", [])
-                        commit_msg = commits[0].get("message") if commits else "No commit message"
+                        commit_msg = (
+                            commits[0].get("message")
+                            if commits
+                            else "No commit message"
+                        )
                         count = payload.get("size", 1)
                         ref = payload.get("ref", "").replace("refs/heads/", "")
                         title = f"{actor.get('login')} pushed {count} commit{'s' if count != 1 else ''} to {ref} in {repo.get('name')}"
-                        description = f"\"{commit_msg}\""
+                        description = f'"{commit_msg}"'
                         action_type = "push"
                     elif event_type == "PullRequestEvent":
                         action = payload.get("action", "opened")
@@ -559,18 +560,20 @@ async def github_following_activity(
                     else:
                         title = f"{actor.get('login')} performed {event_type} on {repo.get('name')}"
                         action_type = "general"
-                        
-                    structured_events.append({
-                        "id": event.get("id"),
-                        "actor_name": actor.get("login"),
-                        "actor_avatar": actor.get("avatar_url"),
-                        "repo_name": repo.get("name"),
-                        "type": event_type,
-                        "action_type": action_type,
-                        "title": title,
-                        "description": description,
-                        "created_at": created_at,
-                    })
+
+                    structured_events.append(
+                        {
+                            "id": event.get("id"),
+                            "actor_name": actor.get("login"),
+                            "actor_avatar": actor.get("avatar_url"),
+                            "repo_name": repo.get("name"),
+                            "type": event_type,
+                            "action_type": action_type,
+                            "title": title,
+                            "description": description,
+                            "created_at": created_at,
+                        }
+                    )
                 return {"events": structured_events}
             else:
                 return {"events": [], "error": f"GitHub API returned {res.status_code}"}
@@ -602,7 +605,7 @@ async def github_file_content(
         headers["Authorization"] = f"Bearer {access_token}"
 
     url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
-    
+
     async with httpx.AsyncClient() as client:
         try:
             res = await client.get(url, headers=headers, timeout=12.0)
@@ -615,9 +618,10 @@ async def github_file_content(
             elif res.status_code == 404:
                 raise HTTPException(status_code=404, detail="File not found on GitHub.")
             else:
-                raise HTTPException(status_code=res.status_code, detail=f"GitHub error: {res.text}")
+                raise HTTPException(
+                    status_code=res.status_code, detail=f"GitHub error: {res.text}"
+                )
         except HTTPException as he:
             raise he
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-

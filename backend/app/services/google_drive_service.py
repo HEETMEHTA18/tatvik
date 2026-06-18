@@ -10,6 +10,7 @@ from app.models.entities import GoogleProfile
 
 logger = logging.getLogger(__name__)
 
+
 class GoogleDriveService:
     @staticmethod
     async def get_or_refresh_token(user_id: str, db: Session) -> str | None:
@@ -29,12 +30,14 @@ class GoogleDriveService:
                     response = await client.post(
                         "https://oauth2.googleapis.com/token",
                         data={
-                            "client_id": settings.GOOGLE_CLIENT_ID or "google-client-id",
-                            "client_secret": settings.GOOGLE_CLIENT_SECRET or "google-client-secret",
+                            "client_id": settings.GOOGLE_CLIENT_ID
+                            or "google-client-id",
+                            "client_secret": settings.GOOGLE_CLIENT_SECRET
+                            or "google-client-secret",
                             "refresh_token": profile.refresh_token,
                             "grant_type": "refresh_token",
                         },
-                        timeout=10.0
+                        timeout=10.0,
                     )
                     if response.status_code == 200:
                         data = response.json()
@@ -43,10 +46,14 @@ class GoogleDriveService:
                             profile.access_token = new_access
                             profile.synced_at = datetime.utcnow()
                             db.commit()
-                            logger.info(f"Refreshed Google OAuth token for user {user_id}")
+                            logger.info(
+                                f"Refreshed Google OAuth token for user {user_id}"
+                            )
                             return new_access
             except Exception as e:
-                logger.error(f"Failed to refresh Google OAuth token for user {user_id}: {e}")
+                logger.error(
+                    f"Failed to refresh Google OAuth token for user {user_id}: {e}"
+                )
 
         return profile.access_token
 
@@ -59,7 +66,9 @@ class GoogleDriveService:
         Falls back to local file sync if Google integration is not authenticated.
         """
         # Save to local google_drive_sync folder in the workspace first
-        workspace_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        workspace_dir = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        )
         sync_dir = os.path.join(workspace_dir, "google_drive_sync")
         os.makedirs(sync_dir, exist_ok=True)
         file_path = os.path.join(sync_dir, filename)
@@ -76,18 +85,15 @@ class GoogleDriveService:
                 "drive_file_id": None,
                 "web_view_link": None,
                 "message": "Connected to local workspace backup. Link Google Drive to sync to cloud.",
-                "synced_at": "Just now (local)"
+                "synced_at": "Just now (local)",
             }
 
         try:
-            metadata = {
-                "name": filename,
-                "mimeType": "text/markdown"
-            }
+            metadata = {"name": filename, "mimeType": "text/markdown"}
             boundary = "google_drive_upload_boundary_devmentor"
             headers = {
                 "Authorization": f"Bearer {access_token}",
-                "Content-Type": f"multipart/related; boundary={boundary}"
+                "Content-Type": f"multipart/related; boundary={boundary}",
             }
             body = (
                 f"\r\n--{boundary}\r\n"
@@ -103,22 +109,26 @@ class GoogleDriveService:
                     "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
                     headers=headers,
                     content=body.encode("utf-8"),
-                    timeout=15.0
+                    timeout=15.0,
                 )
                 if response.status_code == 200:
                     res_data = response.json()
                     file_id = res_data.get("id")
-                    logger.info(f"Successfully uploaded tailored resume to Google Drive for user {user_id}")
+                    logger.info(
+                        f"Successfully uploaded tailored resume to Google Drive for user {user_id}"
+                    )
                     return {
                         "status": "success",
                         "file_name": filename,
                         "file_path": file_path,
                         "drive_file_id": file_id,
                         "web_view_link": f"https://drive.google.com/open?id={file_id}",
-                        "synced_at": "Just now"
+                        "synced_at": "Just now",
                     }
                 else:
-                    logger.error(f"Google Drive API error: {response.status_code} - {response.text}")
+                    logger.error(
+                        f"Google Drive API error: {response.status_code} - {response.text}"
+                    )
                     return {
                         "status": "partial_success_api_error",
                         "file_name": filename,
@@ -126,7 +136,7 @@ class GoogleDriveService:
                         "drive_file_id": None,
                         "web_view_link": None,
                         "message": f"Saved locally. Google Drive API error: {response.status_code}",
-                        "synced_at": "Just now (local)"
+                        "synced_at": "Just now (local)",
                     }
         except Exception as e:
             logger.error(f"Exception uploading to Google Drive: {e}")
@@ -137,5 +147,5 @@ class GoogleDriveService:
                 "drive_file_id": None,
                 "web_view_link": None,
                 "message": f"Saved locally. Error uploading: {str(e)}",
-                "synced_at": "Just now (local)"
+                "synced_at": "Just now (local)",
             }

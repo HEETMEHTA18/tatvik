@@ -11,7 +11,14 @@ from pypdf import PdfReader
 
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
-from app.models.entities import Repository, TechNews, GithubProfile, DeveloperScore, AutoDevSession, PromptHistory
+from app.models.entities import (
+    Repository,
+    TechNews,
+    GithubProfile,
+    DeveloperScore,
+    AutoDevSession,
+    PromptHistory,
+)
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -484,8 +491,7 @@ async def get_weekly_report(
 
     # 1. Repos worked on
     proj_stmt = select(AutoDevSession.project_name).where(
-        AutoDevSession.user_id == user_id,
-        AutoDevSession.start_time >= seven_days_ago
+        AutoDevSession.user_id == user_id, AutoDevSession.start_time >= seven_days_ago
     )
     active_projects = db.scalars(proj_stmt).all()
     unique_active_projects = set(active_projects)
@@ -495,8 +501,7 @@ async def get_weekly_report(
 
     # 2. Unique skills/technologies used
     tech_stmt = select(PromptHistory.technologies).where(
-        PromptHistory.user_id == user_id,
-        PromptHistory.created_at >= seven_days_ago
+        PromptHistory.user_id == user_id, PromptHistory.created_at >= seven_days_ago
     )
     technologies_list = db.scalars(tech_stmt).all()
     skills_set = set()
@@ -508,8 +513,7 @@ async def get_weekly_report(
                     skills_set.add(item_stripped.lower())
 
     sess_tech_stmt = select(AutoDevSession.languages, AutoDevSession.frameworks).where(
-        AutoDevSession.user_id == user_id,
-        AutoDevSession.start_time >= seven_days_ago
+        AutoDevSession.user_id == user_id, AutoDevSession.start_time >= seven_days_ago
     )
     sess_tech = db.execute(sess_tech_stmt).all()
     for row in sess_tech:
@@ -532,8 +536,7 @@ async def get_weekly_report(
     # 3. Daily activity breakdown (Mon-Sun)
     chart_data = [0] * 7
     prompts_stmt = select(PromptHistory.created_at).where(
-        PromptHistory.user_id == user_id,
-        PromptHistory.created_at >= seven_days_ago
+        PromptHistory.user_id == user_id, PromptHistory.created_at >= seven_days_ago
     )
     prompt_times = db.scalars(prompts_stmt).all()
     for pt in prompt_times:
@@ -543,7 +546,7 @@ async def get_weekly_report(
     if sum(chart_data) == 0:
         sess_times_stmt = select(AutoDevSession.start_time).where(
             AutoDevSession.user_id == user_id,
-            AutoDevSession.start_time >= seven_days_ago
+            AutoDevSession.start_time >= seven_days_ago,
         )
         sess_times = db.scalars(sess_times_stmt).all()
         for st in sess_times:
@@ -592,7 +595,10 @@ async def get_weekly_report(
         "improvement_percentage": improvement_percentage,
         "chart_data": chart_data,
         "achievements": "Continuous development integration and active skill building.",
-        "next_steps": ["Integrate new libraries in your active repositories", "Explore system optimization guidelines"]
+        "next_steps": [
+            "Integrate new libraries in your active repositories",
+            "Explore system optimization guidelines",
+        ],
     }
 
 
@@ -823,13 +829,14 @@ async def generate_tailored_resume(
             "applied_optimizations": [
                 f"Aligned experience bullet points with keyword requirements for {payload.job_title}",
                 "Quantified achievements to highlight business value and tech scale",
-                "Formatted skills section to optimize ATS scanning"
+                "Formatted skills section to optimize ATS scanning",
             ],
-            "ats_match_forecast": 92
+            "ats_match_forecast": 92,
         }
 
     # Sync to Google Drive and local workspace fallback
     from app.services.google_drive_service import GoogleDriveService
+
     filename = f"Tailored_Resume_{payload.job_title.replace(' ', '_')}.md"
     sync_result = await GoogleDriveService.upload_file_to_drive(
         user_id=user_id,
@@ -840,4 +847,3 @@ async def generate_tailored_resume(
     gen_data["google_drive_sync"] = sync_result
 
     return gen_data
-

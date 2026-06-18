@@ -63,7 +63,7 @@ def google_authorize(token: str, request: Request):
     scopes = [
         "https://www.googleapis.com/auth/drive.file",
         "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/userinfo.profile"
+        "https://www.googleapis.com/auth/userinfo.profile",
     ]
     scope_str = " ".join(scopes)
 
@@ -74,10 +74,12 @@ def google_authorize(token: str, request: Request):
         "scope": scope_str,
         "access_type": "offline",
         "prompt": "consent",
-        "state": token
+        "state": token,
     }
 
-    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(
+        params
+    )
     return RedirectResponse(url=auth_url)
 
 
@@ -109,7 +111,9 @@ async def google_callback(
         if not user_id:
             raise ValueError()
     except Exception:
-        return RedirectResponse(url=f"{frontend_base}/?gdrive=error&message=invalid_auth_state")
+        return RedirectResponse(
+            url=f"{frontend_base}/?gdrive=error&message=invalid_auth_state"
+        )
 
     scheme = "https" if not is_local else "http"
     redirect_uri = f"{scheme}://{host_header}/api/v1/auth/google/callback"
@@ -119,7 +123,8 @@ async def google_callback(
             "https://oauth2.googleapis.com/token",
             data={
                 "client_id": settings.GOOGLE_CLIENT_ID or "google-client-id",
-                "client_secret": settings.GOOGLE_CLIENT_SECRET or "google-client-secret",
+                "client_secret": settings.GOOGLE_CLIENT_SECRET
+                or "google-client-secret",
                 "code": code,
                 "grant_type": "authorization_code",
                 "redirect_uri": redirect_uri,
@@ -130,11 +135,13 @@ async def google_callback(
         refresh_token = token_data.get("refresh_token")
 
         if not access_token:
-            return RedirectResponse(url=f"{frontend_base}/?gdrive=error&message=no_access_token")
+            return RedirectResponse(
+                url=f"{frontend_base}/?gdrive=error&message=no_access_token"
+            )
 
         profile_response = await client.get(
             "https://www.googleapis.com/oauth2/v2/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"}
+            headers={"Authorization": f"Bearer {access_token}"},
         )
         google_user = profile_response.json()
         email = google_user.get("email") or "google-user@devmentor.com"
@@ -146,7 +153,7 @@ async def google_callback(
                 user_id=user_id,
                 email=email,
                 access_token=access_token,
-                refresh_token=refresh_token
+                refresh_token=refresh_token,
             )
             db.add(profile)
         else:
@@ -160,22 +167,20 @@ async def google_callback(
 
 
 @router.get("/google/status")
-def google_status(
-    request: Request,
-    db: Session = Depends(get_db)
-):
+def google_status(request: Request, db: Session = Depends(get_db)):
     from app.api.deps import get_current_user_id
     from app.models.entities import GoogleProfile
     from sqlalchemy import select
-    
+
     # Extract token from header to manually authenticate
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return {"connected": False, "email": None}
-    
+
     token = auth_header.split(" ")[1]
     from jose import jwt
     from app.core.config import settings
+
     try:
         payload = jwt.decode(
             token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
@@ -189,7 +194,6 @@ def google_status(
     if profile:
         return {"connected": True, "email": profile.email}
     return {"connected": False, "email": None}
-
 
 
 @router.get("/github/callback")

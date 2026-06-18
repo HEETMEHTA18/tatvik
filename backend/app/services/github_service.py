@@ -145,7 +145,17 @@ class GithubService:
             # Calculate a basic Developer Score and save it
             # Developer score formula (0 to 10 scale) using commits count
             developer_score_val = round(
-                min(max(total_stars * 0.2 + len(repos_data) * 0.3 + total_commits * 0.01 + 3.0, 1.0), 10.0), 1
+                min(
+                    max(
+                        total_stars * 0.2
+                        + len(repos_data) * 0.3
+                        + total_commits * 0.01
+                        + 3.0,
+                        1.0,
+                    ),
+                    10.0,
+                ),
+                1,
             )
 
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
@@ -295,7 +305,17 @@ class GithubService:
 
             # Calculate a basic Developer Score and save it using commits count
             developer_score_val = round(
-                min(max(total_stars * 0.2 + len(repos_data) * 0.3 + total_commits * 0.01 + 3.0, 1.0), 10.0), 1
+                min(
+                    max(
+                        total_stars * 0.2
+                        + len(repos_data) * 0.3
+                        + total_commits * 0.01
+                        + 3.0,
+                        1.0,
+                    ),
+                    10.0,
+                ),
+                1,
             )
 
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
