@@ -213,7 +213,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _showTailorDialog(state),
+              onPressed: () => _showTailorBottomSheet(state),
               icon: const Icon(Icons.auto_awesome_rounded, size: 14),
               label: Text(
                 'Tailor & Sync',
@@ -235,118 +235,132 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     );
   }
 
-  void _showTailorDialog(AppState state) {
+  void _showTailorBottomSheet(AppState state) {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0D0E15),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: Colors.white10, width: 0.5),
+      ),
       builder: (context) {
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: AlertDialog(
-            backgroundColor: const Color(0xCC0D0E15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: AppTheme.border),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
-                const SizedBox(width: 12),
-                Text(
-                  'Tailor Resume',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textMain,
-                  ),
-                ),
-              ],
-            ),
-            content: Form(
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          child: SingleChildScrollView(
+            child: Form(
               key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Provide the job details to automatically tailor your resume and sync the output to Google Drive.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: titleController,
-                      style: TextStyle(color: AppTheme.textMain, fontSize: 14),
-                      decoration: InputDecoration(
-                        labelText: 'Job Title',
-                        labelStyle: TextStyle(color: AppTheme.textSecondary),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppTheme.border),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppTheme.accent),
-                          borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tailor Resume',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: AppTheme.textMain,
                         ),
                       ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty ? 'Please enter job title' : null,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Provide the target job details to automatically tailor your resume and sync the output to Google Drive.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: descController,
-                      style: TextStyle(color: AppTheme.textMain, fontSize: 14),
-                      maxLines: 5,
-                      decoration: InputDecoration(
-                        labelText: 'Job Description',
-                        labelStyle: TextStyle(color: AppTheme.textSecondary),
-                        alignLabelWithHint: true,
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppTheme.border),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: AppTheme.accent),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    controller: titleController,
+                    style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Job Title',
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.border),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty ? 'Please enter job description' : null,
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.accent),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ],
-                ),
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty ? 'Please enter job title' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: descController,
+                    style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      labelText: 'Job Description',
+                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                      alignLabelWithHint: true,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.border),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: AppTheme.accent),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    validator: (value) =>
+                        value == null || value.trim().isEmpty ? 'Please enter job description' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            Navigator.pop(context);
+                            state.generateAndSyncResumeFromChat(
+                              jobTitle: titleController.text.trim(),
+                              jobDescription: descController.text.trim(),
+                            );
+                            _scrollToBottom();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: const Text('Tailor & Sync'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (formKey.currentState!.validate()) {
-                    Navigator.pop(context);
-                    state.generateAndSyncResumeFromChat(
-                      jobTitle: titleController.text.trim(),
-                      jobDescription: descController.text.trim(),
-                    );
-                    _scrollToBottom();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text('Tailor & Sync'),
-              ),
-            ],
           ),
         );
       },
