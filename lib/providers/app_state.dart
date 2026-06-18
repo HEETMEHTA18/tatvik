@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/repository.dart';
@@ -8,6 +8,7 @@ import '../models/roadmap.dart';
 import '../models/mentor_message.dart';
 import '../core/config/app_config.dart';
 import '../models/prompt_item.dart';
+import '../utils/cookie_manager.dart';
 
 
 class AppState extends ChangeNotifier {
@@ -25,11 +26,31 @@ class AppState extends ChangeNotifier {
   Future<void> initPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final storedToken = prefs.getString('auth_token');
-      final storedUsername = prefs.getString('github_username');
-      final storedDisplayName = prefs.getString('profile_display_name');
-      final storedAvatarUrl = prefs.getString('github_avatar_url');
-      final storedLoginTimestamp = prefs.getString('login_timestamp');
+      var storedToken = prefs.getString('auth_token');
+      var storedUsername = prefs.getString('github_username');
+      var storedDisplayName = prefs.getString('profile_display_name');
+      var storedAvatarUrl = prefs.getString('github_avatar_url');
+      var storedLoginTimestamp = prefs.getString('login_timestamp');
+
+      if (kIsWeb && (storedToken == null || storedToken.isEmpty)) {
+        final cookieToken = getCookie('auth_token');
+        if (cookieToken != null && cookieToken.isNotEmpty) {
+          storedToken = cookieToken;
+          storedUsername = getCookie('github_username');
+          storedDisplayName = getCookie('profile_display_name');
+          storedAvatarUrl = getCookie('github_avatar_url');
+          storedLoginTimestamp = getCookie('login_timestamp');
+          
+          // Re-sync back to SharedPreferences
+          try {
+            await prefs.setString('auth_token', storedToken);
+            if (storedUsername != null) await prefs.setString('github_username', storedUsername);
+            if (storedDisplayName != null) await prefs.setString('profile_display_name', storedDisplayName);
+            if (storedAvatarUrl != null) await prefs.setString('github_avatar_url', storedAvatarUrl);
+            if (storedLoginTimestamp != null) await prefs.setString('login_timestamp', storedLoginTimestamp);
+          } catch (_) {}
+        }
+      }
       
       pushNotifications = prefs.getBool('pref_notifications') ?? true;
       aiInsights = prefs.getBool('pref_ai') ?? true;
@@ -85,14 +106,21 @@ class AppState extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       if (token != null && token!.isNotEmpty) {
         await prefs.setString('auth_token', token!);
+        saveCookie('auth_token', token!);
       }
       await prefs.setString('github_username', githubUsername);
+      saveCookie('github_username', githubUsername);
       await prefs.setString('profile_display_name', username);
-      await prefs.setString('login_timestamp', sessionLoginTimestamp ?? DateTime.now().toIso8601String());
+      saveCookie('profile_display_name', username);
+      final ts = sessionLoginTimestamp ?? DateTime.now().toIso8601String();
+      await prefs.setString('login_timestamp', ts);
+      saveCookie('login_timestamp', ts);
       if (avatarUrl != null && avatarUrl!.isNotEmpty) {
         await prefs.setString('github_avatar_url', avatarUrl!);
+        saveCookie('github_avatar_url', avatarUrl!);
       } else {
         await prefs.remove('github_avatar_url');
+        deleteCookie('github_avatar_url');
       }
     } catch (_) {}
   }
@@ -1111,21 +1139,23 @@ This is simulated offline prompts.md content.
 
       // 2. Fallback to direct HTTP calls (works on mobile/desktop, fails gracefully on Web)
       int commitsCount = 0;
-      final commitsUri = Uri.parse('https://api.github.com/search/commits?q=author:$ghUsername');
-      try {
-        final commitsResponse = await http.get(
-          commitsUri,
-          headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'DevMentor-App',
-          },
-        );
-        if (commitsResponse.statusCode == 200) {
-          final commitsData = jsonDecode(commitsResponse.body);
-          commitsCount = commitsData['total_count'] ?? 0;
+      if (!kIsWeb) {
+        final commitsUri = Uri.parse('https://api.github.com/search/commits?q=author:$ghUsername');
+        try {
+          final commitsResponse = await http.get(
+            commitsUri,
+            headers: {
+              'Accept': 'application/vnd.github.v3+json',
+              'User-Agent': 'DevMentor-App',
+            },
+          );
+          if (commitsResponse.statusCode == 200) {
+            final commitsData = jsonDecode(commitsResponse.body);
+            commitsCount = commitsData['total_count'] ?? 0;
+          }
+        } catch (e) {
+          debugPrint('Error fetching commits count: $e');
         }
-      } catch (e) {
-        debugPrint('Error fetching commits count: $e');
       }
 
       final userUri = Uri.parse('https://api.github.com/users/$ghUsername');
@@ -1537,6 +1567,12 @@ This is simulated offline prompts.md content.
       await prefs.remove('roast_cache_timestamp');
       await prefs.remove('weekly_report_response_cache');
       await prefs.remove('weekly_report_cache_timestamp');
+
+      deleteCookie('auth_token');
+      deleteCookie('github_username');
+      deleteCookie('profile_display_name');
+      deleteCookie('github_avatar_url');
+      deleteCookie('login_timestamp');
     } catch (_) {}
   }
 

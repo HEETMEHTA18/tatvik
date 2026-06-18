@@ -63,39 +63,118 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
     final baseBg = isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF4F7FC);
 
     if (isMobileBrowser) {
+      final baseBg = isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF4F7FC);
+      final colors = isDark ? darkColors : lightColors;
+
       return Scaffold(
         backgroundColor: baseBg,
         body: Stack(
           children: [
-            // Static smooth gradient for mobile web performance (no ticking background or high sigma blur)
+            // 1. Base background
             Positioned.fill(
+              child: Container(color: baseBg),
+            ),
+
+            // 2. Static Liquid Orbs/Blobs (no ticking animations, painted once for zero GPU load)
+            // Orb 1 (Top Left)
+            Positioned(
+              top: -150,
+              left: -100,
               child: Container(
+                width: 450,
+                height: 450,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: isDark
-                        ? [
-                            const Color(0xFF100F1E),
-                            const Color(0xFF0A0A0F),
-                          ]
-                        : [
-                            const Color(0xFFEAF2FB),
-                            const Color(0xFFF4F7FC),
-                          ],
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors[0],
+                      colors[0].withValues(alpha: 0.0),
+                    ],
                   ),
                 ),
               ),
             ),
 
-            // 3b. Transition Layer (using simple opacity on mobile web instead of heavy blur)
+            // Orb 2 (Bottom Right)
+            Positioned(
+              bottom: -200,
+              right: -100,
+              child: Container(
+                width: 550,
+                height: 550,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors[1],
+                      colors[1].withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Orb 3 (Center Right)
+            Positioned(
+              top: 250,
+              right: -150,
+              child: Container(
+                width: 450,
+                height: 450,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors[2],
+                      colors[2].withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Orb 4 (Bottom Left/Center)
+            Positioned(
+              bottom: 100,
+              left: -150,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      colors[3],
+                      colors[3].withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // 3. Static blur filter to blend colors beautifully
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 45, sigmaY: 45),
+                child: Container(
+                  color: Colors.transparent,
+                ),
+              ),
+            ),
+
+            // 3.5. Moving ASCII Background (which remains static on mobile browser)
+            Positioned.fill(
+              child: MovingAsciiBackground(isDark: isDark),
+            ),
+
+            // 3b. Transition Glass Layer (visible when swiping/transitioning)
             if (widget.transitionProgress > 0.01)
               Positioned.fill(
                 child: Opacity(
                   opacity: widget.transitionProgress.clamp(0.0, 1.0),
                   child: Container(
                     color: (isDark ? Colors.black : Colors.white)
-                        .withValues(alpha: widget.transitionProgress * 0.3),
+                        .withValues(alpha: widget.transitionProgress * 0.2),
                   ),
                 ),
               ),

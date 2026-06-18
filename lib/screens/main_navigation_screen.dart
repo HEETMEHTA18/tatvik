@@ -474,19 +474,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                     borderRadius: BorderRadius.circular(28),
                     child: BackdropFilter(
                       filter: ImageFilter.blur(
-                        sigmaX: isMobileBrowser ? 0.0 : (isDark ? 40.0 : 30.0),
-                        sigmaY: isMobileBrowser ? 0.0 : (isDark ? 40.0 : 30.0),
+                        sigmaX: isMobileBrowser ? 25.0 : (isDark ? 40.0 : 30.0),
+                        sigmaY: isMobileBrowser ? 25.0 : (isDark ? 40.0 : 30.0),
                       ),
                       child: Container(
                         height: 68,
                         decoration: BoxDecoration(
                           color: isMobileBrowser
-                              ? (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: 0.92)
+                              ? (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: isDark ? 0.45 : 0.70)
                               : (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: isDark ? 0.25 : 0.55),
                           borderRadius: BorderRadius.circular(28),
                           border: Border.all(
                             color: Colors.white.withValues(
-                              alpha: isMobileBrowser ? 0.12 : (isDark ? 0.18 : 0.45),
+                              alpha: isMobileBrowser ? 0.25 : (isDark ? 0.18 : 0.45),
                             ),
                             width: 0.5,
                           ),
