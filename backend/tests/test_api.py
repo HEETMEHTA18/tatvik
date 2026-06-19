@@ -201,12 +201,21 @@ def test_research_github_search():
     headers = get_auth_headers()
     from unittest.mock import patch, MagicMock
 
-    with patch("subprocess.run") as mock_run, patch(
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
         "app.api.v1.endpoints.research.call_gemini"
     ) as mock_gemini:
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout='[{"fullName": "test/repo", "description": "Test description", "stargazersCount": 5, "url": "https://github.com/test/repo"}]',
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
         )
         mock_gemini.return_value = "AI analysis summary"
 
@@ -332,12 +341,21 @@ def test_research_project_analysis():
     headers = get_auth_headers()
     from unittest.mock import patch, MagicMock
 
-    with patch("subprocess.run") as mock_run, patch(
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
         "app.api.v1.endpoints.research.call_gemini"
     ) as mock_gemini:
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout='[{"fullName": "test/repo", "description": "Test description", "stargazersCount": 5, "url": "https://github.com/test/repo"}]',
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
         )
         mock_gemini.return_value = "AI project plan"
 
@@ -357,18 +375,27 @@ def test_research_learning_path():
     headers = get_auth_headers()
     from unittest.mock import patch, MagicMock
 
-    with patch("subprocess.run") as mock_run, patch(
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
         "app.api.v1.endpoints.research.call_gemini"
     ) as mock_gemini:
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout='[{"fullName": "test/repo", "description": "Test description", "stargazersCount": 5, "url": "https://github.com/test/repo"}]',
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
         )
         mock_gemini.return_value = "AI learning guide"
 
         response = client.post(
             "/api/v1/research/learning-path",
-            json={"role": "Cloud Architect", "target_technologies": ["AWS", "Docker"]},
+            json={"role": "Python Developer", "target_technologies": ["FastAPI"]},
             headers=headers,
         )
         assert response.status_code == 200

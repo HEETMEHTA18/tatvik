@@ -31,12 +31,12 @@ async def sync_username(
             "message": "Public GitHub sync completed",
             "details": sync_result,
         }
-    except Exception as e:
+    except Exception:
         import logging
 
-        logging.getLogger(__name__).error(f"Failed to sync public github data: {e}")
+        logging.getLogger(__name__).exception("Failed to sync public github data")
         raise HTTPException(
-            status_code=500, detail=f"Failed to sync public GitHub data: {str(e)}"
+            status_code=500, detail="Failed to sync public GitHub data. Please try again later."
         )
 
 
@@ -68,9 +68,11 @@ async def sync_github(
             "message": "GitHub sync completed",
             "details": sync_result,
         }
-    except Exception as e:
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("GitHub sync failed")
         raise HTTPException(
-            status_code=500, detail=f"Failed to sync GitHub data: {str(e)}"
+            status_code=500, detail="Failed to sync GitHub data. Please try again later."
         )
 
 
@@ -580,8 +582,10 @@ async def github_following_activity(
                 return {"events": structured_events}
             else:
                 return {"events": [], "error": f"GitHub API returned {res.status_code}"}
-        except Exception as e:
-            return {"events": [], "error": str(e)}
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Failed to fetch following activity")
+            return {"events": [], "error": "Failed to fetch activity. Please try again later."}
 
 
 @router.get("/file-content")
@@ -622,12 +626,14 @@ async def github_file_content(
                 raise HTTPException(status_code=404, detail="File not found on GitHub.")
             else:
                 raise HTTPException(
-                    status_code=res.status_code, detail=f"GitHub error: {res.text}"
+                    status_code=res.status_code, detail="GitHub API error. Please try again later."
                 )
         except HTTPException as he:
             raise he
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("Failed to fetch GitHub file content")
+            raise HTTPException(status_code=500, detail="Failed to fetch file content. Please try again later.")
 
 
 @router.get("/public-stats/{username}")
@@ -689,9 +695,9 @@ async def get_public_stats(
                 )
 
             profile_data = profile_response.json()
-        except Exception as e:
-            logger.error(
-                f"Failed to fetch public GitHub profile for {clean_username}: {e}. Returning fallback mock."
+        except Exception:
+            logger.exception(
+                f"Failed to fetch public GitHub profile for {clean_username}. Returning fallback mock."
             )
             return {
                 "login": clean_username,

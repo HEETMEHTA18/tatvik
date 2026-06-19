@@ -845,5 +845,5 @@ async def push_github_prompts(
         else:
             raise HTTPException(
                 status_code=put_res.status_code,
-                detail=f"GitHub API Error: {put_res.text}",
+                detail="GitHub API error. Please try again later.",
             )

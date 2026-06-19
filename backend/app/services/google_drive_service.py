@@ -119,7 +119,11 @@ class GoogleDriveService:
         If the filename ends in .pdf, compiles the Markdown content into PDF bytes and uploads.
         Falls back to local file sync if Google integration is not authenticated.
         """
-        is_pdf = filename.lower().endswith(".pdf")
+        # Sanitize filename to prevent path traversal
+        safe_filename = os.path.basename(filename)
+        if not safe_filename:
+            safe_filename = "resume.txt"
+        is_pdf = safe_filename.lower().endswith(".pdf")
 
         # Save to local google_drive_sync folder in the workspace first
         workspace_dir = os.path.dirname(
@@ -127,7 +131,7 @@ class GoogleDriveService:
         )
         sync_dir = os.path.join(workspace_dir, "google_drive_sync")
         os.makedirs(sync_dir, exist_ok=True)
-        file_path = os.path.join(sync_dir, filename)
+        file_path = os.path.join(sync_dir, safe_filename)
 
         if is_pdf:
             try:
@@ -138,8 +142,8 @@ class GoogleDriveService:
                 logger.error(f"Failed to generate PDF: {e}")
                 # Fallback to plain text
                 upload_bytes = content.encode("utf-8")
-                filename = filename.replace(".pdf", ".txt")
-                file_path = os.path.join(sync_dir, filename)
+                safe_filename = safe_filename.replace(".pdf", ".txt")
+                file_path = os.path.join(sync_dir, safe_filename)
                 is_pdf = False
         else:
             upload_bytes = content.encode("utf-8")
@@ -159,7 +163,7 @@ class GoogleDriveService:
             # Return local-only status, advising user to connect
             return {
                 "status": "local_only",
-                "file_name": filename,
+                "file_name": safe_filename,
                 "file_path": file_path,
                 "drive_file_id": None,
                 "web_view_link": None,
@@ -172,7 +176,7 @@ class GoogleDriveService:
 
         try:
             mime_type = "application/pdf" if is_pdf else "text/markdown"
-            metadata = {"name": filename, "mimeType": mime_type}
+            metadata = {"name": safe_filename, "mimeType": mime_type}
             if folder_id:
                 metadata["parents"] = [folder_id]
             boundary = b"google_drive_upload_boundary_devmentor"
@@ -208,7 +212,7 @@ class GoogleDriveService:
                     )
                     return {
                         "status": "success",
-                        "file_name": filename,
+                        "file_name": safe_filename,
                         "file_path": file_path,
                         "drive_file_id": file_id,
                         "web_view_link": f"https://drive.google.com/open?id={file_id}",
@@ -220,7 +224,7 @@ class GoogleDriveService:
                     )
                     return {
                         "status": "partial_success_api_error",
-                        "file_name": filename,
+                        "file_name": safe_filename,
                         "file_path": file_path,
                         "drive_file_id": None,
                         "web_view_link": None,
@@ -231,10 +235,10 @@ class GoogleDriveService:
             logger.error(f"Exception uploading to Google Drive: {e}")
             return {
                 "status": "partial_success_exception",
-                "file_name": filename,
+                "file_name": safe_filename,
                 "file_path": file_path,
                 "drive_file_id": None,
                 "web_view_link": None,
-                "message": f"Saved locally. Error uploading: {str(e)}",
+                "message": "Saved locally. An error occurred during upload.",
                 "synced_at": "Just now (local)",
             }

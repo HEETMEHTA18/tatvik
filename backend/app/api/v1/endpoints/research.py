@@ -132,9 +132,46 @@ async def call_gemini(system_prompt: str, user_prompt: str) -> str:
                 except (KeyError, IndexError):
                     return "Error: Malformed Gemini API response."
             else:
-                return f"Error: Gemini API error: {response.text}"
+                logger.error(f"Gemini API returned status {response.status_code}")
+                return "Error: AI service returned an error. Please try again later."
         except Exception as e:
-            return f"Error: Exception calling Gemini API: {str(e)}"
+            logger.exception("Gemini API call failed")
+            return "Error: AI service unavailable. Please try again later."
+
+
+GITHUB_API_HEADERS = {
+    "Accept": "application/vnd.github.v3+json",
+    "User-Agent": "DevMentor-App",
+}
+
+
+async def _search_github_repos(query: str, limit: int = 5) -> list[dict]:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "https://api.github.com/search/repositories",
+            params={"q": query, "sort": "stars", "order": "desc", "per_page": limit},
+            headers=GITHUB_API_HEADERS,
+            timeout=15.0,
+        )
+        if response.status_code != 200:
+            raise Exception(f"GitHub API returned status {response.status_code}")
+        data = response.json()
+        return [
+            {
+                "fullName": item["full_name"],
+                "description": item.get("description", ""),
+                "stargazersCount": item["stargazers_count"],
+                "url": item["html_url"],
+            }
+            for item in data.get("items", [])
+        ]
+
+
+def _sanitize_video_id(video_id: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_-]", "", video_id)
+    if not safe:
+        raise ValueError("Invalid video ID after sanitization")
+    return safe
 
 
 # Schemas
@@ -226,13 +263,14 @@ async def research_github(
                 if response.status_code != 200:
                     raise HTTPException(
                         status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail=f"Failed to scrape GitHub repo: {response.text}",
+                        detail="Failed to scrape GitHub repository from upstream reader.",
                     )
                 scraped_content = response.text
-            except Exception as e:
+            except Exception:
+                logger.exception("Jina Reader request failed")
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Failed to reach Jina Reader: {str(e)}",
+                    detail="Failed to fetch repository data. Please try again later.",
                 )
 
         system_prompt = (
@@ -263,25 +301,12 @@ async def research_github(
 
     else:
         try:
-            # Use structured array arguments to run the command securely, preventing shell injections
-            cmd = [
-                "gh",
-                "search",
-                "repos",
-                payload.query,
-                "--json",
-                "fullName,description,stargazersCount,url",
-                "--limit",
-                str(min(payload.limit or 5, 20)),
-            ]
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-            if res.returncode != 0:
-                raise Exception(res.stderr)
-            repos = json.loads(res.stdout)
-        except Exception as e:
+            repos = await _search_github_repos(payload.query, min(payload.limit or 5, 20))
+        except Exception:
+            logger.exception("GitHub search failed")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error executing GitHub search CLI: {str(e)}",
+                detail="Failed to search GitHub repositories. Please try again later.",
             )
 
         system_prompt = (
@@ -337,7 +362,8 @@ async def research_youtube(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid YouTube video ID."
         )
-    video_id = video_id_match.group(1)
+    raw_video_id = video_id_match.group(1)
+    video_id = _sanitize_video_id(raw_video_id)
 
     cache_key = f"research:youtube:{video_id}"
     cached = get_cache(cache_key)
@@ -350,8 +376,8 @@ async def research_youtube(
     db.commit()
     db.refresh(session_obj)
 
+    safe_url = f"https://www.youtube.com/watch?v={video_id}"
     subtitle_path = f"/tmp/yt_{video_id}"
-    # Use structured array arguments to run the command securely, preventing shell injections
     cmd = [
         ".venv/bin/yt-dlp",
         "--write-auto-sub",
@@ -360,7 +386,7 @@ async def research_youtube(
         "--skip-download",
         "-o",
         subtitle_path,
-        payload.url,
+        safe_url,
     ]
 
     subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -400,7 +426,7 @@ async def research_youtube(
 
     video_info_str = ""
     try:
-        info_cmd = [".venv/bin/yt-dlp", "-j", payload.url]
+        info_cmd = [".venv/bin/yt-dlp", "-j", safe_url]
         res = subprocess.run(info_cmd, capture_output=True, text=True, timeout=15)
         if res.returncode == 0:
             info = json.loads(res.stdout)
@@ -483,13 +509,14 @@ async def research_reddit(
             if response.status_code != 200:
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Failed to search Reddit discussions: {response.text}",
+                    detail="Failed to search Reddit discussions from upstream reader.",
                 )
             scraped_content = response.text
-        except Exception as e:
+        except Exception:
+            logger.exception("Reddit Jina Reader request failed")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to reach Jina Reader for Reddit search: {str(e)}",
+                detail="Failed to search Reddit discussions. Please try again later.",
             )
 
     system_prompt = (
@@ -551,11 +578,15 @@ async def research_rss(
     try:
         feed = feedparser.parse(payload.url)
         if not feed.entries:
-            raise Exception("No entries found in RSS feed.")
-    except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No entries found in RSS feed.",
+            )
+    except Exception:
+        logger.exception("RSS feed parsing failed")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to parse RSS feed: {str(e)}",
+            detail="Failed to parse RSS feed. Please check the URL and try again.",
         )
 
     entries_list = []
@@ -616,21 +647,9 @@ async def research_project_analysis(
 
     repos = []
     try:
-        cmd = [
-            "gh",
-            "search",
-            "repos",
-            payload.project_idea,
-            "--json",
-            "fullName,description,stargazersCount,url",
-            "--limit",
-            "3",
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        if res.returncode == 0:
-            repos = json.loads(res.stdout)
+        repos = await _search_github_repos(payload.project_idea, limit=3)
     except Exception:
-        pass
+        logger.exception("GitHub search in project-analysis failed")
 
     system_prompt = (
         "You are an expert AI Project Architect. Given a developer's project idea and some matching template repositories, "
@@ -705,21 +724,9 @@ async def research_learning_path(
     repos = []
     try:
         query_str = f"{payload.role} roadmap tutorial"
-        cmd = [
-            "gh",
-            "search",
-            "repos",
-            query_str,
-            "--json",
-            "fullName,description,stargazersCount,url",
-            "--limit",
-            "3",
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        if res.returncode == 0:
-            repos = json.loads(res.stdout)
+        repos = await _search_github_repos(query_str, limit=3)
     except Exception:
-        pass
+        logger.exception("GitHub search in learning-path failed")
 
     system_prompt = (
         "You are an expert AI Career Mentor. Generate a detailed, step-by-step learning roadmap "
