@@ -18,6 +18,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   final _copilotRepoController = TextEditingController();
   final _copilotTitleController = TextEditingController();
   final _copilotDescController = TextEditingController();
+  final _learningPathRoleController = TextEditingController();
+  final _learningPathTechsController = TextEditingController();
 
   @override
   void initState() {
@@ -28,6 +30,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final state = Provider.of<AppState>(context, listen: false);
       state.fetchRoadmap();
+      _learningPathRoleController.text = state.personalGoal.isNotEmpty ? state.personalGoal : 'Full Stack Developer';
+      _learningPathTechsController.text = state.preferredStack.isNotEmpty ? state.preferredStack : 'Flutter, Python, FastAPI';
     });
   }
 
@@ -36,6 +40,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     _copilotRepoController.dispose();
     _copilotTitleController.dispose();
     _copilotDescController.dispose();
+    _learningPathRoleController.dispose();
+    _learningPathTechsController.dispose();
     super.dispose();
   }
 
@@ -605,7 +611,19 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 
   Widget _buildLearningPathTab(BuildContext context, AppState state) {
     if (state.isLoadingLearningPaths) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Analyzing source repositories and compiling path steps...',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      );
     }
 
     final title = state.learningPathTitle ?? 'Advanced Web Architect';
@@ -655,6 +673,104 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Generator Card
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.psychology_outlined, color: AppTheme.accent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'GENERATE ROADMAP LEARNING PATH',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _learningPathRoleController,
+                  style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'TARGET CAREER ROLE / GOAL',
+                    labelStyle: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.textSecondary),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _learningPathTechsController,
+                  style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'TARGET TECHNOLOGIES (COMMA SEPARATED)',
+                    labelStyle: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.textSecondary),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                if (state.isRateLimited) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.destructive.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: AppTheme.destructive, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Rate limit exceeded. Please wait a few minutes before trying again.',
+                            style: TextStyle(color: AppTheme.destructive, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      state.clearRateLimit();
+                      state.personalGoal = _learningPathRoleController.text.trim();
+                      state.preferredStack = _learningPathTechsController.text.trim();
+                      state.fetchLearningPaths();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'BUILD LEARNING PATH',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Path Header Card
           GlassCard(
             padding: const EdgeInsets.all(24),
             child: Row(
@@ -665,7 +781,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'LEARNING PATH',
+                        'CURRENT LEARNING PATH',
                         style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
                       ),
                       const SizedBox(height: 6),

@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     roadmap,
     users,
     prompts,
+    research,
 )
 
 api_router = APIRouter()
@@ -32,3 +33,4 @@ api_router.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 api_router.include_router(
     notifications.router, prefix="/notifications", tags=["notifications"]
 )
+api_router.include_router(research.router, prefix="/research", tags=["research"])

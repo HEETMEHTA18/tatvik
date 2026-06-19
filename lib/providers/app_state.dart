@@ -485,6 +485,16 @@ This is simulated offline prompts.md content.
   String preferredStack = "Flutter, FastAPI, PostgreSQL";
   bool isSavingMemory = false;
 
+  // Research Layer State
+  bool isResearching = false;
+  String? researchError;
+  Map<String, dynamic>? researchResult;
+  bool isRateLimited = false;
+
+  // Weekly Tech News Digest Cache
+  String? weeklyTechDigest;
+  bool isLoadingTechDigest = false;
+
 
   // Notifications List & Methods
   List<Map<String, dynamic>> notifications = [
@@ -1975,21 +1985,64 @@ This is simulated offline prompts.md content.
 
   Future<void> evaluateProject(String title) async {
     isEvaluatingProject = true;
+    isRateLimited = false;
     notifyListeners();
     try {
       final response = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/advanced/evaluate-project'),
+        Uri.parse('${AppConfig.apiBaseUrl}/research/project-analysis'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'project_title': title}),
+        body: jsonEncode({'project_idea': title}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        evaluatedProjectScore = data['score'];
-        evaluatedProjectExplanation = data['explanation'];
-        evaluatedProjectUpgradePath = List<String>.from(data['upgrade_path'] ?? []);
+        final analysis = data['analysis'] ?? '';
+        
+        // Parse score from analysis text or use a robust fallback (e.g. 8/10)
+        int score = 8;
+        final scoreReg = RegExp(r'(Score|Rating|Value Score|ATS Score):\s*(\d+)/10', caseSensitive: false);
+        final match = scoreReg.firstMatch(analysis);
+        if (match != null) {
+          score = int.tryParse(match.group(2) ?? '8') ?? 8;
+        } else {
+          // Alternative search for single digit score
+          final matchAlt = RegExp(r'\b([56789]|10)/10\b').firstMatch(analysis);
+          if (matchAlt != null) {
+            score = int.tryParse(matchAlt.group(1) ?? '8') ?? 8;
+          }
+        }
+        
+        evaluatedProjectScore = score;
+        evaluatedProjectExplanation = analysis;
+        
+        // Split milestones/recommendations to populate a 4-step upgrade path
+        List<String> path = [];
+        final lines = analysis.split('\n');
+        for (var line in lines) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('-') || trimmed.startsWith('•') || RegExp(r'^\d+\.').hasMatch(trimmed)) {
+            final cleaned = trimmed.replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '').trim();
+            if (cleaned.length > 10 && path.length < 4) {
+              path.add(cleaned);
+            }
+          }
+        }
+        
+        if (path.length < 4) {
+          // Provide sensible default/extracted steps if text-parsing was sparse
+          path = [
+            'Analyze similar open-source templates for design patterns',
+            'Draft clear interface specs and outline primary database models',
+            'Develop core operational logic and integrate unit tests',
+            'Establish automated deployment pipeline & track analytics',
+          ];
+        }
+        
+        evaluatedProjectUpgradePath = path;
+      } else if (response.statusCode == 429) {
+        handleRateLimit();
       }
     } catch (e) {
       debugPrint('Error evaluating project: $e');
@@ -2095,18 +2148,96 @@ This is simulated offline prompts.md content.
 
   Future<void> fetchLearningPaths() async {
     isLoadingLearningPaths = true;
+    isRateLimited = false;
     notifyListeners();
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/advanced/learning-paths'),
+      // Split preferred stack tags or default to a standard set
+      final techs = preferredStack.isNotEmpty
+          ? preferredStack.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+          : ['Flutter', 'Python', 'FastAPI'];
+      
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/research/learning-path'),
         headers: {
+          'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
+        body: jsonEncode({
+          'role': personalGoal.isNotEmpty ? personalGoal : 'Full Stack Developer',
+          'target_technologies': techs,
+        }),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        learningPathTitle = data['path_title'];
-        learningPathSteps = data['steps'];
+        learningPathTitle = data['roadmap_title'] ?? 'Developer Career Path';
+        final String rawPathText = data['learning_path'] ?? '';
+        
+        // Parse the markdown string into 5 Duolingo-style steps
+        final List<Map<String, dynamic>> parsedSteps = [];
+        final regex = RegExp(r'(?:^|\n)(?:Step\s+\d+|Milestone\s+\d+|###?\s+\d+)\b', caseSensitive: false);
+        final parts = rawPathText.split(regex);
+        
+        int stepIdx = 1;
+        for (var part in parts) {
+          final trimmed = part.trim();
+          if (trimmed.isEmpty) continue;
+          
+          // Try to extract a repository name from the text
+          String repoName = 'GitHub Reference';
+          final repoMatch = RegExp(r'\b([a-zA-Z0-9\-_]+/[a-zA-Z0-9\-_.]+)\b').firstMatch(trimmed);
+          if (repoMatch != null) {
+            repoName = repoMatch.group(1)!;
+          } else {
+            // Pick a reasonable fallback name if none found
+            if (stepIdx == 1) repoName = 'flutter/flutter';
+            else if (stepIdx == 2) repoName = 'tiangolo/fastapi';
+            else if (stepIdx == 3) repoName = 'docker/cli';
+            else repoName = 'open-source/project';
+          }
+          
+          // Extract description and task
+          String desc = trimmed;
+          String task = 'Inspect typical project configuration and package dependency tree.';
+          
+          final taskMatch = RegExp(r'(?:Task|Actionable\s+Task|Action):\s*(.*)', caseSensitive: false).firstMatch(trimmed);
+          if (taskMatch != null) {
+            task = taskMatch.group(1)!.trim();
+            desc = trimmed.substring(0, taskMatch.start).trim();
+          } else {
+            // Split by double newline to find a task-like ending
+            final paragraphs = trimmed.split('\n\n');
+            if (paragraphs.length > 1) {
+              task = paragraphs.last.trim();
+              desc = paragraphs.sublist(0, paragraphs.length - 1).join('\n\n').trim();
+            }
+          }
+          
+          parsedSteps.add({
+            'step_num': stepIdx++,
+            'repo_name': repoName,
+            'description': desc,
+            'task': task,
+            'is_completed': stepIdx == 2, // first step marked completed for UI matchup
+          });
+        }
+        
+        // If parsing didn't produce any items, fallback or create structured steps
+        if (parsedSteps.isEmpty) {
+          final lines = rawPathText.split('\n').where((l) => l.trim().isNotEmpty).toList();
+          for (var i = 0; i < lines.length && i < 5; i++) {
+            parsedSteps.add({
+              'step_num': i + 1,
+              'repo_name': i == 0 ? 'flutter/flutter' : 'git/git',
+              'description': lines[i].replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '').trim(),
+              'task': 'Examine repository code structure and main files.',
+              'is_completed': i == 0,
+            });
+          }
+        }
+        
+        learningPathSteps = parsedSteps;
+      } else if (response.statusCode == 429) {
+        handleRateLimit();
       }
     } catch (e) {
       debugPrint('Error fetching learning paths: $e');
@@ -2523,6 +2654,91 @@ This is simulated offline prompts.md content.
       debugPrint('Error submitting prompt event: $e');
     } finally {
       isSubmittingPromptEvent = false;
+      notifyListeners();
+    }
+  }
+
+  void handleRateLimit() {
+    isRateLimited = true;
+    notifications.insert(0, {
+      'id': 'rate_limit_${DateTime.now().millisecondsSinceEpoch}',
+      'title': 'Rate Limit Warning ⚠️',
+      'body': 'Please wait a moment before initiating more research queries.',
+      'timestamp': DateTime.now(),
+      'isRead': false,
+      'type': 'security',
+    });
+    notifyListeners();
+  }
+
+  void clearRateLimit() {
+    isRateLimited = false;
+    notifyListeners();
+  }
+
+  void addSystemMessageToChat(String text) {
+    chatMessages.add(MentorMessage(
+      content: text,
+      role: MessageRole.assistant,
+      timestamp: DateTime.now(),
+    ));
+    notifyListeners();
+    saveChatHistory();
+  }
+
+  Future<void> fetchWeeklyTechDigest({bool force = false}) async {
+    isLoadingTechDigest = true;
+    isRateLimited = false;
+    notifyListeners();
+    try {
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/research/digest?topic=general'),
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        weeklyTechDigest = data['digest'];
+      } else if (response.statusCode == 429) {
+        handleRateLimit();
+      }
+    } catch (e) {
+      debugPrint('Error fetching weekly tech digest: $e');
+    } finally {
+      isLoadingTechDigest = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchResearchData(String tool, Map<String, dynamic> payload) async {
+    isResearching = true;
+    researchError = null;
+    researchResult = null;
+    isRateLimited = false;
+    notifyListeners();
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/research/$tool'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      );
+      if (response.statusCode == 200) {
+        researchResult = jsonDecode(response.body);
+      } else if (response.statusCode == 429) {
+        handleRateLimit();
+      } else {
+        final errData = jsonDecode(response.body);
+        researchError = errData['detail'] ?? 'Research request failed.';
+      }
+    } catch (e) {
+      debugPrint('Error performing research query: $e');
+      researchError = e.toString();
+    } finally {
+      isResearching = false;
       notifyListeners();
     }
   }

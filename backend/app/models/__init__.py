@@ -14,6 +14,9 @@ from app.models.entities import (
     AutoDevSession,
     ExecutedCommand,
     GeneratedFile,
+    ResearchSession,
+    ResearchResult,
+    WeeklyDigest,
 )
 
 __all__ = [
@@ -32,4 +35,7 @@ __all__ = [
     "AutoDevSession",
     "ExecutedCommand",
     "GeneratedFile",
+    "ResearchSession",
+    "ResearchResult",
+    "WeeklyDigest",
 ]

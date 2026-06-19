@@ -7,6 +7,7 @@ import '../../widgets/glass_card.dart';
 import '../../widgets/animated_copy_button.dart';
 import '../../providers/app_state.dart';
 import '../../models/repository.dart';
+import '../mentor/mentor_chat_screen.dart';
 
 class DiscoverReposScreen extends StatefulWidget {
   const DiscoverReposScreen({super.key});
@@ -22,6 +23,9 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
   final _projectController = TextEditingController();
   final _jobTitleController = TextEditingController();
   final _jobDescController = TextEditingController();
+  final _researchUrlController = TextEditingController();
+  final _researchQueryController = TextEditingController();
+  int _researchSubTab = 0;
 
   @override
   void dispose() {
@@ -29,6 +33,8 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
     _projectController.dispose();
     _jobTitleController.dispose();
     _jobDescController.dispose();
+    _researchUrlController.dispose();
+    _researchQueryController.dispose();
     super.dispose();
   }
 
@@ -65,6 +71,10 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
         case 4:
           tabContent = _buildOpportunitiesTab(context, appState);
           tabTitle = 'Opportunity Scanner';
+          break;
+        case 5:
+          tabContent = _buildResearchTab(context, appState);
+          tabTitle = 'Deep Research Agent';
           break;
         default:
           tabContent = Container();
@@ -168,6 +178,16 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                       iconColor: const Color(0xFFFF2D55),
                       label: 'AI Project Evaluator',
                       onTap: () => setState(() => _activeTab = 3),
+                      showDivider: true,
+                    ),
+                    _buildDiscoverRow(
+                      icon: Icons.travel_explore_rounded,
+                      iconColor: const Color(0xFF0A84FF),
+                      label: 'Deep Research Agent',
+                      onTap: () {
+                        setState(() => _activeTab = 5);
+                        appState.fetchWeeklyTechDigest();
+                      },
                       showDivider: false,
                     ),
                   ],
@@ -1088,6 +1108,29 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                           ),
                   ),
                 ),
+                if (state.isRateLimited) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.destructive.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: AppTheme.destructive, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Rate limit exceeded. Please wait a few minutes before trying again.',
+                            style: TextStyle(color: AppTheme.destructive, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1286,6 +1329,348 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildResearchTab(BuildContext context, AppState state) {
+    final subTabs = [
+      {'label': 'GitHub', 'icon': Icons.code_rounded},
+      {'label': 'YouTube', 'icon': Icons.play_circle_fill_rounded},
+      {'label': 'Reddit', 'icon': Icons.reddit_rounded},
+      {'label': 'RSS', 'icon': Icons.rss_feed_rounded},
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sub-tab selectors
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(subTabs.length, (idx) {
+                final isSelected = _researchSubTab == idx;
+                final tab = subTabs[idx];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(tab['label'] as String),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _researchSubTab = idx;
+                          state.researchResult = null;
+                          state.researchError = null;
+                          _researchUrlController.clear();
+                          _researchQueryController.clear();
+                        });
+                      }
+                    },
+                    avatar: Icon(
+                      tab['icon'] as IconData,
+                      size: 16,
+                      color: isSelected ? Colors.black : AppTheme.textSecondary,
+                    ),
+                    selectedColor: AppTheme.accent,
+                    backgroundColor: Colors.white10,
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.black : AppTheme.textSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Inputs Card
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(subTabs[_researchSubTab]['icon'] as IconData, color: AppTheme.accent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'RESEARCH ${subTabs[_researchSubTab]['label']?.toString().toUpperCase()}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                
+                if (_researchSubTab != 2) ...[
+                  TextField(
+                    controller: _researchUrlController,
+                    style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: _researchSubTab == 0
+                          ? 'GITHUB REPOSITORY URL'
+                          : _researchSubTab == 1
+                              ? 'YOUTUBE VIDEO URL'
+                              : 'RSS FEED URL',
+                      labelStyle: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.textSecondary),
+                      hintText: _researchSubTab == 0
+                          ? 'e.g. https://github.com/flutter/flutter'
+                          : _researchSubTab == 1
+                              ? 'e.g. https://www.youtube.com/watch?v=...'
+                              : 'e.g. https://news.ycombinator.com/rss',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                if (_researchSubTab == 0 || _researchSubTab == 2) ...[
+                  TextField(
+                    controller: _researchQueryController,
+                    style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                    decoration: InputDecoration(
+                      labelText: _researchSubTab == 0 ? 'SEARCH QUERY (OPTIONAL)' : 'TOPIC / KEYWORDS',
+                      labelStyle: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.textSecondary),
+                      hintText: _researchSubTab == 0 ? 'e.g. state management' : 'e.g. fastml, flutter performance',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                if (state.researchError != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.destructive.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      state.researchError!,
+                      style: TextStyle(color: AppTheme.destructive, fontSize: 12),
+                    ),
+                  ),
+                ],
+
+                if (state.isRateLimited) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.destructive.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: AppTheme.destructive, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Rate limit exceeded. Please wait a few minutes before trying again.',
+                            style: TextStyle(color: AppTheme.destructive, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: state.isResearching
+                        ? null
+                        : () {
+                            state.clearRateLimit();
+                            final url = _researchUrlController.text.trim();
+                            final query = _researchQueryController.text.trim();
+
+                            if (_researchSubTab == 0) {
+                              if (url.isEmpty && query.isEmpty) return;
+                              state.fetchResearchData('github', {
+                                if (url.isNotEmpty) 'url': url,
+                                if (query.isNotEmpty) 'query': query,
+                              });
+                            } else if (_researchSubTab == 1) {
+                              if (url.isEmpty) return;
+                              state.fetchResearchData('youtube', {'url': url});
+                            } else if (_researchSubTab == 2) {
+                              if (query.isEmpty) return;
+                              state.fetchResearchData('reddit', {'query': query});
+                            } else if (_researchSubTab == 3) {
+                              if (url.isEmpty) return;
+                              state.fetchResearchData('rss', {'url': url});
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: state.isResearching
+                        ? const SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                          )
+                        : Text(
+                            'START RESEARCH SCAN',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.black,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          if (state.researchResult != null) ...[
+            const SizedBox(height: 24),
+            _buildSectionHeader(context, 'Research Insights'),
+            const SizedBox(height: 12),
+            GlassCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SUMMARY & ANALYSIS',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                      AnimatedCopyButton(text: state.researchResult!['summary'] ?? ''),
+                    ],
+                  ),
+                  const Divider(height: 24, color: Colors.white12),
+                  Text(
+                    state.researchResult!['summary'] ?? 'No summary returned.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textMain,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      icon: Icon(Icons.forum_outlined, size: 18, color: AppTheme.accent),
+                      label: Text(
+                        'DISCUSS WITH AI MENTOR',
+                        style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.accent),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppTheme.accent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        final platform = state.researchResult!['platform'] ?? 'research sources';
+                        final urlOrQuery = state.researchResult!['url'] ?? state.researchResult!['query'] ?? '';
+                        final summaryText = state.researchResult!['summary'] ?? '';
+                        
+                        state.addSystemMessageToChat(
+                          'I have performed Deep Research on $platform ($urlOrQuery):\n\n'
+                          '$summaryText\n\n'
+                          'Let\'s discuss these findings! Ask me about specific technical details or next steps.'
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => MentorChatScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 28),
+          _buildSectionHeader(context, 'Latest Technical Digest'),
+          const SizedBox(height: 12),
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.newspaper_rounded, color: AppTheme.peach, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'TECH NEWS DIGEST',
+                          style: GoogleFonts.jetBrainsMono(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (state.isLoadingTechDigest)
+                      const SizedBox(
+                        width: 12, height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      )
+                    else
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () => state.fetchWeeklyTechDigest(force: true),
+                      ),
+                  ],
+                ),
+                const Divider(height: 24, color: Colors.white12),
+                if (state.weeklyTechDigest != null)
+                  Text(
+                    state.weeklyTechDigest!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  )
+                else
+                  Text(
+                    'Generating latest technical digest from HackerNews RSS feed...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

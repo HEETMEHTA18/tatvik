@@ -214,3 +214,37 @@ class GeneratedFile(Base):
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     action: Mapped[str] = mapped_column(String(64))  # "created" or "modified"
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ResearchSession(Base):
+    __tablename__ = "research_sessions"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    query: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ResearchResult(Base):
+    __tablename__ = "research_results"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    session_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("research_sessions.id"), index=True
+    )
+    platform: Mapped[str] = mapped_column(String(32))  # github, youtube, reddit, rss
+    raw_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class WeeklyDigest(Base):
+    __tablename__ = "weekly_digests"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    topic: Mapped[str] = mapped_column(String(255))
+    digest_text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
