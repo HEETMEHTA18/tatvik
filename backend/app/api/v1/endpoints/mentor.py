@@ -11,9 +11,15 @@ from app.models.entities import Repository, TechNews, GithubProfile
 router = APIRouter()
 
 
+class HistoryMessage(BaseModel):
+    role: str  # 'user' or 'assistant'
+    content: str
+
+
 class MentorMessageRequest(BaseModel):
     message: str
     resume_context: str | None = None
+    history: list[HistoryMessage] = []
 
 
 async def search_github_repositories(
@@ -171,6 +177,13 @@ async def mentor_chat(
         "Always recommend actionable learning steps based on these real-time tech trends and repositories."
     )
 
+    # 6. Build the conversation history turns for the LLM
+    # Sanitise roles to strictly 'user' or 'assistant' to prevent injection
+    safe_history = [
+        {"role": ("user" if h.role == "user" else "assistant"), "content": h.content}
+        for h in payload.history[-20:]  # cap at 20 prior messages
+    ]
+
     def clean_response(text: str) -> str:
         # Strip bold symbols and header symbols
         cleaned = (
@@ -179,19 +192,21 @@ async def mentor_chat(
         # Replace common markdown list markers with clean dashes if needed
         return cleaned.strip()
 
-    # 6. Call AI API
+    # 7. Call AI API
     if settings.groq_api_key:
         url = "https://api.groq.com/openai/v1/chat/completions"
         async with httpx.AsyncClient() as client:
             try:
+                groq_messages = [
+                    {"role": "system", "content": system_prompt},
+                    *safe_history,
+                    {"role": "user", "content": payload.message},
+                ]
                 response = await client.post(
                     url,
                     json={
                         "model": "llama-3.1-8b-instant",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": payload.message},
-                        ],
+                        "messages": groq_messages,
                     },
                     headers={
                         "Authorization": f"Bearer {settings.groq_api_key}",
@@ -222,19 +237,30 @@ async def mentor_chat(
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
         async with httpx.AsyncClient() as client:
             try:
+                # Gemini uses 'user'/'model' roles and a flat contents list.
+                # Prepend the system prompt to the very first user turn.
+                gemini_contents = []
+                for idx, h in enumerate(safe_history):
+                    text_content = h["content"]
+                    if idx == 0 and h["role"] == "user":
+                        text_content = f"{system_prompt}\n\n{text_content}"
+                    gemini_contents.append({
+                        "role": "user" if h["role"] == "user" else "model",
+                        "parts": [{"text": text_content}],
+                    })
+
+                # Append the current user message
+                # If there's no history, inject system prompt into this turn
+                if not safe_history:
+                    current_text = f"{system_prompt}\n\nUser message: {payload.message}"
+                else:
+                    current_text = payload.message
+                gemini_contents.append({"role": "user", "parts": [{"text": current_text}]})
+
+
                 response = await client.post(
                     url,
-                    json={
-                        "contents": [
-                            {
-                                "parts": [
-                                    {
-                                        "text": f"{system_prompt}\nUser message: {payload.message}"
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                    json={"contents": gemini_contents},
                     headers={"Content-Type": "application/json"},
                     timeout=30.0,
                 )

@@ -719,6 +719,22 @@ This is simulated offline prompts.md content.
     ));
     notifyListeners();
 
+    // Build conversation history (everything except the message we just added)
+    // Limit to last 10 turns (20 messages) to stay within token limits
+    final historyMessages = chatMessages.length > 1
+        ? chatMessages
+            .sublist(0, chatMessages.length - 1)
+            .reversed
+            .take(20)
+            .toList()
+            .reversed
+            .map((m) => {
+                  'role': m.role == MessageRole.user ? 'user' : 'assistant',
+                  'content': m.content,
+                })
+            .toList()
+        : <Map<String, String>>[];
+
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/mentor/chat'),
@@ -728,6 +744,7 @@ This is simulated offline prompts.md content.
         },
         body: jsonEncode({
           'message': text,
+          'history': historyMessages,
           if (lastUploadedResumeText != null && lastUploadedResumeText!.isNotEmpty)
             'resume_context': lastUploadedResumeText,
         }),
