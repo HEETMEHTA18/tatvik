@@ -301,7 +301,9 @@ async def research_github(
 
     else:
         try:
-            repos = await _search_github_repos(payload.query, min(payload.limit or 5, 20))
+            repos = await _search_github_repos(
+                payload.query, min(payload.limit or 5, 20)
+            )
         except Exception:
             logger.exception("GitHub search failed")
             raise HTTPException(

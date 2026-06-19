@@ -36,7 +36,8 @@ async def sync_username(
 
         logging.getLogger(__name__).exception("Failed to sync public github data")
         raise HTTPException(
-            status_code=500, detail="Failed to sync public GitHub data. Please try again later."
+            status_code=500,
+            detail="Failed to sync public GitHub data. Please try again later.",
         )
 
 
@@ -70,9 +71,11 @@ async def sync_github(
         }
     except Exception:
         import logging
+
         logging.getLogger(__name__).exception("GitHub sync failed")
         raise HTTPException(
-            status_code=500, detail="Failed to sync GitHub data. Please try again later."
+            status_code=500,
+            detail="Failed to sync GitHub data. Please try again later.",
         )
 
 
@@ -584,8 +587,12 @@ async def github_following_activity(
                 return {"events": [], "error": f"GitHub API returned {res.status_code}"}
         except Exception:
             import logging
+
             logging.getLogger(__name__).exception("Failed to fetch following activity")
-            return {"events": [], "error": "Failed to fetch activity. Please try again later."}
+            return {
+                "events": [],
+                "error": "Failed to fetch activity. Please try again later.",
+            }
 
 
 @router.get("/file-content")
@@ -626,14 +633,19 @@ async def github_file_content(
                 raise HTTPException(status_code=404, detail="File not found on GitHub.")
             else:
                 raise HTTPException(
-                    status_code=res.status_code, detail="GitHub API error. Please try again later."
+                    status_code=res.status_code,
+                    detail="GitHub API error. Please try again later.",
                 )
         except HTTPException as he:
             raise he
         except Exception:
             import logging
+
             logging.getLogger(__name__).exception("Failed to fetch GitHub file content")
-            raise HTTPException(status_code=500, detail="Failed to fetch file content. Please try again later.")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to fetch file content. Please try again later.",
+            )
 
 
 @router.get("/public-stats/{username}")
