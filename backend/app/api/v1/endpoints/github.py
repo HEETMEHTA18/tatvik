@@ -638,6 +638,7 @@ async def get_public_stats(
 ):
     import httpx
     import logging
+
     logger = logging.getLogger(__name__)
 
     # Strip any leading '@'
@@ -660,7 +661,11 @@ async def get_public_stats(
 
     if not access_token:
         # Fall back to any active access token in the DB
-        fallback_stmt = select(GithubProfile).where(GithubProfile.access_token.is_not(None)).limit(1)
+        fallback_stmt = (
+            select(GithubProfile)
+            .where(GithubProfile.access_token.is_not(None))
+            .limit(1)
+        )
         fallback_profile = db.scalar(fallback_stmt)
         if fallback_profile:
             access_token = fallback_profile.access_token
@@ -679,11 +684,15 @@ async def get_public_stats(
             if profile_response.status_code == 404:
                 raise HTTPException(status_code=404, detail="GitHub user not found")
             elif profile_response.status_code != 200:
-                raise ValueError(f"GitHub API returned status {profile_response.status_code}: {profile_response.text}")
+                raise ValueError(
+                    f"GitHub API returned status {profile_response.status_code}: {profile_response.text}"
+                )
 
             profile_data = profile_response.json()
         except Exception as e:
-            logger.error(f"Failed to fetch public GitHub profile for {clean_username}: {e}. Returning fallback mock.")
+            logger.error(
+                f"Failed to fetch public GitHub profile for {clean_username}: {e}. Returning fallback mock."
+            )
             return {
                 "login": clean_username,
                 "name": clean_username,
@@ -697,10 +706,10 @@ async def get_public_stats(
                         "stargazers_count": 8,
                         "language": "Dart",
                         "description": "Mock repo description",
-                        "owner": {"login": clean_username}
+                        "owner": {"login": clean_username},
                     }
                 ],
-                "is_fallback": True
+                "is_fallback": True,
             }
 
         # 2. Fetch commits count (ignore failures)

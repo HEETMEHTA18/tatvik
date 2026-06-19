@@ -244,10 +244,12 @@ async def mentor_chat(
                     text_content = h["content"]
                     if idx == 0 and h["role"] == "user":
                         text_content = f"{system_prompt}\n\n{text_content}"
-                    gemini_contents.append({
-                        "role": "user" if h["role"] == "user" else "model",
-                        "parts": [{"text": text_content}],
-                    })
+                    gemini_contents.append(
+                        {
+                            "role": "user" if h["role"] == "user" else "model",
+                            "parts": [{"text": text_content}],
+                        }
+                    )
 
                 # Append the current user message
                 # If there's no history, inject system prompt into this turn
@@ -255,8 +257,9 @@ async def mentor_chat(
                     current_text = f"{system_prompt}\n\nUser message: {payload.message}"
                 else:
                     current_text = payload.message
-                gemini_contents.append({"role": "user", "parts": [{"text": current_text}]})
-
+                gemini_contents.append(
+                    {"role": "user", "parts": [{"text": current_text}]}
+                )
 
                 response = await client.post(
                     url,

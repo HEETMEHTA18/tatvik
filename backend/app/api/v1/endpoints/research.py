@@ -1,5 +1,6 @@
 import subprocess
 import json
+import logging
 import re
 import os
 import httpx
@@ -15,6 +16,8 @@ from app.api.deps import get_current_user_id, get_optional_user_id, get_db
 from app.core.config import settings
 from app.models.entities import ResearchSession, ResearchResult, WeeklyDigest, Roadmap
 import redis
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -916,9 +919,7 @@ async def get_whats_new(
                         else ""
                     )
                     author = (
-                        author_elem.text
-                        if author_elem is not None
-                        else "Tech Channel"
+                        author_elem.text if author_elem is not None else "Tech Channel"
                     )
 
                     if title and url:
@@ -965,4 +966,3 @@ async def get_whats_new(
 
     set_cache(cache_key, result, 3600)
     return result
-

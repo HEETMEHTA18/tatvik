@@ -184,20 +184,26 @@ class GithubService:
         try:
             async with httpx.AsyncClient() as client:
                 headers = {"User-Agent": "DevMentor-App"}
-                
+
                 # Check if we can find any access token in the database to raise rate limits
                 access_token = None
-                profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+                profile_stmt = select(GithubProfile).where(
+                    GithubProfile.user_id == user_id
+                )
                 profile = self.db.scalar(profile_stmt)
                 if profile and profile.access_token:
                     access_token = profile.access_token
                 else:
                     # Look for ANY valid access token in the database
-                    fallback_stmt = select(GithubProfile).where(GithubProfile.access_token.is_not(None)).limit(1)
+                    fallback_stmt = (
+                        select(GithubProfile)
+                        .where(GithubProfile.access_token.is_not(None))
+                        .limit(1)
+                    )
                     fallback_profile = self.db.scalar(fallback_stmt)
                     if fallback_profile:
                         access_token = fallback_profile.access_token
-                
+
                 if access_token:
                     headers["Authorization"] = f"Bearer {access_token}"
 
@@ -224,7 +230,9 @@ class GithubService:
                     self.db.add(user)
 
                 # Upsert GithubProfile without access token
-                profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+                profile_stmt = select(GithubProfile).where(
+                    GithubProfile.user_id == user_id
+                )
                 profile = self.db.scalar(profile_stmt)
                 if not profile:
                     profile = GithubProfile(user_id=user_id, login=login)
@@ -252,14 +260,20 @@ class GithubService:
                         headers={
                             "Accept": "application/vnd.github.v3+json",
                             "User-Agent": "DevMentor-App",
-                            **({"Authorization": f"Bearer {access_token}"} if access_token else {})
+                            **(
+                                {"Authorization": f"Bearer {access_token}"}
+                                if access_token
+                                else {}
+                            ),
                         },
                         timeout=8.0,
                     )
                     if commits_response.status_code == 200:
                         total_commits = commits_response.json().get("total_count", 0)
                 except Exception as ce:
-                    logger.warning(f"Failed to fetch total commits for user {login}: {ce}")
+                    logger.warning(
+                        f"Failed to fetch total commits for user {login}: {ce}"
+                    )
 
                 # Delete existing repos for clean sync
                 existing_repos_stmt = select(Repository).where(
@@ -276,7 +290,9 @@ class GithubService:
                     owner = r_data.get("owner", {}).get("login", login)
                     repo_name = r_data.get("name", "")
                     full_name = r_data.get("full_name", f"{owner}/{repo_name}")
-                    description = r_data.get("description") or "No description provided."
+                    description = (
+                        r_data.get("description") or "No description provided."
+                    )
                     language = r_data.get("language")
                     stars = r_data.get("stargazers_count", 0)
                     forks = r_data.get("forks_count", 0)
@@ -337,7 +353,9 @@ class GithubService:
                     1,
                 )
 
-                score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
+                score_stmt = select(DeveloperScore).where(
+                    DeveloperScore.user_id == user_id
+                )
                 score_rec = self.db.scalar(score_stmt)
                 if not score_rec:
                     score_rec = DeveloperScore(user_id=user_id)
@@ -355,13 +373,19 @@ class GithubService:
                     "developer_score": developer_score_val,
                 }
         except Exception as e:
-            logger.error(f"Error syncing public GitHub data for {username}: {e}. Falling back to default data.")
+            logger.error(
+                f"Error syncing public GitHub data for {username}: {e}. Falling back to default data."
+            )
             # Fallback to local profile / mock profile details
             user_stmt = select(User).where(User.id == user_id)
             user = self.db.scalar(user_stmt)
             login = username
-            avatar_url = user.avatar_url if (user and user.avatar_url) else f"https://github.com/{username}.png"
-            
+            avatar_url = (
+                user.avatar_url
+                if (user and user.avatar_url)
+                else f"https://github.com/{username}.png"
+            )
+
             # Save fallback developer score
             score_stmt = select(DeveloperScore).where(DeveloperScore.user_id == user_id)
             score_rec = self.db.scalar(score_stmt)
@@ -370,7 +394,7 @@ class GithubService:
             score_rec.score = 65  # default/mock score
             score_rec.calculated_at = datetime.utcnow()
             self.db.add(score_rec)
-            
+
             # Ensure GithubProfile exists
             profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
             profile = self.db.scalar(profile_stmt)
@@ -378,9 +402,9 @@ class GithubService:
                 profile = GithubProfile(user_id=user_id, login=login)
             profile.synced_at = datetime.utcnow()
             self.db.add(profile)
-            
+
             self.db.commit()
-            
+
             return {
                 "login": login,
                 "avatar_url": avatar_url,
@@ -388,6 +412,5 @@ class GithubService:
                 "total_stars": 12,
                 "total_commits": 42,
                 "developer_score": 6.5,
-                "is_fallback": True
+                "is_fallback": True,
             }
-

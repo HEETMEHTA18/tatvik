@@ -55,4 +55,3 @@ def get_optional_user_id(
         return str(sub) if sub else None
     except Exception:
         return None
-
