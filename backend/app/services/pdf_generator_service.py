@@ -43,8 +43,8 @@ class PDFGeneratorService:
         }
         for orig, rep in replacements.items():
             text = text.replace(orig, rep)
-        # Strip markdown links [text](url) -> text
-        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        # Strip markdown links [text](url) -> text, with bounded quantifiers to prevent ReDoS
+        text = re.sub(r"\[([^\]]{1,250})\]\([^)]{1,500}\)", r"\1", text)
         # Convert anything else to Latin-1 safe characters
         return text.encode("latin1", "replace").decode("latin1")
 
