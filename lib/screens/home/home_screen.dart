@@ -31,52 +31,15 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text('Dashboard', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                onPressed: () => _showNotificationCenter(context, appState),
-                icon: Icon(
-                  appState.unreadNotificationsCount > 0
-                      ? Icons.notifications_active_rounded
-                      : Icons.notifications_none_rounded,
-                  color: appState.unreadNotificationsCount > 0 ? AppTheme.accent : AppTheme.textSecondary,
-                ),
-              ),
-              if (appState.unreadNotificationsCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${appState.unreadNotificationsCount}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await appState.fetchGithubData(appState.githubUsername);
+          await appState.fetchProfileRoast(force: true);
+        },
+        color: AppTheme.accent,
+        backgroundColor: AppTheme.surface,
+        child: Stack(
+          children: [
           // Background Gradient Orbs
           Positioned(
             top: -100,
@@ -95,6 +58,70 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Dashboard',
+                      style: GoogleFonts.inter(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textMain,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Stack(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _showNotificationCenter(context, appState),
+                            icon: Icon(
+                              appState.unreadNotificationsCount > 0
+                                  ? Icons.notifications_active_rounded
+                                  : Icons.notifications_none_rounded,
+                              size: 18,
+                              color: appState.unreadNotificationsCount > 0 ? AppTheme.accent : AppTheme.textSecondary,
+                            ),
+                          ),
+                        ),
+                        if (appState.unreadNotificationsCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 14,
+                                minHeight: 14,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${appState.unreadNotificationsCount}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 20),
                 _buildWelcomeHeader(context, appState),
                 const SizedBox(height: 12),
@@ -108,33 +135,6 @@ class HomeScreen extends StatelessWidget {
                 _buildRoastSection(context, appState),
                 _buildAgentDigestSection(context, appState),
                 const SizedBox(height: 32),
-                _buildSectionHeader(context, 'AI Insights', onSeeAll: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Analyzing your profile for more insights...')),
-                  );
-                }),
-                const SizedBox(height: 12),
-                _buildInsightRow(
-                  context,
-                  'SKILL MATCH',
-                  appState.strengths.isNotEmpty ? appState.strengths.first : 'Analyzing repository structure...',
-                  AppTheme.isDark ? const Color(0xFF10B981) : AppTheme.accent,
-                  Icons.bolt_rounded,
-                  onTap: () {
-                    _showListDialog(context, 'All Profile Strengths', appState.strengths, AppTheme.success);
-                  },
-                ),
-                _buildInsightRow(
-                  context,
-                  'GAP DETECTED',
-                  appState.gaps.isNotEmpty ? appState.gaps.first : 'No critical gaps detected',
-                  AppTheme.destructive,
-                  Icons.warning_amber_rounded,
-                  onTap: () {
-                    _showListDialog(context, 'All Profile Gaps', appState.gaps, AppTheme.destructive);
-                  },
-                ),
-                const SizedBox(height: 32),
                 _buildSectionHeader(context, 'Top Languages'),
                 const SizedBox(height: 16),
                 _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
@@ -145,6 +145,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 75),
@@ -517,69 +518,6 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInsightRow(BuildContext context, String tag, String message, Color color, IconData icon, {VoidCallback? onTap}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: onTap,
-        child: GlassCard(
-          padding: const EdgeInsets.all(16),
-          borderRadius: 16,
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tag, style: GoogleFonts.jetBrainsMono(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textMain)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showListDialog(BuildContext context, String title, List<String> items, Color color) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppTheme.isDark ? const Color(0xFF1E1E24) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text(title, style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: items.isEmpty
-                ? [const Text('No records found.')]
-                : items.map((it) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('• ', style: TextStyle(color: color, fontSize: 16)),
-                        Expanded(child: Text(it, style: TextStyle(color: AppTheme.textMain, fontSize: 13))),
-                      ],
-                    ),
-                  )).toList(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: TextStyle(color: AppTheme.accent)),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   Widget _buildLanguageBar(BuildContext context, String lang, double percentage, Color color) {
     return Padding(

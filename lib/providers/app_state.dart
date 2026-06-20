@@ -1452,6 +1452,8 @@ This is simulated offline prompts.md content.
       await prefs.setBool('pref_github_locked', true);
     } catch (_) {}
 
+    await _persistSessionSnapshot();
+
     await fetchGithubData(githubUsername);
 
     // Sync through backend to get authoritative real data
@@ -1515,6 +1517,8 @@ This is simulated offline prompts.md content.
       await prefs.setString('auth_token', sessionToken);
     } catch (_) {}
 
+    await _persistSessionSnapshot();
+
     await fetchUserProfile();
   }
 
@@ -1547,6 +1551,8 @@ This is simulated offline prompts.md content.
               await prefs.setString('github_avatar_url', avatarUrl!);
             }
           } catch (_) {}
+          
+          await _persistSessionSnapshot();
 
           await fetchGithubData(githubUsername);
 
@@ -1755,19 +1761,22 @@ This is simulated offline prompts.md content.
 
         try {
           final prefs = await SharedPreferences.getInstance();
+          final lastDna = prefs.getString('last_dna_archetype');
+          if (dnaArchetype != lastDna) {
+            await prefs.setString('last_dna_archetype', dnaArchetype!);
+            notifications.insert(0, {
+              'id': 'dna_${DateTime.now().millisecondsSinceEpoch}',
+              'title': 'DNA Archetype Identified: $dnaArchetype',
+              'body': 'Your alignment score is $dnaScore%. Click to inspect details.',
+              'timestamp': DateTime.now(),
+              'isRead': false,
+              'type': 'dna',
+              'extraData': data,
+            });
+          }
           await prefs.setString('dna_response_cache', bodyText);
           await prefs.setInt('dna_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
         } catch (_) {}
-
-        notifications.insert(0, {
-          'id': 'dna_${DateTime.now().millisecondsSinceEpoch}',
-          'title': 'DNA Archetype Identified: $dnaArchetype',
-          'body': 'Your alignment score is $dnaScore%. Click to inspect details.',
-          'timestamp': DateTime.now(),
-          'isRead': false,
-          'type': 'dna',
-          'extraData': data,
-        });
       }
     } catch (e) {
       debugPrint('Error fetching DNA: $e');
@@ -1812,19 +1821,22 @@ This is simulated offline prompts.md content.
 
         try {
           final prefs = await SharedPreferences.getInstance();
+          final lastRoast = prefs.getString('last_roast_response');
+          if (profileRoast != lastRoast) {
+            await prefs.setString('last_roast_response', profileRoast!);
+            notifications.insert(0, {
+              'id': 'roast_${DateTime.now().millisecondsSinceEpoch}',
+              'title': 'GitHub Profile Roasted! 🔥',
+              'body': 'Brutal review is ready. Click to inspect tips and issues.',
+              'timestamp': DateTime.now(),
+              'isRead': false,
+              'type': 'roast',
+              'extraData': data,
+            });
+          }
           await prefs.setString('roast_response_cache', bodyText);
           await prefs.setInt('roast_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
         } catch (_) {}
-
-        notifications.insert(0, {
-          'id': 'roast_${DateTime.now().millisecondsSinceEpoch}',
-          'title': 'GitHub Profile Roasted! 🔥',
-          'body': 'Brutal review is ready. Click to inspect tips and issues.',
-          'timestamp': DateTime.now(),
-          'isRead': false,
-          'type': 'roast',
-          'extraData': data,
-        });
       }
     } catch (e) {
       debugPrint('Error fetching roast: $e');
@@ -2260,10 +2272,15 @@ This is simulated offline prompts.md content.
             repoName = repoMatch.group(1)!;
           } else {
             // Pick a reasonable fallback name if none found
-            if (stepIdx == 1) repoName = 'flutter/flutter';
-            else if (stepIdx == 2) repoName = 'tiangolo/fastapi';
-            else if (stepIdx == 3) repoName = 'docker/cli';
-            else repoName = 'open-source/project';
+            if (stepIdx == 1) {
+              repoName = 'flutter/flutter';
+            } else if (stepIdx == 2) {
+              repoName = 'tiangolo/fastapi';
+            } else if (stepIdx == 3) {
+              repoName = 'docker/cli';
+            } else {
+              repoName = 'open-source/project';
+            }
           }
           
           // Extract description and task
@@ -2771,6 +2788,20 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         weeklyTechDigest = data['digest'];
+        
+        final prefs = await SharedPreferences.getInstance();
+        final lastDigest = prefs.getString('last_weekly_digest');
+        if (weeklyTechDigest != null && weeklyTechDigest!.isNotEmpty && weeklyTechDigest != lastDigest) {
+          await prefs.setString('last_weekly_digest', weeklyTechDigest!);
+          notifications.insert(0, {
+            'id': 'digest_${DateTime.now().millisecondsSinceEpoch}',
+            'title': 'New Technical Digest Available',
+            'body': 'Your Deep Research Agent has compiled the latest tech news.',
+            'timestamp': DateTime.now(),
+            'isRead': false,
+            'type': 'digest',
+          });
+        }
       } else if (response.statusCode == 429) {
         handleRateLimit();
       }
@@ -2841,13 +2872,16 @@ This is simulated offline prompts.md content.
         final data = jsonDecode(response.body);
         whatsNewDigest = data;
 
-        // Check if we should trigger a push notification
         final digestText = data['digest'] ?? '';
         final prefs = await SharedPreferences.getInstance();
         final lastDigest = prefs.getString('last_whats_new_digest');
+        final lastTime = prefs.getInt('last_whats_new_time') ?? 0;
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
 
-        if (digestText.isNotEmpty && digestText != lastDigest) {
+        // Limit to max twice daily (12 hours = 43200000 ms)
+        if (digestText.isNotEmpty && digestText != lastDigest && (nowMs - lastTime) > 43200000) {
           await prefs.setString('last_whats_new_digest', digestText);
+          await prefs.setInt('last_whats_new_time', nowMs);
 
           // Add to local notifications list
           notifications.insert(0, {

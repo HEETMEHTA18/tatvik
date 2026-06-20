@@ -147,9 +147,9 @@ class GithubService:
             developer_score_val = round(
                 min(
                     max(
-                        total_stars * 0.2
-                        + len(repos_data) * 0.3
-                        + total_commits * 0.01
+                        total_stars * 0.05
+                        + len(repos_data) * 0.1
+                        + total_commits * 0.005
                         + 3.0,
                         1.0,
                     ),
@@ -219,7 +219,6 @@ class GithubService:
                 github_data = profile_response.json()
                 login = github_data.get("login", username)
                 avatar_url = github_data.get("avatar_url")
-                name = github_data.get("name") or login
 
                 # Update User profile details in DB
                 user_stmt = select(User).where(User.id == user_id)
@@ -342,9 +341,9 @@ class GithubService:
                 developer_score_val = round(
                     min(
                         max(
-                            total_stars * 0.2
-                            + len(repos_data) * 0.3
-                            + total_commits * 0.01
+                            total_stars * 0.05
+                            + len(repos_data) * 0.1
+                            + total_commits * 0.005
                             + 3.0,
                             1.0,
                         ),
@@ -383,7 +382,7 @@ class GithubService:
             avatar_url = (
                 user.avatar_url
                 if (user and user.avatar_url)
-                else f"https://github.com/{username}.png"
+                else f"https://avatars.githubusercontent.com/{username}"
             )
 
             # Save fallback developer score

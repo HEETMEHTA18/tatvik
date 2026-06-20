@@ -141,7 +141,7 @@ async def get_developer_dna(
         "{\n"
         '  "archetype": "Builder" | "Architect" | "Hacker" | "Explorer",\n'
         '  "score": int (archetype alignment percentage 1-100),\n'
-        '  "description": "catchy 1-sentence archetype tagline",\n'
+        '  "description": "catchy tagline (MUST be exactly 10 to 20 words maximum)",\n'
         '  "strengths": ["strength 1", "strength 2", "strength 3"],\n'
         '  "weaknesses": ["weakness 1", "weakness 2", "weakness 3"]\n'
         "}"
@@ -577,7 +577,7 @@ async def get_weekly_report(
         f'  "skills_learned": {skills_learned},\n'
         f'  "improvement_percentage": {improvement_percentage},\n'
         f'  "chart_data": {chart_data},\n'
-        f'  "achievements": "A short summary of their achievements this week (e.g. Mastered Flutter pop leak diagnosis)",\n'
+        f'  "achievements": "A short summary of their achievements this week (MUST be exactly 10 to 20 words maximum)",\n'
         f'  "next_steps": ["Specific next step 1 matching their stack", "Specific next step 2"]\n'
         f"}}"
     )

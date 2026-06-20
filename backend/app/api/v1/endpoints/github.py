@@ -714,7 +714,7 @@ async def get_public_stats(
             return {
                 "login": clean_username,
                 "name": clean_username,
-                "avatar_url": f"https://github.com/{clean_username}.png",
+                "avatar_url": f"https://avatars.githubusercontent.com/{clean_username}",
                 "public_repos": 12,
                 "total_stars": 18,
                 "total_commits": 145,

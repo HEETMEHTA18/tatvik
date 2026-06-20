@@ -97,8 +97,15 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
     // Main Explore tab — GitHub mobile style
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: CustomScrollView(
-        slivers: [
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await appState.fetchGithubData(appState.githubUsername);
+        },
+        color: AppTheme.accent,
+        backgroundColor: AppTheme.surface,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
           // Large title header
           SliverToBoxAdapter(
             child: Padding(
@@ -295,6 +302,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
           // Bottom padding
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
       ),
     );
   }
