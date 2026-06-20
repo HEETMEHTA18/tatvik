@@ -43,6 +43,8 @@ class PDFGeneratorService:
         }
         for orig, rep in replacements.items():
             text = text.replace(orig, rep)
+        # Strip markdown links [text](url) -> text
+        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
         # Convert anything else to Latin-1 safe characters
         return text.encode("latin1", "replace").decode("latin1")
 
@@ -59,8 +61,14 @@ class PDFGeneratorService:
             line_str = line.strip()
             if not line_str:
                 continue
+            
+            upper_line = line_str.upper()
             if line_str.startswith("## "):
                 heading = line_str[3:].strip().upper()
+                current_section = heading
+                sections[current_section] = []
+            elif (line_str.startswith("### ") or line_str.startswith("**")) and any(kw in upper_line for kw in ["SUMMARY", "EXPERIENCE", "PROJECTS", "EDUCATION", "SKILLS", "CONTACT"]):
+                heading = re.sub(r'[^a-zA-Z\s]', '', line_str).strip().upper()
                 current_section = heading
                 sections[current_section] = []
             elif line_str.startswith("# "):
