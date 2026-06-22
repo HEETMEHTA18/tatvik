@@ -2711,6 +2711,8 @@ This is simulated offline prompts.md content.
       isLoadingPromptHistory = false;
       notifyListeners();
     }
+  }
+
   Future<String> refinePrompt(String promptId) async {
     if (token == null) {
       // Mock Refinement

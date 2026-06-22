@@ -17,6 +17,7 @@ def setup_module():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     import app.api.v1.endpoints.research as research
+
     research.redis_client = None
 
 
@@ -457,7 +458,7 @@ def test_refine_prompt_endpoint():
             "refined_prompt": "Use indexed subquery or COUNT(1) to avoid sequential scan.",
             "score": 85,
             "technologies": ["PostgreSQL", "SQL"],
-            "workflow": "Database"
+            "workflow": "Database",
         }
 
         refine_response = client.post(
@@ -479,6 +480,8 @@ def test_refine_prompt_endpoint():
     history_list = history_response.json()
     matched = [p for p in history_list if p["id"] == prompt_id]
     assert len(matched) == 1
-    assert matched[0]["refined_prompt"] == "Use indexed subquery or COUNT(1) to avoid sequential scan."
+    assert (
+        matched[0]["refined_prompt"]
+        == "Use indexed subquery or COUNT(1) to avoid sequential scan."
+    )
     assert matched[0]["score"] == 85
-

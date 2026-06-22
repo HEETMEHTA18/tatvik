@@ -240,8 +240,7 @@ async def refine_individual_prompt(
     Calls AI to generate the refined prompt, score, technologies, and workflow category.
     """
     stmt = select(PromptHistory).where(
-        PromptHistory.id == prompt_id,
-        PromptHistory.user_id == user_id
+        PromptHistory.id == prompt_id, PromptHistory.user_id == user_id
     )
     db_prompt = db.scalar(stmt)
     if not db_prompt:
@@ -656,13 +655,17 @@ async def sync_github_prompts(
                             continue
 
                         # If it's a top-level list item (starts with - or * or 1.) and indentation < 2
-                        if (line_str.startswith("- ") or line_str.startswith("* ") or line_str.startswith("1. ")) and indentation < 2:
+                        if (
+                            line_str.startswith("- ")
+                            or line_str.startswith("* ")
+                            or line_str.startswith("1. ")
+                        ) and indentation < 2:
                             if current_prompt:
                                 prompts_to_import.append(current_prompt)
-                            
+
                             prefix_len = 3 if line_str.startswith("1. ") else 2
                             raw_text = line_str[prefix_len:].strip()
-                            
+
                             # Parse project name: [project] refined_prompt
                             project_name = None
                             refined_text = raw_text
@@ -670,7 +673,7 @@ async def sync_github_prompts(
                                 end_bracket = raw_text.find("]")
                                 if end_bracket != -1:
                                     project_name = raw_text[1:end_bracket].strip()
-                                    refined_text = raw_text[end_bracket + 1:].strip()
+                                    refined_text = raw_text[end_bracket + 1 :].strip()
 
                             current_prompt = {
                                 "refined_prompt": refined_text,
@@ -685,17 +688,27 @@ async def sync_github_prompts(
                             if line_str.startswith("- ") or line_str.startswith("* "):
                                 meta_content = line_str[2:].strip()
                                 if meta_content.startswith("*Original:*"):
-                                    current_prompt["original_prompt"] = meta_content[len("*Original:*"):].strip()
+                                    current_prompt["original_prompt"] = meta_content[
+                                        len("*Original:*") :
+                                    ].strip()
                                 elif meta_content.startswith("*Score:*"):
-                                    score_str = meta_content[len("*Score:*"):].strip().split("/")[0]
+                                    score_str = (
+                                        meta_content[len("*Score:*") :]
+                                        .strip()
+                                        .split("/")[0]
+                                    )
                                     try:
                                         current_prompt["score"] = int(score_str)
                                     except:
                                         pass
                                 elif meta_content.startswith("*Technologies:*"):
-                                    current_prompt["technologies"] = meta_content[len("*Technologies:*"):].strip()
+                                    current_prompt["technologies"] = meta_content[
+                                        len("*Technologies:*") :
+                                    ].strip()
                                 elif meta_content.startswith("*Workflow:*"):
-                                    current_prompt["workflow"] = meta_content[len("*Workflow:*"):].strip()
+                                    current_prompt["workflow"] = meta_content[
+                                        len("*Workflow:*") :
+                                    ].strip()
 
                     if current_prompt:
                         prompts_to_import.append(current_prompt)
