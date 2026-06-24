@@ -21,5 +21,4 @@ class Settings(BaseSettings):
     openclaw_api_url: str = "https://api.openclaw.ai/v1"
 
 
-
 settings = Settings()

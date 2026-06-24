@@ -201,9 +201,19 @@ async def mentor_chat(
 
     # 5b. Detect agentic action keywords to dispatch to OpenClaw
     action_keywords = [
-        "execute", "run command", "create pr", "open pr", "make a pr",
-        "create pull request", "fix this bug", "implement this", "build this feature",
-        "write the code", "deploy", "run terminal", "edit the file"
+        "execute",
+        "run command",
+        "create pr",
+        "open pr",
+        "make a pr",
+        "create pull request",
+        "fix this bug",
+        "implement this",
+        "build this feature",
+        "write the code",
+        "deploy",
+        "run terminal",
+        "edit the file",
     ]
     openclaw_result = None
     if any(k in msg_lower for k in action_keywords):
@@ -216,7 +226,9 @@ async def mentor_chat(
                     repo_url=repo_url,
                     task_description=payload.message,
                 )
-                logger.info(f"OpenClaw task dispatched for user {user_id}: {openclaw_result}")
+                logger.info(
+                    f"OpenClaw task dispatched for user {user_id}: {openclaw_result}"
+                )
             except Exception as e:
                 logger.warning(f"OpenClaw dispatch failed: {e}")
 
@@ -262,11 +274,14 @@ async def mentor_chat(
                     reply = data["choices"][0]["message"]["content"]
                     # Save this exchange to Cognee long-term memory
                     try:
-                        await _cognee_service.add_developer_profile(user_id, {
-                            "last_message": payload.message,
-                            "repos": repo_list_str,
-                            "provider": "groq"
-                        })
+                        await _cognee_service.add_developer_profile(
+                            user_id,
+                            {
+                                "last_message": payload.message,
+                                "repos": repo_list_str,
+                                "provider": "groq",
+                            },
+                        )
                     except Exception:
                         pass
                     response_data = {
@@ -328,11 +343,14 @@ async def mentor_chat(
                         reply = data["candidates"][0]["content"]["parts"][0]["text"]
                         # Save this exchange to Cognee long-term memory
                         try:
-                            await _cognee_service.add_developer_profile(user_id, {
-                                "last_message": payload.message,
-                                "repos": repo_list_str,
-                                "provider": "gemini"
-                            })
+                            await _cognee_service.add_developer_profile(
+                                user_id,
+                                {
+                                    "last_message": payload.message,
+                                    "repos": repo_list_str,
+                                    "provider": "gemini",
+                                },
+                            )
                         except Exception:
                             pass
                         response_data = {
