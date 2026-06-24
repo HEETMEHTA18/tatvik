@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     groq_api_key: str = ""
     GOOGLE_CLIENT_ID: str = "google-client-id"
     GOOGLE_CLIENT_SECRET: str = "google-client-secret"
+    cognee_api_key: str = ""
+    openclaw_api_key: str = ""
+    openclaw_api_url: str = "https://api.openclaw.ai/v1"
+
 
 
 settings = Settings()

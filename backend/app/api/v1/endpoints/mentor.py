@@ -1,3 +1,4 @@
+import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -7,8 +8,15 @@ from sqlalchemy import select
 from app.api.deps import get_current_user_id, get_db
 from app.core.config import settings
 from app.models.entities import Repository, TechNews, GithubProfile
+from app.services.cognee_service import CogneeService
+from app.services.openclaw_service import OpenClawService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+# Singleton service instances
+_cognee_service = CogneeService()
+_openclaw_service = OpenClawService()
 
 
 class HistoryMessage(BaseModel):
@@ -96,6 +104,19 @@ async def mentor_chat(
     profile = db.scalar(profile_stmt)
     access_token = profile.access_token if profile else None
 
+    # 2a. Fetch long-term memory context from Cognee for this user
+    cognee_memory_context = ""
+    try:
+        memory = await _cognee_service.get_developer_profile(user_id)
+        if memory and "results" in memory and memory["results"]:
+            cognee_memory_context = (
+                "\nLong-term Developer Memory (from previous sessions):\n"
+                + str(memory["results"])[:800]  # cap at 800 chars
+                + "\n"
+            )
+    except Exception as e:
+        logger.warning(f"Could not fetch Cognee memory for user {user_id}: {e}")
+
     # 3. Detect if they are asking for top repositories
     msg_lower = payload.message.lower()
     github_context = ""
@@ -172,10 +193,32 @@ async def mentor_chat(
         system_prompt += f"\nContext - User's Uploaded Resume (use this to help tailor suggestions, discuss their background, or answer job/resume questions):\n{payload.resume_context}\n"
 
     system_prompt += (
+        f"{cognee_memory_context}"
         f"{github_context}"
         f"{news_context}\n"
         "Always recommend actionable learning steps based on these real-time tech trends and repositories."
     )
+
+    # 5b. Detect agentic action keywords to dispatch to OpenClaw
+    action_keywords = [
+        "execute", "run command", "create pr", "open pr", "make a pr",
+        "create pull request", "fix this bug", "implement this", "build this feature",
+        "write the code", "deploy", "run terminal", "edit the file"
+    ]
+    openclaw_result = None
+    if any(k in msg_lower for k in action_keywords):
+        # Find the first synced repo to use as target
+        target_repo = repos[0].full_name if repos else None
+        if target_repo:
+            repo_url = f"https://github.com/{target_repo}"
+            try:
+                openclaw_result = await _openclaw_service.execute_task(
+                    repo_url=repo_url,
+                    task_description=payload.message,
+                )
+                logger.info(f"OpenClaw task dispatched for user {user_id}: {openclaw_result}")
+            except Exception as e:
+                logger.warning(f"OpenClaw dispatch failed: {e}")
 
     # 6. Build the conversation history turns for the LLM
     # Sanitise roles to strictly 'user' or 'assistant' to prevent injection
@@ -217,10 +260,22 @@ async def mentor_chat(
                 if response.status_code == 200:
                     data = response.json()
                     reply = data["choices"][0]["message"]["content"]
-                    return {
+                    # Save this exchange to Cognee long-term memory
+                    try:
+                        await _cognee_service.add_developer_profile(user_id, {
+                            "last_message": payload.message,
+                            "repos": repo_list_str,
+                            "provider": "groq"
+                        })
+                    except Exception:
+                        pass
+                    response_data = {
                         "user_id": user_id,
                         "assistant_message": clean_response(reply),
                     }
+                    if openclaw_result:
+                        response_data["openclaw_task"] = openclaw_result
+                    return response_data
                 else:
                     import logging
 
@@ -271,10 +326,22 @@ async def mentor_chat(
                     data = response.json()
                     try:
                         reply = data["candidates"][0]["content"]["parts"][0]["text"]
-                        return {
+                        # Save this exchange to Cognee long-term memory
+                        try:
+                            await _cognee_service.add_developer_profile(user_id, {
+                                "last_message": payload.message,
+                                "repos": repo_list_str,
+                                "provider": "gemini"
+                            })
+                        except Exception:
+                            pass
+                        response_data = {
                             "user_id": user_id,
                             "assistant_message": clean_response(reply),
                         }
+                        if openclaw_result:
+                            response_data["openclaw_task"] = openclaw_result
+                        return response_data
                     except (KeyError, IndexError):
                         import logging
 
