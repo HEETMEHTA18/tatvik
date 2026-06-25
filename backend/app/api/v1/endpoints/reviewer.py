@@ -57,6 +57,19 @@ async def run_continuous_code_review(
     # Extract the raw output from OpenClaw (the file tree / analysis)
     raw_analysis = str(claw_result.get("message", claw_result))
 
+    if claw_result.get("success") is False:
+        error_msg = str(claw_result.get("error", raw_analysis))
+        if "ReadTimeout" in error_msg or "Timeout" in error_msg:
+            return ReviewResponse(
+                success=False,
+                security_score=0,
+                performance_score=0,
+                architecture_score=0,
+                maintainability_score=0,
+                summary="The analysis is taking longer than expected. OpenClaw is continuing the review securely in the background.",
+                issues=["Timeout waiting for analysis to finish synchronously."],
+            )
+
     if "<!DOCTYPE html>" in raw_analysis or claw_result.get("success") is False:
         logger.warning(f"OpenClaw returned an error or HTML page: {raw_analysis[:200]}")
         raise HTTPException(
