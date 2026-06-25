@@ -24,7 +24,7 @@ class OpenClawService:
             )
 
     async def execute_task(
-        self, repo_url: str, task_description: str, branch_name: str = "main"
+        self, repo_url: str, task_description: str, branch_name: str | None = None
     ) -> dict:
         """
         Triggers OpenClaw to carry out a developmental task (e.g. coding features, writing tests, applying bug fixes)
@@ -41,13 +41,14 @@ class OpenClawService:
                 "pull_request_url": "https://github.com/stub-owner/stub-repo/pull/1",
             }
 
+        branch_text = f" (branch: {branch_name})" if branch_name else ""
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-1.5-flash",
+            "model": "gemini-2.0-flash",
             "messages": [
                 {
                     "role": "user",
-                    "content": f"Repository: {repo_url} (branch: {branch_name})\nTask: {task_description}\nPlease clone or fetch the code, analyze the architecture, dependencies, and code quality, and provide a comprehensive raw analysis.",
+                    "content": f"Repository: {repo_url}{branch_text}\nTask: {task_description}\nPlease clone or fetch the code, analyze the architecture, dependencies, and code quality, and provide a comprehensive raw analysis. You may use all 7 of your available plugins (browser, canvas, device-pair, file-transfer, memory-core, phone-control, talk-voice) to complete this task thoroughly.",
                 }
             ],
         }
