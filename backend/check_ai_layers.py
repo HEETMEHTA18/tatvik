@@ -53,7 +53,7 @@ async def test_cognee():
 
     # Test 1: Service initialisation
     if service.enabled:
-        ok(f"CogneeService initialised. API Key: {service.api_key[:8]}...")
+        ok("CogneeService initialised. API Key: [CONFIGURED]")
     else:
         warn("CogneeService in stub/dry-run mode (no API key)")
 
@@ -126,7 +126,7 @@ async def test_openclaw():
     # Test 1: Service initialisation
     if service.enabled:
         ok(f"OpenClawService initialised. URL: {service.api_url}")
-        ok(f"API Key: {service.api_key[:8]}...")
+        ok("API Key: [CONFIGURED]")
     else:
         warn("OpenClawService in dry-run mode (no API key)")
 
