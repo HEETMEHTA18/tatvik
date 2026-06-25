@@ -5,10 +5,12 @@ from pydantic import BaseModel
 from app.api.deps import get_optional_user_id
 from app.core.config import settings
 from app.services.openclaw_service import OpenClawService
+from app.services.cognee_service import CogneeService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 _openclaw_service = OpenClawService()
+_cognee_service = CogneeService()
 
 
 class ReviewRequest(BaseModel):
@@ -102,6 +104,25 @@ async def run_continuous_code_review(
 
         review_data = await call_ai_json(prompt_text, task_type="heavy")
         if review_data:
+            # Persist review results into Cognee Cloud for growth tracking
+            if user_id:
+                await _cognee_service.remember_review_result(
+                    user_id, request.repo_url, review_data
+                )
+                # Store individual issues as mistakes for the Smart Mentor
+                for issue in review_data.get("issues", [])[:5]:
+                    category = "general"
+                    lower = issue.lower()
+                    if "security" in lower:
+                        category = "security"
+                    elif "performance" in lower or "slow" in lower:
+                        category = "performance"
+                    elif "architect" in lower or "structure" in lower:
+                        category = "architecture"
+                    elif "maintain" in lower or "readab" in lower:
+                        category = "maintainability"
+                    await _cognee_service.remember_mistake(user_id, issue, category)
+
             return ReviewResponse(
                 success=True,
                 security_score=review_data.get("security_score", 0),

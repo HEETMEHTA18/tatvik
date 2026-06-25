@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
     analysis,
     auth,
     github,
+    intelligence,
     mentor,
     notifications,
     recommendations,
@@ -38,3 +39,6 @@ api_router.include_router(
 api_router.include_router(research.router, prefix="/research", tags=["research"])
 api_router.include_router(timeline.router, prefix="/timeline", tags=["timeline"])
 api_router.include_router(reviewer.router, prefix="/reviewer", tags=["reviewer"])
+api_router.include_router(
+    intelligence.router, prefix="/intelligence", tags=["intelligence"]
+)
