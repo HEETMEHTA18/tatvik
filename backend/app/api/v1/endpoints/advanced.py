@@ -37,14 +37,14 @@ class BattleRequest(BaseModel):
     target: str
 
 
-async def call_ai_json(prompt: str) -> dict:
+async def call_ai_json(prompt: str, task_type: str = "general") -> dict:
     """
-    Utility function to call Groq or Gemini API with a JSON prompt and return parsed dict.
+    Utility function to call an AI API with a JSON prompt and return parsed dict.
+    Segregates tasks to the best API key / model based on task_type.
     """
-    # Primary: Gemini (higher context limits for large tasks)
-    api_key = settings.gemini_api_key
-    if api_key:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={api_key}"
+    # 1. Heavy reasoning tasks (like deep architecture review) -> Gemini
+    if task_type == "heavy" and settings.gemini_api_key:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={settings.gemini_api_key}"
         json_payload = {
             "contents": [
                 {
@@ -72,13 +72,11 @@ async def call_ai_json(prompt: str) -> dict:
                         reply.replace("```json", "").replace("```", "").strip()
                     )
                     return json.loads(clean_reply)
-                else:
-                    logger.error(f"Gemini API error in advanced route: {response.text}")
             except Exception as e:
-                logger.error(f"Error calling Gemini in advanced route: {e}")
+                logger.error(f"Gemini API error: {e}")
 
-    # Fallback: Groq
-    if settings.groq_api_key:
+    # 2. Fast/small tasks (like parsing a single string) -> Groq
+    if (task_type == "fast" or task_type == "general") and settings.groq_api_key:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {settings.groq_api_key}",
@@ -98,10 +96,47 @@ async def call_ai_json(prompt: str) -> dict:
                 if response.status_code == 200:
                     reply = response.json()["choices"][0]["message"]["content"]
                     return json.loads(reply)
-                else:
-                    logger.error(f"Groq API error in advanced route: {response.text}")
             except Exception as e:
-                logger.error(f"Error calling Groq in advanced route: {e}")
+                logger.error(f"Groq API error: {e}")
+
+    # 3. Fallback or specific OpenRouter models -> OpenRouter
+    if settings.openrouter_api_key:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {settings.openrouter_api_key}",
+            "HTTP-Referer": "https://devmentor.ai",
+            "X-Title": "DevMentor",
+            "Content-Type": "application/json",
+        }
+        # Choose a free model on OpenRouter depending on task
+        model = (
+            "google/gemini-2.5-flash-lite"
+            if task_type == "heavy"
+            else "meta-llama/llama-3.1-8b-instruct:free"
+        )
+        json_payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"{prompt}\nReturn exactly a valid JSON object.",
+                }
+            ],
+            "response_format": {"type": "json_object"},
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=json_payload, headers=headers, timeout=25.0
+                )
+                if response.status_code == 200:
+                    reply = response.json()["choices"][0]["message"]["content"]
+                    clean_reply = (
+                        reply.replace("```json", "").replace("```", "").strip()
+                    )
+                    return json.loads(clean_reply)
+            except Exception as e:
+                logger.error(f"OpenRouter API error: {e}")
 
     # Ultimate fallback if no keys or errors occur
     return {}

@@ -47,9 +47,9 @@ class OpenClawService:
             "messages": [
                 {
                     "role": "user",
-                    "content": f"Repository: {repo_url} (branch: {branch_name})\nTask: {task_description}\nPlease clone or fetch the code, analyze the architecture, dependencies, and code quality, and provide a comprehensive raw analysis."
+                    "content": f"Repository: {repo_url} (branch: {branch_name})\nTask: {task_description}\nPlease clone or fetch the code, analyze the architecture, dependencies, and code quality, and provide a comprehensive raw analysis.",
                 }
-            ]
+            ],
         }
 
         async with httpx.AsyncClient() as client:
@@ -59,7 +59,11 @@ class OpenClawService:
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    message_content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    message_content = (
+                        data.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "")
+                    )
                     return {"success": True, "message": message_content}
                 else:
                     logger.error(
