@@ -40,16 +40,18 @@ async def run_continuous_code_review(
 
     # 1. Ask OpenClaw to clone and analyze the codebase structure
     logger.info(f"Dispatching Code Review for {request.repo_url}")
-    branch_text = f" branch {request.branch}" if request.branch else " on its default branch"
+    branch_text = (
+        f" branch {request.branch}" if request.branch else " on its default branch"
+    )
     claw_task = f"Clone {request.repo_url}{branch_text}. Analyze the architecture, dependencies, and code quality. Do not modify files. Just print a summary of the tech stack, major files, and obvious code smells."
-    
+
     kwargs = {
         "repo_url": request.repo_url,
         "task_description": claw_task,
     }
     if request.branch:
         kwargs["branch_name"] = request.branch
-        
+
     claw_result = await _openclaw_service.execute_task(**kwargs)
 
     # Extract the raw output from OpenClaw (the file tree / analysis)
