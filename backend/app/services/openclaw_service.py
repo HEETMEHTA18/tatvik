@@ -44,7 +44,7 @@ class OpenClawService:
         branch_text = f" (branch: {branch_name})" if branch_name else ""
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.5-flash",
             "messages": [
                 {
                     "role": "user",
@@ -121,7 +121,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.5-flash",
             "messages": [
                 {
                     "role": "user",
@@ -156,7 +156,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.5-flash",
             "messages": [
                 {
                     "role": "user",
@@ -192,7 +192,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/voice/stream/init"
         payload = {
-            "model": "gemini-2.0-flash",
+            "model": "gemini-2.5-flash",
             "system_instruction": f"You are DevMentor Voice. Use 'memory-core' to remember user details. Context: {context_prompt}",
         }
         async with httpx.AsyncClient() as client:
