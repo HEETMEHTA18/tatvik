@@ -281,9 +281,16 @@ async def mentor_chat(
             {"role": "user", "content": payload.message},
         ]
 
+        import time
+        start_time = time.time()
         async with httpx.AsyncClient() as client:
             try:
                 while current_iteration < max_iterations:
+                    if time.time() - start_time > 70:
+                        logger.warning("Agentic loop approaching 100s Render timeout. Breaking early.")
+                        final_reply = reply if 'reply' in locals() else "Task is taking too long to finish. OpenClaw is still processing in the background."
+                        break
+                    
                     response = await client.post(
                         url,
                         json={
@@ -319,6 +326,8 @@ async def mentor_chat(
                             command=cmd
                         )
                         output = action_res.get("output", str(action_res))
+                        if "ReadTimeout" in output or "Timeout" in output:
+                            output = "Timeout waiting for response. The command is likely still executing securely in the background. Please conclude the current task or assume it will finish shortly."
                         # Append the AI's generation, then the tool output
                         agent_messages.append({"role": "assistant", "content": reply})
                         agent_messages.append(
