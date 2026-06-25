@@ -55,7 +55,7 @@ class OpenClawService:
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(
-                    url, json=payload, headers=self.headers, timeout=120.0
+                    url, json=payload, headers=self.headers, timeout=600.0
                 )
                 if response.status_code == 200:
                     data = response.json()
