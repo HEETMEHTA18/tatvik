@@ -511,9 +511,6 @@ async def get_weekly_report(
 ):
     stmt = select(Repository).where(Repository.user_id == user_id)
     repos = db.scalars(stmt).all()
-    repo_list_str = (
-        ", ".join([r.full_name for r in repos]) if repos else "No repositories"
-    )
 
     # Fetch user personal goal and preferred stack
     user_stmt = select(User).where(User.id == user_id)

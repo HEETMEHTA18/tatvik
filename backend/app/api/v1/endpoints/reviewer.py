@@ -1,7 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-import httpx
 
 from app.api.deps import get_current_user_id
 from app.core.config import settings
@@ -67,10 +66,13 @@ async def run_continuous_code_review(
         "Do not output anything outside of the JSON block."
     )
 
-    prompt_text = f"{system_prompt}\n\nReview this repository analysis:\n\n{raw_analysis}"
+    prompt_text = (
+        f"{system_prompt}\n\nReview this repository analysis:\n\n{raw_analysis}"
+    )
 
     try:
         from app.api.v1.endpoints.advanced import call_ai_json
+
         review_data = await call_ai_json(prompt_text, task_type="heavy")
         if review_data:
             return ReviewResponse(
@@ -83,7 +85,9 @@ async def run_continuous_code_review(
                 issues=review_data.get("issues", []),
             )
         else:
-            raise HTTPException(status_code=500, detail="LLM failed to output valid JSON for review.")
+            raise HTTPException(
+                status_code=500, detail="LLM failed to output valid JSON for review."
+            )
     except Exception as e:
         logger.error(f"Code Reviewer Exception: {e}")
         raise HTTPException(status_code=500, detail=str(e))
