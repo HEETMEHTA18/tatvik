@@ -1,5 +1,7 @@
-import os
+import httpx
 import logging
+import tempfile
+import os
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -11,23 +13,11 @@ class CogneeService:
         Initializes Cognee Cloud connection and configures target LLM/Vector store credentials.
         """
         self.api_key = settings.cognee_api_key
+        self.base_url = settings.cognee_base_url.rstrip("/")
 
-        # Fix SQLite operational error on read-only environments by routing to /tmp
-        os.environ["COGNEE_HOME"] = "/tmp/cognee_system"
-        os.environ["DATA_DIR"] = "/tmp/cognee_system/data"
-        os.makedirs("/tmp/cognee_system/data", exist_ok=True)
-
-        # Cognee relies on environment variables set during module initialization
+        self.headers = {"Content-Type": "application/json"}
         if self.api_key:
-            os.environ["COGNEE_API_KEY"] = self.api_key
-
-        # Configure target LLM provider to use Gemini (prevents falling back to OpenAI)
-        if settings.gemini_api_key:
-            os.environ["LLM_API_KEY"] = settings.gemini_api_key
-            os.environ["LLM_PROVIDER"] = "gemini"
-            os.environ["LLM_MODEL"] = "gemini/gemini-2.0-flash"
-            os.environ["EMBEDDING_PROVIDER"] = "gemini"
-            os.environ["EMBEDDING_MODEL"] = "models/text-embedding-004"
+            self.headers["X-Api-Key"] = self.api_key
 
         self.enabled = bool(self.api_key)
         if not self.enabled:
@@ -45,16 +35,29 @@ class CogneeService:
             )
             return True
 
-        try:
-            import cognee
+        url = f"{self.base_url}/api/v1/remember/entry"
+        payload = {
+            "entry": {
+                "type": "qa",
+                "question": f"What is the developer profile, strengths, and weaknesses for user {user_id}?",
+                "answer": str(profile_data),
+            },
+            "dataset_name": f"user_{user_id}",
+            "session_id": f"devmentor_{user_id}",
+        }
 
-            text_payload = f"Developer profile for user {user_id}: " + str(profile_data)
-            await cognee.add(text_payload, dataset_name=f"user_{user_id}")
-            await cognee.cognify(datasets=[f"user_{user_id}"])
-            return True
-        except Exception as e:
-            logger.exception(f"Failed to add developer profile to Cognee: {e}")
-            return False
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=30.0
+                )
+                if response.status_code == 200:
+                    return True
+                logger.error(f"Failed to add developer profile: {response.text}")
+                return False
+            except Exception as e:
+                logger.exception(f"Failed to communicate with Cognee Cloud: {e}")
+                return False
 
     async def get_developer_profile(self, user_id: str) -> dict:
         """
@@ -66,17 +69,25 @@ class CogneeService:
                 "message": "Cognee API key not set. Using local database profile instead."
             }
 
-        try:
-            import cognee
+        url = f"{self.base_url}/api/v1/recall"
+        payload = {
+            "query": f"developer profile metadata weaknesses strengths mistakes user_{user_id}",
+            "session_id": f"devmentor_{user_id}",
+            "search_type": "GRAPH_COMPLETION",
+        }
 
-            results = await cognee.search(
-                f"developer profile metadata weaknesses strengths mistakes user_{user_id}",
-                search_type="mindmap",
-            )
-            return {"results": results}
-        except Exception as e:
-            logger.exception(f"Failed to query Cognee developer profile: {e}")
-            return {"error": str(e)}
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=60.0
+                )
+                if response.status_code == 200:
+                    return {"results": response.json()}
+                logger.error(f"Failed to recall developer profile: {response.text}")
+                return {"error": response.text}
+            except Exception as e:
+                logger.exception(f"Failed to query Cognee Cloud profile: {e}")
+                return {"error": str(e)}
 
     async def index_repository(
         self, user_id: str, repo_name: str, codebase_files: list[dict]
@@ -90,19 +101,41 @@ class CogneeService:
             )
             return True
 
-        try:
-            import cognee
+        texts = [
+            f"File {file.get('path')}: {file.get('content', '')}"
+            for file in codebase_files
+        ]
+        combined = "\n\n".join(texts)
 
-            texts = [
-                f"File {file.get('path')}: {file.get('content', '')}"
-                for file in codebase_files
-            ]
-            combined = "\n\n".join(texts)
-            await cognee.add(combined, dataset_name=f"repo_{user_id}_{repo_name}")
-            await cognee.cognify(datasets=[f"repo_{user_id}_{repo_name}"])
-            return True
+        # We must use file upload for raw knowledge ingestion, NO session_id
+        url = f"{self.base_url}/api/v1/remember"
+        headers = {"X-Api-Key": self.api_key}  # no application/json
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w+", delete=False, suffix=".txt"
+            ) as tmp:
+                tmp.write(combined)
+                tmp_path = tmp.name
+
+            async with httpx.AsyncClient() as client:
+                with open(tmp_path, "rb") as f:
+                    files = {
+                        "data": (f"{repo_name.replace('/', '_')}.txt", f, "text/plain")
+                    }
+                    data = {"datasetName": f"user_{user_id}"}
+                    response = await client.post(
+                        url, headers=headers, files=files, data=data, timeout=300.0
+                    )
+
+            os.remove(tmp_path)
+
+            if response.status_code == 200:
+                return True
+            logger.error(f"Failed to index repository in Cognee Cloud: {response.text}")
+            return False
         except Exception as e:
-            logger.exception(f"Failed to index repository on Cognee: {e}")
+            logger.exception(f"Failed to index repository to Cognee Cloud: {e}")
             return False
 
     async def query_repository_memory(
@@ -117,10 +150,22 @@ class CogneeService:
             )
             return []
 
-        try:
-            import cognee
+        url = f"{self.base_url}/api/v1/recall"
+        payload = {
+            "query": f"For repository {repo_name}: {query}",
+            "session_id": f"devmentor_{user_id}",
+            "search_type": "HYBRID_COMPLETION",
+        }
 
-            return await cognee.search(query)
-        except Exception as e:
-            logger.exception(f"Failed to query Cognee repository memory: {e}")
-            return []
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=60.0
+                )
+                if response.status_code == 200:
+                    return response.json()
+                logger.error(f"Failed to query repository memory: {response.text}")
+                return []
+            except Exception as e:
+                logger.exception(f"Failed to query Cognee Cloud repo memory: {e}")
+                return []
