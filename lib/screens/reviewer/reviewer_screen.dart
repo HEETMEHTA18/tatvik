@@ -18,7 +18,7 @@ class ReviewerScreen extends StatefulWidget {
 }
 
 class _ReviewerScreenState extends State<ReviewerScreen> {
-  final _pathController = TextEditingController(text: '/home/heet18/Projects/devmentor');
+  final _pathController = TextEditingController(text: 'https://github.com/HEETMEHTA18/devmentor');
   bool _isLoading = false;
   Map<String, dynamic>? _reviewData;
   String _errorMsg = '';
@@ -141,7 +141,7 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Provide a local repository path or workspace to run a continuous code review using OpenClaw.',
+                  'Provide a public GitHub repository URL to run a continuous code review using OpenClaw.',
                   style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
@@ -149,7 +149,7 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
                   controller: _pathController,
                   style: TextStyle(color: AppTheme.textMain, fontSize: 13),
                   decoration: InputDecoration(
-                    labelText: 'Workspace Path',
+                    labelText: 'Repository URL',
                     labelStyle: TextStyle(color: AppTheme.textSecondary),
                     filled: true,
                     fillColor: AppTheme.isDark ? const Color(0x10FFFFFF) : const Color(0x05000000),
