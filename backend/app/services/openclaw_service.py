@@ -43,7 +43,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.0-flash",
+            "model": "gemini-1.5-flash",
             "messages": [
                 {
                     "role": "user",
