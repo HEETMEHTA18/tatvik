@@ -165,7 +165,7 @@ class GithubAgentService:
 
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"gemini-2.0-flash:generateContent?key={settings.gemini_api_key}"
+            f"gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
         )
         async with httpx.AsyncClient() as client:
             try:

@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = "google-client-id"
     GOOGLE_CLIENT_SECRET: str = "google-client-secret"
     cognee_api_key: str = ""
-    cognee_base_url: str = "https://tenant-8a941fb2-e171-4bac-8bdc-48b1f70cf20c.aws.cognee.ai"
+    cognee_base_url: str = (
+        "https://tenant-8a941fb2-e171-4bac-8bdc-48b1f70cf20c.aws.cognee.ai"
+    )
     openclaw_api_key: str = ""
     openclaw_api_url: str = "https://api.openclaw.ai/v1"
 
