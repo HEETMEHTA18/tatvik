@@ -56,6 +56,13 @@ async def run_continuous_code_review(
 
     # Extract the raw output from OpenClaw (the file tree / analysis)
     raw_analysis = str(claw_result.get("message", claw_result))
+    
+    if "<!DOCTYPE html>" in raw_analysis or claw_result.get("success") is False:
+        logger.warning(f"OpenClaw returned an error or HTML page: {raw_analysis[:200]}")
+        raise HTTPException(
+            status_code=503, 
+            detail="The OpenClaw AI environment is currently booting up from sleep mode on Hugging Face. Please wait 1-2 minutes and try your request again."
+        )
 
     # 2. Use Gemini/Llama to generate the exact scores and detailed review
     system_prompt = (
