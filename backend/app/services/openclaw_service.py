@@ -107,3 +107,104 @@ class OpenClawService:
             except Exception as e:
                 logger.exception("Failed to dispatch command run request to OpenClaw")
                 return {"success": False, "error": str(e)}
+
+    async def test_ui_with_browser(self, target_url: str, ui_instructions: str) -> dict:
+        """
+        Explicitly invokes the 'browser' and 'canvas' plugins to evaluate a live UI.
+        """
+        if not self.enabled:
+            return {
+                "success": True,
+                "stub": True,
+                "message": f"Mock UI review for {target_url}",
+            }
+
+        url = f"{self.api_url}/v1/chat/completions"
+        payload = {
+            "model": "gemini-2.0-flash",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Please use your 'browser' plugin to navigate to {target_url}. Then use your 'canvas' plugin to take screenshots and critique the UI. Task: {ui_instructions}",
+                }
+            ],
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=120.0
+                )
+                if response.status_code == 200:
+                    return {
+                        "success": True,
+                        "message": response.json()["choices"][0]["message"]["content"],
+                    }
+                return {"success": False, "error": response.text}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+    async def test_mobile_app(self, ngrok_url: str, test_instructions: str) -> dict:
+        """
+        Explicitly invokes 'device-pair' and 'phone-control' plugins to test a mobile emulator over a tunnel.
+        """
+        if not self.enabled:
+            return {
+                "success": True,
+                "stub": True,
+                "message": f"Mock Mobile test for {ngrok_url}",
+            }
+
+        url = f"{self.api_url}/v1/chat/completions"
+        payload = {
+            "model": "gemini-2.0-flash",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Please use your 'device-pair' plugin to connect to the ADB server at {ngrok_url}. Then use your 'phone-control' plugin to perform this test: {test_instructions}",
+                }
+            ],
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=300.0
+                )
+                if response.status_code == 200:
+                    return {
+                        "success": True,
+                        "message": response.json()["choices"][0]["message"]["content"],
+                    }
+                return {"success": False, "error": response.text}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+
+    async def start_voice_mentor_stream(self, context_prompt: str) -> dict:
+        """
+        Initializes a WebRTC/WebSocket context for 'talk-voice' and 'memory-core'.
+        Returns the websocket stream URL for the Flutter app to connect to.
+        """
+        if not self.enabled:
+            return {
+                "success": True,
+                "stub": True,
+                "stream_url": "wss://mock-stream.openclaw.ai",
+            }
+
+        url = f"{self.api_url}/v1/voice/stream/init"
+        payload = {
+            "model": "gemini-2.0-flash",
+            "system_instruction": f"You are DevMentor Voice. Use 'memory-core' to remember user details. Context: {context_prompt}",
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    url, json=payload, headers=self.headers, timeout=10.0
+                )
+                if response.status_code == 200:
+                    return {
+                        "success": True,
+                        "stream_url": response.json().get("stream_url"),
+                    }
+                return {"success": False, "error": response.text}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
