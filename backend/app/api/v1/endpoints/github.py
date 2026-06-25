@@ -618,24 +618,36 @@ async def github_file_content(
     if access_token:
         headers["Authorization"] = f"Bearer {access_token}"
 
-    url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+    paths_to_check = [path]
+    if path == ".autodevs/prompts.md":
+        paths_to_check.extend([".autodevs/prompt.md", "prompts.md", "prompt.md"])
 
     async with httpx.AsyncClient() as client:
         try:
-            res = await client.get(url, headers=headers, timeout=12.0)
-            if res.status_code == 200:
-                data = res.json()
-                content = data.get("content", "")
-                content_cleaned = content.replace("\n", "").replace("\r", "")
-                decoded = base64.b64decode(content_cleaned).decode("utf-8")
-                return {"content": decoded}
-            elif res.status_code == 404:
-                raise HTTPException(status_code=404, detail="File not found on GitHub.")
-            else:
-                raise HTTPException(
-                    status_code=res.status_code,
-                    detail="GitHub API error. Please try again later.",
+            last_status = None
+            for check_path in paths_to_check:
+                url = (
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{check_path}"
                 )
+                res = await client.get(url, headers=headers, timeout=12.0)
+                last_status = res.status_code
+
+                if res.status_code == 200:
+                    data = res.json()
+                    content = data.get("content", "")
+                    content_cleaned = content.replace("\n", "").replace("\r", "")
+                    decoded = base64.b64decode(content_cleaned).decode("utf-8")
+                    return {"content": decoded}
+                elif res.status_code == 404:
+                    continue  # Try next path
+                else:
+                    raise HTTPException(
+                        status_code=res.status_code,
+                        detail="GitHub API error. Please try again later.",
+                    )
+
+            # If we exhausted all paths
+            raise HTTPException(status_code=404, detail="File not found on GitHub.")
         except HTTPException as he:
             raise he
         except Exception:
