@@ -37,7 +37,7 @@ async def run_continuous_code_review(
     Continuous Code Reviewer: Analyzes architecture, security, performance, accessibility.
     Dispatches task to OpenClaw to analyze the repo, then uses Gemini to generate standard scores.
     """
-    if not settings.groq_api_key:
+    if not settings.nvidia_api_key:
         raise HTTPException(status_code=500, detail="LLM API key not configured")
 
     # 1. Ask OpenClaw to clone and analyze the codebase structure

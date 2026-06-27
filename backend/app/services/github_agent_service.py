@@ -149,8 +149,8 @@ class GithubAgentService:
     async def _ai_generate_content(
         self, task: str, existing_content: str = "", file_path: str = ""
     ) -> str:
-        """Use Gemini to generate file content for a coding task."""
-        if not settings.gemini_api_key:
+        """Use NVIDIA to generate file content for a coding task."""
+        if not settings.nvidia_api_key:
             return f"# AI-generated content\n# Task: {task}\n"
 
         prompt = (
@@ -163,26 +163,32 @@ class GithubAgentService:
             f"Just the raw file content that should be written to the file."
         )
 
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
-        )
+        url = "https://integrate.api.nvidia.com/v1/chat/completions"
         async with httpx.AsyncClient() as client:
             try:
                 resp = await client.post(
                     url,
-                    json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
-                    headers={"Content-Type": "application/json"},
+                    json={
+                        "model": "meta/llama-3.3-70b-instruct",
+                        "messages": [{"role": "user", "content": prompt}]
+                    },
+                    headers={
+                        "Authorization": f"Bearer {settings.nvidia_api_key}",
+                        "Content-Type": "application/json"
+                    },
                     timeout=30.0,
                 )
                 if resp.status_code == 200:
                     return (
-                        resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-                        .strip()
-                        .removeprefix("```")
-                        .removesuffix("```")
+                        resp.json()["choices"][0]["message"]["content"]
+                        .replace("```python", "")
+                        .replace("```dart", "")
+                        .replace("```html", "")
+                        .replace("```", "")
                         .strip()
                     )
+                else:
+                    logger.error(f"NVIDIA API error: {resp.text}")
             except Exception as e:
                 logger.warning(f"Gemini content generation failed: {e}")
         return f"# Task: {task}\n# (AI generation failed — please implement manually)\n"

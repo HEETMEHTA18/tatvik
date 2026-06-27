@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     groq_api_key: str = ""
     openrouter_api_key: str = ""
+    nvidia_api_key: str = ""
     GOOGLE_CLIENT_ID: str = "google-client-id"
     GOOGLE_CLIENT_SECRET: str = "google-client-secret"
     cognee_api_key: str = ""

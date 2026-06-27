@@ -266,10 +266,10 @@ async def mentor_chat(
         return cleaned.strip()
 
     # 7. Agentic Loop - Call AI API (up to 3 iterations for ReAct)
-    if settings.groq_api_key:
+    if settings.nvidia_api_key:
         import re
 
-        url = "https://api.groq.com/openai/v1/chat/completions"
+        url = "https://integrate.api.nvidia.com/v1/chat/completions"
 
         # Initialize loop variables
         max_iterations = 3
@@ -300,18 +300,18 @@ async def mentor_chat(
                     response = await client.post(
                         url,
                         json={
-                            "model": "llama-3.1-8b-instant",
+                            "model": "meta/llama-3.3-70b-instruct",
                             "messages": agent_messages,
                         },
                         headers={
-                            "Authorization": f"Bearer {settings.groq_api_key}",
+                            "Authorization": f"Bearer {settings.nvidia_api_key}",
                             "Content-Type": "application/json",
                         },
                         timeout=30.0,
                     )
 
                     if response.status_code != 200:
-                        logger.error(f"Groq API error: {response.text}")
+                        logger.error(f"NVIDIA API error: {response.text}")
                         break
 
                     data = response.json()
@@ -378,7 +378,7 @@ async def mentor_chat(
                         {
                             "last_message": payload.message,
                             "repos": repo_list_str,
-                            "provider": "groq",
+                            "provider": "nvidia",
                         },
                     )
                 except Exception:
@@ -397,7 +397,7 @@ async def mentor_chat(
             except Exception as e:
                 import logging
 
-                logging.getLogger(__name__).error(f"Error calling Groq: {e}")
+                logging.getLogger(__name__).error(f"Error calling NVIDIA: {e}")
 
     api_key = settings.gemini_api_key
     if api_key:

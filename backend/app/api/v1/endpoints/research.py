@@ -103,40 +103,41 @@ def check_rate_limit(
         pass
 
 
-# Gemini AI Orchestrator Helper
-async def call_gemini(system_prompt: str, user_prompt: str) -> str:
-    api_key = settings.gemini_api_key
+# NVIDIA AI Orchestrator Helper
+async def call_nvidia(system_prompt: str, user_prompt: str) -> str:
+    api_key = settings.nvidia_api_key
     if not api_key:
-        return "[Gemini API Key missing] Stub summary response."
+        return "[NVIDIA API Key missing] Stub summary response."
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = "https://integrate.api.nvidia.com/v1/chat/completions"
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 url,
                 json={
-                    "contents": [
-                        {
-                            "parts": [
-                                {"text": f"{system_prompt}\nUser Input:\n{user_prompt}"}
-                            ]
-                        }
-                    ]
+                    "model": "meta/llama-3.3-70b-instruct",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
                 },
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
                 timeout=30.0,
             )
             if response.status_code == 200:
                 data = response.json()
                 try:
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
+                    return data["choices"][0]["message"]["content"]
                 except (KeyError, IndexError):
-                    return "Error: Malformed Gemini API response."
+                    return "Error: Malformed NVIDIA API response."
             else:
-                logger.error(f"Gemini API returned status {response.status_code}")
+                logger.error(f"NVIDIA API returned status {response.status_code}")
                 return "Error: AI service returned an error. Please try again later."
         except Exception as e:
-            logger.exception("Gemini API call failed")
+            logger.exception("NVIDIA API call failed")
             return "Error: AI service unavailable. Please try again later."
 
 
@@ -280,7 +281,7 @@ async def research_github(
             "outline a step-by-step learning roadmap for a junior developer to understand this codebase, "
             "and rate its complexity (1 to 10). Provide a well-structured response."
         )
-        ai_summary = await call_gemini(system_prompt, scraped_content)
+        ai_summary = await call_nvidia(system_prompt, scraped_content)
 
         result_obj = ResearchResult(
             session_id=session_obj.id,
@@ -317,7 +318,7 @@ async def research_github(
             "Analyze and summarize the top trends, recommend which templates are best for development, "
             "and suggest how they can help a developer build their project."
         )
-        ai_summary = await call_gemini(system_prompt, json.dumps(repos, indent=2))
+        ai_summary = await call_nvidia(system_prompt, json.dumps(repos, indent=2))
 
         result_obj = ResearchResult(
             session_id=session_obj.id,
@@ -457,7 +458,7 @@ async def research_youtube(
         "Summarize the main core concepts taught in the video, outline step-by-step instructions, and extract "
         "any code snippets, resources, or links mentioned. Keep the summary highly educational and developer-centric."
     )
-    ai_summary = await call_gemini(system_prompt, user_prompt)
+    ai_summary = await call_nvidia(system_prompt, user_prompt)
 
     result_obj = ResearchResult(
         session_id=session_obj.id,
@@ -532,7 +533,7 @@ async def research_reddit(
         "Summarize the general developer consensus, list pros and cons discussed by the community, "
         "and mention any specific tips or alternatives suggested in the threads. Be concise and objective."
     )
-    ai_summary = await call_gemini(system_prompt, scraped_content)
+    ai_summary = await call_nvidia(system_prompt, scraped_content)
 
     result_obj = ResearchResult(
         session_id=session_obj.id,
@@ -613,7 +614,7 @@ async def research_rss(
         "Create a concise, bulleted digest highlighting the most important technical releases, tutorials, or updates "
         "and how they are useful to developers."
     )
-    ai_summary = await call_gemini(system_prompt, json.dumps(entries_list, indent=2))
+    ai_summary = await call_nvidia(system_prompt, json.dumps(entries_list, indent=2))
 
     result_obj = ResearchResult(
         session_id=session_obj.id,
@@ -666,7 +667,7 @@ async def research_project_analysis(
     )
 
     user_prompt = f"Project Idea: {payload.project_idea}\n\nRelated Templates:\n{json.dumps(repos, indent=2)}"
-    ai_summary = await call_gemini(system_prompt, user_prompt)
+    ai_summary = await call_nvidia(system_prompt, user_prompt)
 
     roadmap_obj = Roadmap(
         user_id=user_id,
@@ -743,7 +744,7 @@ async def research_learning_path(
     )
 
     user_prompt = f"Target Role: {payload.role}\nTarget Technologies: {', '.join(payload.target_technologies)}\nGitHub Reference Repos:\n{json.dumps(repos, indent=2)}"
-    ai_summary = await call_gemini(system_prompt, user_prompt)
+    ai_summary = await call_nvidia(system_prompt, user_prompt)
 
     session_obj = ResearchSession(
         user_id=user_id, query=f"Learning Path: {payload.role}"
