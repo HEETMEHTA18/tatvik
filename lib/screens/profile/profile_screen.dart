@@ -734,21 +734,87 @@ class ProfileScreen extends StatelessWidget {
                               // Simulating enabling 2FA
                               bool? confirm = await showDialog<bool>(
                                 context: context,
-                                builder: (ctx) => AlertDialog(
-                                  backgroundColor: AppTheme.surface,
-                                  title: Text('Enable 2FA', style: TextStyle(color: AppTheme.textMain)),
-                                  content: Text('A verification code has been sent to your registered email/phone. Enter it below to enable 2FA.\n\n(Simulation: Just tap Confirm)', style: TextStyle(color: AppTheme.textSecondary)),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      child: const Text('Confirm'),
-                                    ),
-                                  ],
-                                ),
+                                barrierDismissible: false,
+                                builder: (ctx) {
+                                  final TextEditingController codeController = TextEditingController();
+                                  bool hasError = false;
+                                  return StatefulBuilder(
+                                    builder: (context, setState) {
+                                      return AlertDialog(
+                                        backgroundColor: AppTheme.surface,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        title: Column(
+                                          children: [
+                                            Icon(Icons.security_rounded, size: 48, color: AppTheme.accent),
+                                            const SizedBox(height: 16),
+                                            Text('Enable 2FA', style: GoogleFonts.outfit(color: AppTheme.textMain, fontWeight: FontWeight.bold)),
+                                          ],
+                                        ),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Enter the 6-digit verification code sent to your registered email.',
+                                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 24),
+                                            TextField(
+                                              controller: codeController,
+                                              keyboardType: TextInputType.number,
+                                              maxLength: 6,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.jetBrainsMono(
+                                                fontSize: 24,
+                                                letterSpacing: 8,
+                                                color: AppTheme.textMain,
+                                              ),
+                                              decoration: InputDecoration(
+                                                hintText: '------',
+                                                hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                                                counterText: '',
+                                                errorText: hasError ? 'Invalid code. Try 123456.' : null,
+                                                filled: true,
+                                                fillColor: AppTheme.background,
+                                                border: OutlineInputBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  borderSide: BorderSide.none,
+                                                ),
+                                              ),
+                                              onChanged: (val) {
+                                                if (hasError) setState(() => hasError = false);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        actionsAlignment: MainAxisAlignment.center,
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, false),
+                                            child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.accent,
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                            ),
+                                            onPressed: () {
+                                              if (codeController.text == '123456') {
+                                                Navigator.pop(ctx, true);
+                                              } else {
+                                                setState(() => hasError = true);
+                                              }
+                                            },
+                                            child: const Text('Verify', style: TextStyle(fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+                                },
                               );
                               if (confirm != true) return;
                             }
