@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
+
+// Conditionally import the web implementation
+import 'world_monitor_unsupported.dart' if (dart.library.html) 'world_monitor_web.dart';
 
 class WorldMonitorScreen extends StatelessWidget {
   const WorldMonitorScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return const WorldMonitorWeb();
+    }
+    
+    // Fallback UI for Native Desktop/Mobile builds
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
@@ -32,28 +41,11 @@ class WorldMonitorScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
                 'Global context for engineering teams: Outages, disruptions, geopolitics, and more. '
-                '(Desktop-first module)',
+                '(Currently requires Web Environment to load Dashboard)',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   color: AppTheme.textSecondary,
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'Available on Desktop Workspace',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.accent,
                 ),
               ),
             ),
