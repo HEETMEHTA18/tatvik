@@ -2,31 +2,36 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class DesktopScaffold extends StatefulWidget {
-  final Widget centerFeed;
-  final Widget rightContextPanel;
+class DesktopScaffold extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTabSelected;
+  final Widget body;
+  final Widget? rightPanel;
   
   const DesktopScaffold({
     super.key,
-    required this.centerFeed,
-    required this.rightContextPanel,
+    required this.selectedIndex,
+    required this.onTabSelected,
+    required this.body,
+    this.rightPanel,
   });
 
-  @override
-  State<DesktopScaffold> createState() => _DesktopScaffoldState();
-}
-
-class _DesktopScaffoldState extends State<DesktopScaffold> {
-  int _selectedIndex = 0;
-
-  final List<String> _navItems = [
+  static const List<String> _navItems = [
     'Home',
-    'Learn',
-    'Projects',
-    'Career',
-    'Pulse',
+    'Explore',
+    'Prompts',
+    'Roadmap',
     'World',
-    'Profile',
+    'Settings',
+  ];
+
+  static const List<IconData> _navIcons = [
+    Icons.home_rounded,
+    Icons.explore_rounded,
+    Icons.auto_awesome_rounded,
+    Icons.route_rounded,
+    Icons.public_rounded,
+    Icons.settings_rounded,
   ];
 
   @override
@@ -55,17 +60,22 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                 ),
                 const SizedBox(height: 16),
                 ...List.generate(_navItems.length, (index) {
+                  final isSelected = selectedIndex == index;
                   return ListTile(
-                    selected: _selectedIndex == index,
+                    selected: isSelected,
                     selectedTileColor: AppTheme.accent.withValues(alpha: 0.1),
+                    leading: Icon(
+                      _navIcons[index],
+                      color: isSelected ? AppTheme.accent : AppTheme.textSecondary,
+                    ),
                     title: Text(
                       _navItems[index],
                       style: GoogleFonts.inter(
-                        fontWeight: _selectedIndex == index ? FontWeight.w700 : FontWeight.w500,
-                        color: _selectedIndex == index ? AppTheme.accent : AppTheme.textSecondary,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? AppTheme.accent : AppTheme.textSecondary,
                       ),
                     ),
-                    onTap: () => setState(() => _selectedIndex = index),
+                    onTap: () => onTabSelected(index),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   );
                 }),
@@ -76,20 +86,20 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
           // Vertical Divider
           Container(width: 1, color: AppTheme.border.withValues(alpha: 0.2)),
           
-          // Center Intelligence Feed
+          // Center Content
           Expanded(
             flex: 5,
-            child: widget.centerFeed,
+            child: body,
           ),
           
-          // Vertical Divider
-          Container(width: 1, color: AppTheme.border.withValues(alpha: 0.2)),
-
-          // Right Context Panel (Tatvik Insights)
-          Expanded(
-            flex: 3,
-            child: widget.rightContextPanel,
-          ),
+          // Right Context Panel (Only if provided)
+          if (rightPanel != null) ...[
+            Container(width: 1, color: AppTheme.border.withValues(alpha: 0.2)),
+            Expanded(
+              flex: 3,
+              child: rightPanel!,
+            ),
+          ],
         ],
       ),
     );

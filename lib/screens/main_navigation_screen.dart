@@ -96,6 +96,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
     const DiscoverReposScreen(),
     const PromptHubScreen(),
     const RoadmapScreen(),
+    const WorldMonitorScreen(),
     const ProfileScreen(),
   ];
 
@@ -428,11 +429,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
         children: [
           if (isDesktop)
             DesktopScaffold(
-              centerFeed: IndexedStack(
+              selectedIndex: _selectedIndex,
+              onTabSelected: _onTabSelected,
+              body: IndexedStack(
                 index: _selectedIndex,
                 children: _screens,
               ),
-              rightContextPanel: const WorldMonitorScreen(),
+              // We can add a TatvikContextPanel here later. For now, let the screens breathe.
+              rightPanel: null,
             )
           else
             Scaffold(
@@ -488,7 +492,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                         child: LayoutBuilder(
                           builder: (context, constraints) {
                             final totalWidth = constraints.maxWidth;
-                            final itemWidth = totalWidth / 5;
+                            final itemWidth = totalWidth / 6;
                             return Stack(
                               children: [
                                 // iOS Liquid Glass Pill Indicator
@@ -619,11 +623,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                                       ),
                                       _MainNavigationItem(
                                         index: 4,
-                                        label: 'Settings',
-                                        icon: Icons.settings_rounded,
+                                        label: 'World',
+                                        icon: Icons.public_rounded,
                                         width: itemWidth,
                                         isSelected: _selectedIndex == 4,
                                         onTap: () => _onTabSelected(4),
+                                      ),
+                                      _MainNavigationItem(
+                                        index: 5,
+                                        label: 'Settings',
+                                        icon: Icons.settings_rounded,
+                                        width: itemWidth,
+                                        isSelected: _selectedIndex == 5,
+                                        onTap: () => _onTabSelected(5),
                                       ),
                                     ],
                                   ),
