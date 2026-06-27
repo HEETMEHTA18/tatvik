@@ -44,6 +44,25 @@ async def periodic_news_scanner():
         await asyncio.sleep(3600)
 
 
+async def periodic_huggingface_ping():
+    import httpx
+    from app.core.config import settings
+    await asyncio.sleep(10)
+    
+    # Base URL of HF Space
+    url = settings.openclaw_api_url.replace("/v1", "") if settings.openclaw_api_url else "https://heetmehta18-openclaw-devmentor.hf.space"
+    
+    while True:
+        try:
+            logger.info(f"Pinging HuggingFace Space to keep alive: {url}")
+            async with httpx.AsyncClient() as client:
+                await client.get(url, timeout=10.0)
+        except Exception as e:
+            logger.error(f"Error pinging HuggingFace space: {e}")
+        # Ping every 10 minutes (600 seconds) to prevent HF Spaces from sleeping (30 min timeout)
+        await asyncio.sleep(600)
+
+
 @app.on_event("startup")
 def startup_event():
     Base.metadata.create_all(bind=engine)
@@ -84,6 +103,7 @@ def startup_event():
         logger.error(f"Error seeding database on startup: {e}")
 
     asyncio.create_task(periodic_news_scanner())
+    asyncio.create_task(periodic_huggingface_ping())
 
 
 @app.middleware("http")

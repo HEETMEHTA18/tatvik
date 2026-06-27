@@ -185,7 +185,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
               ),
             ),
 
-            // Discover Section
+            // Section: GitHub Discover
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(
@@ -195,7 +195,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                   bottom: 12,
                 ),
                 child: Text(
-                  'Discover',
+                  'GitHub Discover',
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -204,8 +204,6 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                 ),
               ),
             ),
-
-            // Discover Cards
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -228,6 +226,46 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                         onTap: () => setState(() => _activeTab = 4),
                         showDivider: true,
                       ),
+                      _buildDiscoverRow(
+                        icon: Icons.search_rounded,
+                        iconColor: const Color(0xFF5E5CE6),
+                        label: 'Codebase Q&A Search',
+                        onTap: () => setState(() => _activeTab = 8),
+                        showDivider: false,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Section: AI Developer Tools
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 24,
+                  bottom: 12,
+                ),
+                child: Text(
+                  'AI Developer Tools',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GlassCard(
+                  borderRadius: 16,
+                  padding: EdgeInsets.zero,
+                  child: Column(
+                    children: [
                       _buildDiscoverRow(
                         icon: Icons.description_rounded,
                         iconColor: const Color(0xFF5856D6),
@@ -257,13 +295,6 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                         iconColor: const Color(0xFF32D74B),
                         label: 'Continuous Code Reviewer',
                         onTap: () => setState(() => _activeTab = 6),
-                        showDivider: true,
-                      ),
-                      _buildDiscoverRow(
-                        icon: Icons.search_rounded,
-                        iconColor: const Color(0xFF5E5CE6),
-                        label: 'Codebase Q&A Search',
-                        onTap: () => setState(() => _activeTab = 8),
                         showDivider: true,
                       ),
                       _buildDiscoverRow(

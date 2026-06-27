@@ -75,15 +75,15 @@ async def call_ai_json(prompt: str, task_type: str = "general") -> dict:
             except Exception as e:
                 logger.error(f"Gemini API error: {e}")
 
-    # 2. Fast/small tasks (like parsing a single string) -> NVIDIA
-    if (task_type == "fast" or task_type == "general") and settings.nvidia_api_key:
-        url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    # 2. Fast/small tasks (like parsing a single string) -> Groq
+    if (task_type == "fast" or task_type == "general") and settings.groq_api_key:
+        url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {settings.nvidia_api_key}",
+            "Authorization": f"Bearer {settings.groq_api_key}",
             "Content-Type": "application/json",
         }
         json_payload = {
-            "model": "meta/llama-3.1-8b-instruct",
+            "model": "llama-3.1-8b-instant",
             "messages": [{"role": "user", "content": prompt}],
             "response_format": {"type": "json_object"},
             "temperature": 0.3,
@@ -97,7 +97,7 @@ async def call_ai_json(prompt: str, task_type: str = "general") -> dict:
                     reply = response.json()["choices"][0]["message"]["content"]
                     return json.loads(reply)
             except Exception as e:
-                logger.error(f"NVIDIA API error: {e}")
+                logger.error(f"Groq API error: {e}")
 
     # 3. Fallback or specific OpenRouter models -> OpenRouter
     if settings.openrouter_api_key:
