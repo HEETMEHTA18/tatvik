@@ -68,93 +68,154 @@ class HomeScreen extends StatelessWidget {
           ),
           SingleChildScrollView(
             padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = constraints.maxWidth > 800;
+
+                final header = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Dashboard',
-                      style: GoogleFonts.inter(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textMain,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    Stack(
+                    const SizedBox(height: 40),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _showNotificationCenter(context, appState),
-                            icon: Icon(
-                              appState.unreadNotificationsCount > 0
-                                  ? Icons.notifications_active_rounded
-                                  : Icons.notifications_none_rounded,
-                              size: 18,
-                              color: appState.unreadNotificationsCount > 0 ? AppTheme.accent : AppTheme.textSecondary,
-                            ),
+                        Text(
+                          'Dashboard',
+                          style: GoogleFonts.inter(
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textMain,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        if (appState.unreadNotificationsCount > 0)
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
+                        Stack(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                               ),
-                              constraints: const BoxConstraints(
-                                minWidth: 14,
-                                minHeight: 14,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${appState.unreadNotificationsCount}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () => _showNotificationCenter(context, appState),
+                                icon: Icon(
+                                  appState.unreadNotificationsCount > 0
+                                      ? Icons.notifications_active_rounded
+                                      : Icons.notifications_none_rounded,
+                                  size: 18,
+                                  color: appState.unreadNotificationsCount > 0 ? AppTheme.accent : AppTheme.textSecondary,
                                 ),
                               ),
                             ),
-                          ),
+                            if (appState.unreadNotificationsCount > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${appState.unreadNotificationsCount}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 20),
+                    _buildWelcomeHeader(context, appState),
+                    const SizedBox(height: 12),
+                    _buildDemoDataBanner(context, appState),
+                    const SizedBox(height: 12),
                   ],
-                ),
-                const SizedBox(height: 20),
-                _buildWelcomeHeader(context, appState),
-                const SizedBox(height: 12),
-                _buildDemoDataBanner(context, appState),
-                const SizedBox(height: 12),
-                _buildScoreSection(context, appState),
-                const SizedBox(height: 32),
-                _buildActivityHeatmap(context, appState),
-                _buildDnaSection(context, appState),
-                _buildWeeklyReportSection(context, appState),
-                _buildRoastSection(context, appState),
-                _buildAgentDigestSection(context, appState),
-                const SizedBox(height: 32),
-                _buildSectionHeader(context, 'Top Languages'),
-                const SizedBox(height: 16),
-                _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
-                _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
-                _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
-                const SizedBox(height: 100), // FAB space
-              ],
+                );
+
+                if (isDesktop) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      header,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildScoreSection(context, appState),
+                                const SizedBox(height: 24),
+                                _buildActivityHeatmap(context, appState),
+                                const SizedBox(height: 24),
+                                _buildAgentDigestSection(context, appState),
+                                const SizedBox(height: 24),
+                                _buildWeeklyReportSection(context, appState),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 32),
+                          Expanded(
+                            flex: 4,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildDnaSection(context, appState),
+                                const SizedBox(height: 24),
+                                _buildRoastSection(context, appState),
+                                const SizedBox(height: 32),
+                                _buildSectionHeader(context, 'Top Languages'),
+                                const SizedBox(height: 16),
+                                _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
+                                _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
+                                _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 100),
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    header,
+                    _buildScoreSection(context, appState),
+                    const SizedBox(height: 32),
+                    _buildActivityHeatmap(context, appState),
+                    _buildDnaSection(context, appState),
+                    _buildWeeklyReportSection(context, appState),
+                    _buildRoastSection(context, appState),
+                    _buildAgentDigestSection(context, appState),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader(context, 'Top Languages'),
+                    const SizedBox(height: 16),
+                    _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
+                    _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
+                    _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
+                    const SizedBox(height: 100), // FAB space
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -230,7 +291,7 @@ class HomeScreen extends StatelessWidget {
     }
 
     return GlassCard(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -239,30 +300,31 @@ class HomeScreen extends StatelessWidget {
             children: [
               Text('DEVELOPER SCORE', style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 letterSpacing: 1.5,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textSecondary,
               )),
-              Icon(Icons.query_stats, color: AppTheme.accent.withValues(alpha: 0.8), size: 20),
+              Icon(Icons.query_stats, color: AppTheme.accent.withValues(alpha: 0.8), size: 24),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 32),
           Row(
             children: [
               Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 90,
-                    height: 90,
+                    width: 110,
+                    height: 110,
                     child: CircularProgressIndicator(
                       value: scoreProgress,
-                      strokeWidth: 8,
+                      strokeWidth: 10,
                       backgroundColor: Colors.white10,
                       valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
                     ),
                   ),
                   Container(
-                    width: 74,
-                    height: 74,
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -281,7 +343,7 @@ class HomeScreen extends StatelessWidget {
                         Text(
                           '${state.developerScore}',
                           style: GoogleFonts.jetBrainsMono(
-                            fontSize: 24,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.textMain,
                           ),
@@ -289,7 +351,8 @@ class HomeScreen extends StatelessWidget {
                         Text(
                           '/10',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: AppTheme.textSecondary,
                           ),
                         ),
@@ -298,7 +361,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 32),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,18 +373,19 @@ class HomeScreen extends StatelessWidget {
                               ? 'Pro Developer Profile' 
                               : 'Rising Developer Profile',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         color: AppTheme.textMain,
+                        letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       'Score is dynamically calculated based on repository stars, active commits, and repo contribution depth.',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 13,
                         color: AppTheme.textSecondary,
-                        height: 1.4,
+                        height: 1.5,
                       ),
                     ),
                   ],
@@ -329,21 +393,21 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 40),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: Colors.white10),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStatItem(context, '${state.stars}', 'STARS', Icons.star_border),
-                Container(width: 1, height: 30, color: Colors.white12),
+                Container(width: 1, height: 40, color: Colors.white12),
                 _buildStatItem(context, '${state.commits}', 'COMMITS', Icons.history),
-                Container(width: 1, height: 30, color: Colors.white12),
+                Container(width: 1, height: 40, color: Colors.white12),
                 _buildStatItem(context, '${state.repos}', 'REPOS', Icons.folder_open),
               ],
             ),
@@ -359,24 +423,25 @@ class HomeScreen extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: AppTheme.accent),
-            const SizedBox(width: 4),
+            Icon(icon, size: 18, color: AppTheme.accent),
+            const SizedBox(width: 6),
             Text(
               value,
               style: GoogleFonts.jetBrainsMono(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
                 color: AppTheme.textMain,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 9,
-            fontWeight: FontWeight.w600,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
             color: AppTheme.textSecondary,
           ),
         ),
@@ -386,14 +451,17 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildActivityHeatmap(BuildContext context, AppState state) {
     return GlassCard(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('ACTIVITY', style: Theme.of(context).textTheme.labelLarge),
+              Text('ACTIVITY', style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              )),
               DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: state.selectedActivityYear,
@@ -687,12 +755,12 @@ class HomeScreen extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 48,
-          height: 48,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppTheme.accent,
-            border: Border.all(color: AppTheme.border, width: 1.0),
+            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.5), width: 2.0),
             image: state.avatarUrl != null
                 ? DecorationImage(
                     image: NetworkImage(state.avatarUrl!),
@@ -701,34 +769,46 @@ class HomeScreen extends StatelessWidget {
                 : null,
           ),
           child: state.avatarUrl == null
-              ? const Icon(Icons.person, color: Colors.white, size: 24)
+              ? const Icon(Icons.person, color: Colors.white, size: 28)
               : null,
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 20),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Welcome back,', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12, color: AppTheme.textSecondary)),
+            Text('Welcome back,', style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontSize: 14, 
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.5,
+            )),
             const SizedBox(height: 4),
             Text(
               state.username,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
+                    letterSpacing: -0.5,
                     color: AppTheme.textMain,
                   ),
             ),
           ],
         ),
         const Spacer(),
-        IconButton(
-          icon: Icon(
-            state.isDarkTheme ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-            color: AppTheme.accent,
-            size: 20,
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            shape: BoxShape.circle,
           ),
-          onPressed: () {
-            state.toggleTheme();
-          },
+          child: IconButton(
+            icon: Icon(
+              state.isDarkTheme ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              color: AppTheme.textSecondary,
+              size: 22,
+            ),
+            onPressed: () {
+              state.toggleTheme();
+            },
+          ),
         ),
       ],
     );
