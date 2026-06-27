@@ -9,7 +9,6 @@ from app.api.v1.endpoints.advanced import call_ai_json
 from app.core.config import settings
 
 async def main():
-    print(f"NVIDIA API Key: {settings.nvidia_api_key[:5]}...")
     print("Testing call_ai_json with 'fast' task type (NVIDIA API)")
     result = await call_ai_json("What is 2+2? Respond with JSON {'answer': 4}", task_type="fast")
     print(f"Result: {result}")
