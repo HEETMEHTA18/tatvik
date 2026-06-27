@@ -1,10 +1,11 @@
 from typing import Dict, Any
 
+
 class CogneeClient:
     """
     Interface to Cognee to build semantic graphs for the Knowledge Graph.
     """
-    
+
     def __init__(self):
         # Initialize Cognee connection here
         pass
@@ -13,7 +14,13 @@ class CogneeClient:
         """Adds a node to the Knowledge Graph."""
         pass
 
-    async def add_edge(self, from_node: str, to_node: str, relationship: str, properties: Dict[str, Any] = None):
+    async def add_edge(
+        self,
+        from_node: str,
+        to_node: str,
+        relationship: str,
+        properties: Dict[str, Any] = None,
+    ):
         """Adds a relationship edge between two nodes."""
         # e.g., 'React 18' (Version) -> 'Breaking Changes' (Breaking Changes)
         pass

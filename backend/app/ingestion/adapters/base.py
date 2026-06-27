@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, AsyncGenerator
 from backend.app.ingestion.models import NormalizedItem
 
+
 class BaseSourceAdapter(ABC):
     """
     Base class for all Source Hub adapters.
@@ -22,4 +23,4 @@ class BaseSourceAdapter(ABC):
         """
         pass
         # Yield NormalizedItem objects
-        yield None # Satisfy type checker for abstract method
+        yield None  # Satisfy type checker for abstract method

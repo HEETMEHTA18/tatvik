@@ -1,6 +1,7 @@
 from typing import Any, Dict
 from backend.app.tatvik.agents.base import TatvikAgent
 
+
 class NavigatorAgent(TatvikAgent):
     @property
     def name(self) -> str:
