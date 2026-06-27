@@ -29,7 +29,15 @@ app.add_middleware(
 
 
 async def periodic_pulse_scanner():
-    await asyncio.sleep(5)
+    from app.core.config import settings
+
+    # Delay startup slightly to let API initialization finish smoothly
+    await asyncio.sleep(20)
+
+    if not settings.enable_pulse_scanner:
+        logger.info("Tatvik Pulse scanner is disabled by configuration.")
+        return
+
     while True:
         try:
             logger.info("Tatvik Pulse scanner running...")
@@ -40,8 +48,15 @@ async def periodic_pulse_scanner():
                 db.close()
         except Exception as e:
             logger.error(f"Error in Tatvik Pulse scanner: {e}")
-        # Run scan every hour (3600 seconds)
-        await asyncio.sleep(3600)
+
+        import gc
+
+        gc.collect()
+        logger.info(
+            f"Tatvik Pulse scanner completed. Sleeping for {settings.pulse_scanner_interval_seconds} seconds."
+        )
+        # Run scan using configurable interval
+        await asyncio.sleep(settings.pulse_scanner_interval_seconds)
 
 
 async def periodic_huggingface_ping():
@@ -107,8 +122,17 @@ def startup_event():
     except Exception as e:
         logger.error(f"Error seeding database on startup: {e}")
 
-    asyncio.create_task(periodic_pulse_scanner())
-    asyncio.create_task(periodic_huggingface_ping())
+    import sys
+    from app.core.config import settings
+
+    # Do not start background polling tasks in testing environments
+    is_testing = "pytest" in sys.modules or settings.environment == "testing"
+
+    if not is_testing:
+        asyncio.create_task(periodic_pulse_scanner())
+        asyncio.create_task(periodic_huggingface_ping())
+    else:
+        logger.info("Skipping periodic background tasks in testing environment.")
 
 
 @app.middleware("http")

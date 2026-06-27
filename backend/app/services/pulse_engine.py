@@ -33,7 +33,9 @@ class PulseEngine:
                 resp = await client.get(url, timeout=15.0)
                 if resp.status_code == 200:
                     root = ET.fromstring(resp.content)
-                    for item in root.findall(".//item"):
+                    for item in root.findall(".//item")[
+                        : settings.pulse_max_items_per_feed
+                    ]:
                         title = item.findtext("title")
                         link = item.findtext("link")
                         desc = item.findtext("description")
@@ -71,7 +73,9 @@ class PulseEngine:
                         resp.headers.get("x-ratelimit-remaining", 5000)
                     )
                     # parse trending/releases... (mocked loop)
-                    for repo in data.get("items", [])[:10]:
+                    for repo in data.get("items", [])[
+                        : settings.pulse_max_items_per_feed
+                    ]:
                         items.append(
                             {
                                 "title": repo.get("full_name"),
@@ -173,6 +177,9 @@ class PulseEngine:
             logger.info(f"Would push {item['title']} to Cognee Knowledge Graph")
 
         self.db.commit()
+        import gc
+
+        gc.collect()
 
 
 async def run_pulse_pipeline(db: Session):
@@ -216,5 +223,7 @@ async def run_pulse_pipeline(db: Session):
     for src in sources:
         try:
             await engine.ingest_source(src["url"], src["type"])
+            # Yield control and sleep to let garbage collection free up memory safely
+            await asyncio.sleep(1.0)
         except Exception as e:
             logger.error(f"Failed to ingest source {src['url']}: {e}")

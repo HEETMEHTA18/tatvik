@@ -25,5 +25,14 @@ class Settings(BaseSettings):
     openclaw_api_key: str = ""
     openclaw_api_url: str = "https://api.openclaw.ai/v1"
 
+    # Background Pulse Scanner Configuration to avoid OOM memory limits
+    enable_pulse_scanner: bool = True
+    pulse_scanner_interval_seconds: int = (
+        43200  # Default to 12 hours instead of 1 hour to prevent high memory usage
+    )
+    pulse_max_items_per_feed: int = (
+        2  # Only process the 2 most recent items to avoid API/memory overhead
+    )
+
 
 settings = Settings()
