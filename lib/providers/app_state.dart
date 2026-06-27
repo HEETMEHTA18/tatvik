@@ -717,6 +717,22 @@ This is simulated offline prompts.md content.
     notifyListeners();
   }
 
+  void addNotification({
+    required String title,
+    required String body,
+    required String type,
+  }) {
+    notifications.insert(0, {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'title': title,
+      'body': body,
+      'timestamp': DateTime.now().toIso8601String(),
+      'isRead': false,
+      'type': type,
+    });
+    notifyListeners();
+  }
+
   // User Data
   String username = '';
   double developerScore = 0.0;
