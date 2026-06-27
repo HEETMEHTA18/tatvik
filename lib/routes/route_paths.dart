@@ -18,8 +18,9 @@ class RoutePaths {
 
   /// Builds a root URL with the tab query parameter.
   static String appTab(int index) {
-    final name = (index >= 0 && index < tabNames.length) ? tabNames[index] : tabNames[0];
+    final name = (index >= 0 && index < tabNames.length)
+        ? tabNames[index]
+        : tabNames[0];
     return '/?tab=$name';
   }
 }
-

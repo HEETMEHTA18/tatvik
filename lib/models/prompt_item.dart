@@ -28,8 +28,8 @@ class PromptItem {
       technologies: List<String>.from(json['technologies'] ?? []),
       workflow: json['workflow'] ?? 'Development',
       projectName: json['project_name'],
-      createdAt: json['created_at'] != null 
-          ? DateTime.parse(json['created_at']) 
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : DateTime.now(),
     );
   }

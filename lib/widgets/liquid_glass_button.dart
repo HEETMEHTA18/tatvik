@@ -30,7 +30,10 @@ class LiquidGlassButton extends StatefulWidget {
     required VoidCallback? onPressed,
     required Widget icon,
     required Widget label,
-    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(
+      horizontal: 24,
+      vertical: 16,
+    ),
     double borderRadius = 32,
     Color? color,
     double? width,
@@ -47,11 +50,7 @@ class LiquidGlassButton extends StatefulWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          icon,
-          const SizedBox(width: 8),
-          label,
-        ],
+        children: [icon, const SizedBox(width: 8), label],
       ),
     );
   }
@@ -60,7 +59,8 @@ class LiquidGlassButton extends StatefulWidget {
   State<LiquidGlassButton> createState() => _LiquidGlassButtonState();
 }
 
-class _LiquidGlassButtonState extends State<LiquidGlassButton> with SingleTickerProviderStateMixin {
+class _LiquidGlassButtonState extends State<LiquidGlassButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -110,18 +110,19 @@ class _LiquidGlassButtonState extends State<LiquidGlassButton> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
 
     // Setup base color
-    final Color buttonBaseColor = widget.color ?? 
-        (isDark 
-            ? AppTheme.accent.withValues(alpha: 0.15) 
+    final Color buttonBaseColor =
+        widget.color ??
+        (isDark
+            ? AppTheme.accent.withValues(alpha: 0.15)
             : AppTheme.accent.withValues(alpha: 0.25));
 
-    Widget content = Padding(
-      padding: widget.padding,
-      child: widget.child,
-    );
+    Widget content = Padding(padding: widget.padding, child: widget.child);
 
     if (widget.width != null || widget.height != null) {
       content = SizedBox(
@@ -141,8 +142,10 @@ class _LiquidGlassButtonState extends State<LiquidGlassButton> with SingleTicker
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: _isHovered 
-                ? buttonBaseColor.withValues(alpha: (buttonBaseColor.a + 0.08).clamp(0.0, 1.0))
+            color: _isHovered
+                ? buttonBaseColor.withValues(
+                    alpha: (buttonBaseColor.a + 0.08).clamp(0.0, 1.0),
+                  )
                 : buttonBaseColor,
             borderRadius: BorderRadius.circular(widget.borderRadius),
             border: Border.all(
@@ -199,7 +202,9 @@ class _LiquidGlassButtonState extends State<LiquidGlassButton> with SingleTicker
       button: true,
       enabled: widget.onPressed != null,
       child: MouseRegion(
-        cursor: widget.onPressed != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        cursor: widget.onPressed != null
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
@@ -224,7 +229,8 @@ class _LiquidGlassButtonState extends State<LiquidGlassButton> with SingleTicker
                     Positioned.fill(
                       child: OCLiquidGlass(
                         borderRadius: widget.borderRadius,
-                        color: Colors.transparent, // backing color handled in glassContainer
+                        color: Colors
+                            .transparent, // backing color handled in glassContainer
                         child: const SizedBox.expand(),
                       ),
                     ),

@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'moving_ascii_background.dart';
 
-
 class LiquidGlassBackground extends StatefulWidget {
   final Widget child;
   final double transitionProgress;
@@ -41,14 +40,17 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
 
     // Light Theme Liquid Colors (Soft, vibrant pastels)
     final lightColors = [
       const Color(0xFFFFD1E1).withValues(alpha: 0.45), // Soft Pink
       const Color(0xFFC7E9FF).withValues(alpha: 0.55), // Soft Sky Blue
-      const Color(0xFFE2D6FF).withValues(alpha: 0.5),  // Soft Lavender
-      const Color(0xFFD3F4EC).withValues(alpha: 0.4),  // Soft Mint
+      const Color(0xFFE2D6FF).withValues(alpha: 0.5), // Soft Lavender
+      const Color(0xFFD3F4EC).withValues(alpha: 0.4), // Soft Mint
     ];
 
     // Dark Theme Liquid Colors (Sleek, glowing, deep indigo, violet, and teal hues)
@@ -71,9 +73,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
         body: Stack(
           children: [
             // 1. Base background
-            Positioned.fill(
-              child: Container(color: baseBg),
-            ),
+            Positioned.fill(child: Container(color: baseBg)),
 
             // 2. Static Liquid Orbs/Blobs (no ticking animations, painted once for zero GPU load)
             // Orb 1 (Top Left)
@@ -86,10 +86,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [
-                      colors[0],
-                      colors[0].withValues(alpha: 0.0),
-                    ],
+                    colors: [colors[0], colors[0].withValues(alpha: 0.0)],
                   ),
                 ),
               ),
@@ -105,10 +102,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [
-                      colors[1],
-                      colors[1].withValues(alpha: 0.0),
-                    ],
+                    colors: [colors[1], colors[1].withValues(alpha: 0.0)],
                   ),
                 ),
               ),
@@ -124,10 +118,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [
-                      colors[2],
-                      colors[2].withValues(alpha: 0.0),
-                    ],
+                    colors: [colors[2], colors[2].withValues(alpha: 0.0)],
                   ),
                 ),
               ),
@@ -143,10 +134,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [
-                      colors[3],
-                      colors[3].withValues(alpha: 0.0),
-                    ],
+                    colors: [colors[3], colors[3].withValues(alpha: 0.0)],
                   ),
                 ),
               ),
@@ -156,16 +144,12 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 45, sigmaY: 45),
-                child: Container(
-                  color: Colors.transparent,
-                ),
+                child: Container(color: Colors.transparent),
               ),
             ),
 
             // 3.5. Moving ASCII Background (which remains static on mobile browser)
-            Positioned.fill(
-              child: MovingAsciiBackground(isDark: isDark),
-            ),
+            Positioned.fill(child: MovingAsciiBackground(isDark: isDark)),
 
             // 3b. Transition Glass Layer (visible when swiping/transitioning)
             if (widget.transitionProgress > 0.01)
@@ -173,16 +157,15 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                 child: Opacity(
                   opacity: widget.transitionProgress.clamp(0.0, 1.0),
                   child: Container(
-                    color: (isDark ? Colors.black : Colors.white)
-                        .withValues(alpha: widget.transitionProgress * 0.2),
+                    color: (isDark ? Colors.black : Colors.white).withValues(
+                      alpha: widget.transitionProgress * 0.2,
+                    ),
                   ),
                 ),
               ),
 
             // 4. Content Screen
-            Positioned.fill(
-              child: widget.child,
-            ),
+            Positioned.fill(child: widget.child),
           ],
         ),
       );
@@ -193,26 +176,24 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
       body: Stack(
         children: [
           // 1a. Base Solid Color
-          Positioned.fill(
-            child: Container(color: baseBg),
-          ),
+          Positioned.fill(child: Container(color: baseBg)),
 
           // 2. Liquid Animated Orbs/Blobs
           AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
               final val = _controller.value * 2 * math.pi;
-              
+
               // Shift distances
               final dx1 = 40 * math.sin(val);
               final dy1 = 30 * math.cos(val);
-              
+
               final dx2 = 50 * math.cos(val + math.pi / 2);
               final dy2 = 40 * math.sin(val + math.pi / 2);
-              
+
               final dx3 = 35 * math.sin(val + math.pi);
               final dy3 = 45 * math.cos(val + math.pi);
-              
+
               final dx4 = 45 * math.cos(val + 3 * math.pi / 2);
               final dy4 = 35 * math.sin(val + 3 * math.pi / 2);
 
@@ -228,10 +209,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [
-                            colors[0],
-                            colors[0].withValues(alpha: 0.0),
-                          ],
+                          colors: [colors[0], colors[0].withValues(alpha: 0.0)],
                         ),
                       ),
                     ),
@@ -247,10 +225,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [
-                            colors[1],
-                            colors[1].withValues(alpha: 0.0),
-                          ],
+                          colors: [colors[1], colors[1].withValues(alpha: 0.0)],
                         ),
                       ),
                     ),
@@ -266,10 +241,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [
-                            colors[2],
-                            colors[2].withValues(alpha: 0.0),
-                          ],
+                          colors: [colors[2], colors[2].withValues(alpha: 0.0)],
                         ),
                       ),
                     ),
@@ -285,10 +257,7 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [
-                            colors[3],
-                            colors[3].withValues(alpha: 0.0),
-                          ],
+                          colors: [colors[3], colors[3].withValues(alpha: 0.0)],
                         ),
                       ),
                     ),
@@ -302,16 +271,12 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
           Positioned.fill(
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 75, sigmaY: 75),
-              child: Container(
-                color: Colors.transparent,
-              ),
+              child: Container(color: Colors.transparent),
             ),
           ),
 
           // 3.5. Moving ASCII Background
-          Positioned.fill(
-            child: MovingAsciiBackground(isDark: isDark),
-          ),
+          Positioned.fill(child: MovingAsciiBackground(isDark: isDark)),
 
           // 3b. Transition Glass Layer (visible when swiping/transitioning)
           if (widget.transitionProgress > 0.01)
@@ -324,17 +289,16 @@ class _LiquidGlassBackgroundState extends State<LiquidGlassBackground>
                     sigmaY: widget.transitionProgress * 25.0,
                   ),
                   child: Container(
-                    color: (isDark ? Colors.black : Colors.white)
-                        .withValues(alpha: widget.transitionProgress * 0.15),
+                    color: (isDark ? Colors.black : Colors.white).withValues(
+                      alpha: widget.transitionProgress * 0.15,
+                    ),
                   ),
                 ),
               ),
             ),
 
           // 4. Content Screen
-          Positioned.fill(
-            child: widget.child,
-          ),
+          Positioned.fill(child: widget.child),
         ],
       ),
     );

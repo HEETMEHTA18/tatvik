@@ -11,7 +11,6 @@ import '../models/prompt_item.dart';
 import '../utils/cookie_manager.dart';
 import '../core/utils/web_helper.dart' as web_helper;
 
-
 class AppState extends ChangeNotifier {
   AppState() {
     initPreferences();
@@ -41,18 +40,22 @@ class AppState extends ChangeNotifier {
           storedDisplayName = getCookie('profile_display_name');
           storedAvatarUrl = getCookie('github_avatar_url');
           storedLoginTimestamp = getCookie('login_timestamp');
-          
+
           // Re-sync back to SharedPreferences
           try {
             await prefs.setString('auth_token', storedToken);
-            if (storedUsername != null) await prefs.setString('github_username', storedUsername);
-            if (storedDisplayName != null) await prefs.setString('profile_display_name', storedDisplayName);
-            if (storedAvatarUrl != null) await prefs.setString('github_avatar_url', storedAvatarUrl);
-            if (storedLoginTimestamp != null) await prefs.setString('login_timestamp', storedLoginTimestamp);
+            if (storedUsername != null)
+              await prefs.setString('github_username', storedUsername);
+            if (storedDisplayName != null)
+              await prefs.setString('profile_display_name', storedDisplayName);
+            if (storedAvatarUrl != null)
+              await prefs.setString('github_avatar_url', storedAvatarUrl);
+            if (storedLoginTimestamp != null)
+              await prefs.setString('login_timestamp', storedLoginTimestamp);
           } catch (_) {}
         }
       }
-      
+
       pushNotifications = prefs.getBool('pref_notifications') ?? true;
       aiInsights = prefs.getBool('pref_ai') ?? true;
       weeklyReport = prefs.getBool('pref_report') ?? false;
@@ -98,20 +101,28 @@ class AppState extends ChangeNotifier {
 
       // Load cached activity data
       try {
-        final cachedActivity = prefs.getString('activity_data_cache_$selectedActivityYear');
+        final cachedActivity = prefs.getString(
+          'activity_data_cache_$selectedActivityYear',
+        );
         if (cachedActivity != null) {
           final List<dynamic> rawList = jsonDecode(cachedActivity);
-          activityData = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+          activityData = rawList
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
         }
       } catch (_) {}
 
       // Load cached following activity
       try {
         if (githubUsername.isNotEmpty) {
-          final cachedFollowing = prefs.getString('following_activity_cache_$githubUsername');
+          final cachedFollowing = prefs.getString(
+            'following_activity_cache_$githubUsername',
+          );
           if (cachedFollowing != null) {
             final List<dynamic> rawEvents = jsonDecode(cachedFollowing);
-            followingActivity = rawEvents.map((e) => Map<String, dynamic>.from(e)).toList();
+            followingActivity = rawEvents
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
           }
         }
       } catch (_) {}
@@ -150,7 +161,9 @@ class AppState extends ChangeNotifier {
         final cachedPromptHistory = prefs.getString('prompt_history_cache__');
         if (cachedPromptHistory != null) {
           final List<dynamic> data = jsonDecode(cachedPromptHistory);
-          promptHistory = data.map((json) => PromptItem.fromJson(json)).toList();
+          promptHistory = data
+              .map((json) => PromptItem.fromJson(json))
+              .toList();
         }
       } catch (_) {}
 
@@ -165,10 +178,14 @@ class AppState extends ChangeNotifier {
 
       // Load cached prompt recommendations
       try {
-        final cachedPromptRecommendations = prefs.getString('prompt_recommendations_cache');
+        final cachedPromptRecommendations = prefs.getString(
+          'prompt_recommendations_cache',
+        );
         if (cachedPromptRecommendations != null) {
           final data = jsonDecode(cachedPromptRecommendations);
-          promptRecommendations = List<dynamic>.from(data['recommendations'] ?? []);
+          promptRecommendations = List<dynamic>.from(
+            data['recommendations'] ?? [],
+          );
         }
       } catch (_) {}
 
@@ -233,27 +250,39 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> loadCachedGithubPromptsMarkdown({String? owner, String? repo}) async {
+  Future<void> loadCachedGithubPromptsMarkdown({
+    String? owner,
+    String? repo,
+  }) async {
     final searchOwner = owner ?? selectedRepoOwner;
     final searchRepo = repo ?? selectedRepoName;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedMarkdown = prefs.getString('github_prompts_markdown_cache_${searchOwner}_$searchRepo');
-      final cachedUpdatedAt = prefs.getInt('github_prompts_markdown_updated_at_${searchOwner}_$searchRepo');
+      final cachedMarkdown = prefs.getString(
+        'github_prompts_markdown_cache_${searchOwner}_$searchRepo',
+      );
+      final cachedUpdatedAt = prefs.getInt(
+        'github_prompts_markdown_updated_at_${searchOwner}_$searchRepo',
+      );
       if (cachedMarkdown != null && cachedMarkdown.isNotEmpty) {
         githubPromptsMarkdown = cachedMarkdown;
         if (cachedUpdatedAt != null) {
-          githubPromptsMarkdownUpdatedAt = DateTime.fromMillisecondsSinceEpoch(cachedUpdatedAt);
+          githubPromptsMarkdownUpdatedAt = DateTime.fromMillisecondsSinceEpoch(
+            cachedUpdatedAt,
+          );
         }
       } else {
         // Fallback to old key if it is the default repo
         if (searchOwner == 'HeetMehta18' && searchRepo == 'AutoDevs') {
           final oldMarkdown = prefs.getString('github_prompts_markdown_cache');
-          final oldUpdatedAt = prefs.getInt('github_prompts_markdown_updated_at');
+          final oldUpdatedAt = prefs.getInt(
+            'github_prompts_markdown_updated_at',
+          );
           if (oldMarkdown != null && oldMarkdown.isNotEmpty) {
             githubPromptsMarkdown = oldMarkdown;
             if (oldUpdatedAt != null) {
-              githubPromptsMarkdownUpdatedAt = DateTime.fromMillisecondsSinceEpoch(oldUpdatedAt);
+              githubPromptsMarkdownUpdatedAt =
+                  DateTime.fromMillisecondsSinceEpoch(oldUpdatedAt);
             }
             return;
           }
@@ -306,7 +335,10 @@ class AppState extends ChangeNotifier {
   Future<void> savePromptRepoSources() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('prompt_repo_sources', jsonEncode(promptRepoSources));
+      await prefs.setString(
+        'prompt_repo_sources',
+        jsonEncode(promptRepoSources),
+      );
     } catch (_) {}
     notifyListeners();
   }
@@ -319,7 +351,8 @@ class AppState extends ChangeNotifier {
     }
 
     final exists = promptRepoSources.any(
-      (repo) => repo['owner'] == normalizedOwner && repo['name'] == normalizedName,
+      (repo) =>
+          repo['owner'] == normalizedOwner && repo['name'] == normalizedName,
     );
     if (!exists) {
       promptRepoSources = [
@@ -331,8 +364,15 @@ class AppState extends ChangeNotifier {
 
     selectedRepoOwner = normalizedOwner;
     selectedRepoName = normalizedName;
-    loadCachedGithubPromptsMarkdown(owner: normalizedOwner, repo: normalizedName).then((_) {
-      refreshGithubPromptsMarkdown(owner: normalizedOwner, repo: normalizedName, force: true);
+    loadCachedGithubPromptsMarkdown(
+      owner: normalizedOwner,
+      repo: normalizedName,
+    ).then((_) {
+      refreshGithubPromptsMarkdown(
+        owner: normalizedOwner,
+        repo: normalizedName,
+        force: true,
+      );
     });
   }
 
@@ -341,7 +381,8 @@ class AppState extends ChangeNotifier {
       return;
     }
 
-    promptRepoSources = List<Map<String, String>>.from(promptRepoSources)..removeAt(index);
+    promptRepoSources = List<Map<String, String>>.from(promptRepoSources)
+      ..removeAt(index);
     if (promptRepoSources.isEmpty) {
       promptRepoSources = [
         {'owner': _githubPromptsOwner, 'name': _githubPromptsRepo},
@@ -354,7 +395,11 @@ class AppState extends ChangeNotifier {
   String selectedRepoName = 'AutoDevs';
   bool isPushingPrompts = false;
 
-  Future<String> refreshGithubPromptsMarkdown({String? owner, String? repo, bool force = false}) async {
+  Future<String> refreshGithubPromptsMarkdown({
+    String? owner,
+    String? repo,
+    bool force = false,
+  }) async {
     if (isLoadingGithubPromptsMarkdown) {
       return 'prompts.md is already syncing.';
     }
@@ -366,7 +411,8 @@ class AppState extends ChangeNotifier {
 
     if (token == null) {
       // Offline/Mock mode content simulator
-      githubPromptsMarkdown = '''# Prompts for $selectedRepoName
+      githubPromptsMarkdown =
+          '''# Prompts for $selectedRepoName
 
 This is simulated offline prompts.md content.
 
@@ -380,7 +426,9 @@ This is simulated offline prompts.md content.
     }
 
     final now = DateTime.now();
-    if (!force && githubPromptsMarkdownUpdatedAt != null && now.difference(githubPromptsMarkdownUpdatedAt!).inMinutes < 30) {
+    if (!force &&
+        githubPromptsMarkdownUpdatedAt != null &&
+        now.difference(githubPromptsMarkdownUpdatedAt!).inMinutes < 30) {
       return 'Using recent prompts.md cache.';
     }
 
@@ -389,10 +437,10 @@ This is simulated offline prompts.md content.
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/github/file-content?owner=$selectedRepoOwner&repo=$selectedRepoName'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse(
+          '${AppConfig.apiBaseUrl}/github/file-content?owner=$selectedRepoOwner&repo=$selectedRepoName',
+        ),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -407,8 +455,14 @@ This is simulated offline prompts.md content.
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('github_prompts_markdown_cache_${selectedRepoOwner}_$selectedRepoName', markdownText);
-          await prefs.setInt('github_prompts_markdown_updated_at_${selectedRepoOwner}_$selectedRepoName', now.millisecondsSinceEpoch);
+          await prefs.setString(
+            'github_prompts_markdown_cache_${selectedRepoOwner}_$selectedRepoName',
+            markdownText,
+          );
+          await prefs.setInt(
+            'github_prompts_markdown_updated_at_${selectedRepoOwner}_$selectedRepoName',
+            now.millisecondsSinceEpoch,
+          );
         } catch (_) {}
 
         return 'prompts.md synced from GitHub.';
@@ -424,7 +478,11 @@ This is simulated offline prompts.md content.
     }
   }
 
-  Future<String> pushUpgradedPromptsToGithub(String projectName, String owner, String repo) async {
+  Future<String> pushUpgradedPromptsToGithub(
+    String projectName,
+    String owner,
+    String repo,
+  ) async {
     isPushingPrompts = true;
     notifyListeners();
 
@@ -507,10 +565,17 @@ This is simulated offline prompts.md content.
 
   List<Map<String, dynamic>> activityData = List.generate(70, (index) {
     final date = DateTime.now().subtract(Duration(days: 69 - index));
-    final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final dateStr =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     return {
       'date': dateStr,
-      'count': (index % 7 == 0) ? 1 : (index % 3 == 0) ? 2 : (index % 2 == 0) ? 4 : 8
+      'count': (index % 7 == 0)
+          ? 1
+          : (index % 3 == 0)
+          ? 2
+          : (index % 2 == 0)
+          ? 4
+          : 8,
     };
   });
   String selectedActivityYear = '2026';
@@ -615,7 +680,6 @@ This is simulated offline prompts.md content.
   Map<String, dynamic>? whatsNewDigest;
   bool isLoadingWhatsNewDigest = false;
 
-
   // Notifications List & Methods
   List<Map<String, dynamic>> notifications = [
     {
@@ -625,10 +689,11 @@ This is simulated offline prompts.md content.
       'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
       'isRead': false,
       'type': 'welcome',
-    }
+    },
   ];
 
-  int get unreadNotificationsCount => notifications.where((n) => n['isRead'] == false).length;
+  int get unreadNotificationsCount =>
+      notifications.where((n) => n['isRead'] == false).length;
 
   void markAllNotificationsAsRead() {
     for (var n in notifications) {
@@ -650,7 +715,6 @@ This is simulated offline prompts.md content.
     notifications.clear();
     notifyListeners();
   }
-
 
   // User Data
   String username = '';
@@ -708,7 +772,8 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
       final lastTime = prefs.getInt('roadmap_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 14400000) { // 4 hours
+      if (!force && (now - lastTime) < 14400000) {
+        // 4 hours
         final cachedRaw = prefs.getString('roadmap_cache');
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
@@ -727,9 +792,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/roadmap/current'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -739,7 +802,10 @@ This is simulated offline prompts.md content.
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('roadmap_cache', response.body);
-          await prefs.setInt('roadmap_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'roadmap_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -758,7 +824,8 @@ This is simulated offline prompts.md content.
         title: m['title'] ?? '',
         description: m['description'] ?? '',
         isCompleted: m['isCompleted'] ?? false,
-        recommendations: (m['recommendations'] as List<dynamic>?)
+        recommendations:
+            (m['recommendations'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             const [],
@@ -793,7 +860,8 @@ This is simulated offline prompts.md content.
             title: m['title'] ?? '',
             description: m['description'] ?? '',
             isCompleted: m['isCompleted'] ?? false,
-            recommendations: (m['recommendations'] as List<dynamic>?)
+            recommendations:
+                (m['recommendations'] as List<dynamic>?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 const [],
@@ -819,31 +887,37 @@ This is simulated offline prompts.md content.
 
   List<Map<String, dynamic>> chatSessions = [];
   String? _currentChatSessionId;
+  bool isMentorTyping = false;
 
   Future<void> sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
-    chatMessages.add(MentorMessage(
-      content: text,
-      role: MessageRole.user,
-      timestamp: DateTime.now(),
-    ));
+    chatMessages.add(
+      MentorMessage(
+        content: text,
+        role: MessageRole.user,
+        timestamp: DateTime.now(),
+      ),
+    );
+    isMentorTyping = true;
     notifyListeners();
 
     // Build conversation history (everything except the message we just added)
     // Limit to last 10 turns (20 messages) to stay within token limits
     final historyMessages = chatMessages.length > 1
         ? chatMessages
-            .sublist(0, chatMessages.length - 1)
-            .reversed
-            .take(20)
-            .toList()
-            .reversed
-            .map((m) => {
+              .sublist(0, chatMessages.length - 1)
+              .reversed
+              .take(20)
+              .toList()
+              .reversed
+              .map(
+                (m) => {
                   'role': m.role == MessageRole.user ? 'user' : 'assistant',
                   'content': m.content,
-                })
-            .toList()
+                },
+              )
+              .toList()
         : <Map<String, String>>[];
 
     try {
@@ -856,45 +930,58 @@ This is simulated offline prompts.md content.
         body: jsonEncode({
           'message': text,
           'history': historyMessages,
-          if (lastUploadedResumeText != null && lastUploadedResumeText!.isNotEmpty)
+          if (lastUploadedResumeText != null &&
+              lastUploadedResumeText!.isNotEmpty)
             'resume_context': lastUploadedResumeText,
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final reply = data['assistant_message'] ?? 'Sorry, I could not generate a response.';
+        final reply =
+            data['assistant_message'] ??
+            'Sorry, I could not generate a response.';
         final openclawTask = data['openclaw_task'] as Map<String, dynamic>?;
-        chatMessages.add(MentorMessage(
-          content: reply,
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-          openclawTask: openclawTask,
-        ));
+        chatMessages.add(
+          MentorMessage(
+            content: reply,
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+            openclawTask: openclawTask,
+          ),
+        );
       } else {
-        chatMessages.add(MentorMessage(
-          content: 'Error: Failed to connect to AI Mentor service.',
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        ));
+        chatMessages.add(
+          MentorMessage(
+            content: 'Error: Failed to connect to AI Mentor service.',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
       }
     } catch (e) {
-      chatMessages.add(MentorMessage(
-        content: 'Error: $e',
-        role: MessageRole.assistant,
-        timestamp: DateTime.now(),
-      ));
+      chatMessages.add(
+        MentorMessage(
+          content: 'Error: $e',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } finally {
+      isMentorTyping = false;
     }
     notifyListeners();
     await saveChatHistory();
   }
 
   Future<void> sendPdfMessage(List<int> fileBytes, String filename) async {
-    chatMessages.add(MentorMessage(
-      content: '📄 Uploaded PDF: $filename',
-      role: MessageRole.user,
-      timestamp: DateTime.now(),
-    ));
+    chatMessages.add(
+      MentorMessage(
+        content: '📄 Uploaded PDF: $filename',
+        role: MessageRole.user,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
 
     try {
@@ -905,11 +992,9 @@ This is simulated offline prompts.md content.
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        fileBytes,
-        filename: filename,
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+      );
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -917,31 +1002,39 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final extractedText = data['extracted_text'] ?? '';
-        
-        chatMessages.add(MentorMessage(
-          content: 'I have parsed your PDF resume. Here is a quick summary of my analysis:\n\n'
-              '• **ATS Alignment Score**: ${data['ats_score']}/100\n'
-              '• **Missing Key Technologies**: ${List<String>.from(data['missing_technologies'] ?? []).join(', ')}\n'
-              '• **Weak Bullet Points**: ${List<String>.from(data['weak_bullet_points'] ?? []).join(', ')}\n\n'
-              'How would you like to improve this resume? You can ask me to re-write any weak bullet points, suggest new projects, or help practice for interviews based on these requirements!',
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        ));
+
+        chatMessages.add(
+          MentorMessage(
+            content:
+                'I have parsed your PDF resume. Here is a quick summary of my analysis:\n\n'
+                '• **ATS Alignment Score**: ${data['ats_score']}/100\n'
+                '• **Missing Key Technologies**: ${List<String>.from(data['missing_technologies'] ?? []).join(', ')}\n'
+                '• **Weak Bullet Points**: ${List<String>.from(data['weak_bullet_points'] ?? []).join(', ')}\n\n'
+                'How would you like to improve this resume? You can ask me to re-write any weak bullet points, suggest new projects, or help practice for interviews based on these requirements!',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
         lastUploadedResumeText = extractedText;
         lastUploadedResumeFileName = filename;
       } else {
-        chatMessages.add(MentorMessage(
-          content: 'Failed to process the PDF resume. Please make sure it is a valid PDF file.',
-          role: MessageRole.assistant,
-          timestamp: DateTime.now(),
-        ));
+        chatMessages.add(
+          MentorMessage(
+            content:
+                'Failed to process the PDF resume. Please make sure it is a valid PDF file.',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
       }
     } catch (e) {
-      chatMessages.add(MentorMessage(
-        content: 'Error processing PDF: $e',
-        role: MessageRole.assistant,
-        timestamp: DateTime.now(),
-      ));
+      chatMessages.add(
+        MentorMessage(
+          content: 'Error processing PDF: $e',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ),
+      );
     }
     notifyListeners();
     await saveChatHistory();
@@ -953,7 +1046,8 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
 
       // Ensure current session has an ID
-      _currentChatSessionId ??= DateTime.now().millisecondsSinceEpoch.toString();
+      _currentChatSessionId ??= DateTime.now().millisecondsSinceEpoch
+          .toString();
 
       // Derive a title from the first user message, or use a default
       String title = 'New Chat';
@@ -977,7 +1071,9 @@ This is simulated offline prompts.md content.
       };
 
       // Update or insert in chatSessions list
-      final idx = chatSessions.indexWhere((s) => s['id'] == _currentChatSessionId);
+      final idx = chatSessions.indexWhere(
+        (s) => s['id'] == _currentChatSessionId,
+      );
       if (idx >= 0) {
         chatSessions[idx] = session;
       } else {
@@ -1011,7 +1107,9 @@ This is simulated offline prompts.md content.
           );
           if (session.isNotEmpty && session['messages'] != null) {
             final msgs = (session['messages'] as List<dynamic>)
-                .map((m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)))
+                .map(
+                  (m) => MentorMessage.fromJson(Map<String, dynamic>.from(m)),
+                )
                 .toList();
             if (msgs.isNotEmpty) {
               chatMessages = msgs;
@@ -1148,7 +1246,8 @@ This is simulated offline prompts.md content.
 
   bool get isDarkTheme {
     if (_themeModeSetting == 'system') {
-      return ui.PlatformDispatcher.instance.platformBrightness != ui.Brightness.light;
+      return ui.PlatformDispatcher.instance.platformBrightness !=
+          ui.Brightness.light;
     }
     return _themeModeSetting == 'dark';
   }
@@ -1187,10 +1286,14 @@ This is simulated offline prompts.md content.
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastTime = prefs.getInt('github_data_response_timestamp_$ghUsername') ?? 0;
+      final lastTime =
+          prefs.getInt('github_data_response_timestamp_$ghUsername') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 1800000) { // 30 minutes cache
-        final cachedRaw = prefs.getString('github_data_response_cache_$ghUsername');
+      if (!force && (now - lastTime) < 1800000) {
+        // 30 minutes cache
+        final cachedRaw = prefs.getString(
+          'github_data_response_cache_$ghUsername',
+        );
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
           _parseGithubData(data, ghUsername);
@@ -1208,7 +1311,9 @@ This is simulated offline prompts.md content.
     try {
       // 1. Try to fetch through backend public-stats proxy to bypass client-side CORS issues
       try {
-        final backendUri = Uri.parse('${AppConfig.apiBaseUrl}/github/public-stats/$ghUsername');
+        final backendUri = Uri.parse(
+          '${AppConfig.apiBaseUrl}/github/public-stats/$ghUsername',
+        );
         final response = await http.get(backendUri);
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -1216,8 +1321,14 @@ This is simulated offline prompts.md content.
 
           try {
             final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('github_data_response_cache_$ghUsername', response.body);
-            await prefs.setInt('github_data_response_timestamp_$ghUsername', DateTime.now().millisecondsSinceEpoch);
+            await prefs.setString(
+              'github_data_response_cache_$ghUsername',
+              response.body,
+            );
+            await prefs.setInt(
+              'github_data_response_timestamp_$ghUsername',
+              DateTime.now().millisecondsSinceEpoch,
+            );
           } catch (_) {}
 
           isLoading = false;
@@ -1226,13 +1337,17 @@ This is simulated offline prompts.md content.
           return;
         }
       } catch (e) {
-        debugPrint('Backend public-stats proxy failed, using direct fallback: $e');
+        debugPrint(
+          'Backend public-stats proxy failed, using direct fallback: $e',
+        );
       }
 
       // 2. Fallback to direct HTTP calls (works on mobile/desktop, fails gracefully on Web)
       int commitsCount = 0;
       if (!kIsWeb) {
-        final commitsUri = Uri.parse('https://api.github.com/search/commits?q=author:$ghUsername');
+        final commitsUri = Uri.parse(
+          'https://api.github.com/search/commits?q=author:$ghUsername',
+        );
         try {
           final commitsResponse = await http.get(
             commitsUri,
@@ -1252,7 +1367,7 @@ This is simulated offline prompts.md content.
 
       final userUri = Uri.parse('https://api.github.com/users/$ghUsername');
       final userResponse = await http.get(userUri);
-      
+
       String userDisplayName = username;
       int publicRepos = 0;
       String? userAvatarUrl;
@@ -1263,9 +1378,11 @@ This is simulated offline prompts.md content.
         userAvatarUrl = userData['avatar_url'];
       }
 
-      final reposUri = Uri.parse('https://api.github.com/users/$ghUsername/repos?per_page=100');
+      final reposUri = Uri.parse(
+        'https://api.github.com/users/$ghUsername/repos?per_page=100',
+      );
       final reposResponse = await http.get(reposUri);
-      
+
       if (reposResponse.statusCode == 200) {
         final List<dynamic> reposData = jsonDecode(reposResponse.body);
         int totalStars = 0;
@@ -1279,7 +1396,9 @@ This is simulated offline prompts.md content.
           'public_repos': publicRepos,
           'avatar_url': userAvatarUrl,
           'total_stars': totalStars,
-          'total_commits': commitsCount > 0 ? commitsCount : (reposData.length * 15),
+          'total_commits': commitsCount > 0
+              ? commitsCount
+              : (reposData.length * 15),
           'repos': reposData,
         };
 
@@ -1287,8 +1406,14 @@ This is simulated offline prompts.md content.
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('github_data_response_cache_$ghUsername', jsonEncode(proxyLikeMap));
-          await prefs.setInt('github_data_response_timestamp_$ghUsername', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setString(
+            'github_data_response_cache_$ghUsername',
+            jsonEncode(proxyLikeMap),
+          );
+          await prefs.setInt(
+            'github_data_response_timestamp_$ghUsername',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -1317,15 +1442,26 @@ This is simulated offline prompts.md content.
         langCounts[lang] = (langCounts[lang] ?? 0) + 1;
       }
 
-      newRepos.add(Repository(
-        name: r['name'] ?? '',
-        owner: r['owner'] is Map ? (r['owner']['login'] ?? '') : (r['owner'] ?? ''),
-        description: r['description'] ?? 'No description provided.',
-        difficulty: (r['stargazers_count'] as num) > 50 ? 'Advanced' : ((r['stargazers_count'] as num) > 5 ? 'Intermediate' : 'Beginner'),
-        impactScore: ((r['stargazers_count'] as num) * 5 + 40).clamp(40, 100).toInt(),
-        tags: lang != null ? [lang] : ['Repo'],
-        whyRecommended: 'Based on your GitHub activity and repository engagement.',
-      ));
+      newRepos.add(
+        Repository(
+          name: r['name'] ?? '',
+          owner: r['owner'] is Map
+              ? (r['owner']['login'] ?? '')
+              : (r['owner'] ?? ''),
+          description: r['description'] ?? 'No description provided.',
+          difficulty: (r['stargazers_count'] as num) > 50
+              ? 'Advanced'
+              : ((r['stargazers_count'] as num) > 5
+                    ? 'Intermediate'
+                    : 'Beginner'),
+          impactScore: ((r['stargazers_count'] as num) * 5 + 40)
+              .clamp(40, 100)
+              .toInt(),
+          tags: lang != null ? [lang] : ['Repo'],
+          whyRecommended:
+              'Based on your GitHub activity and repository engagement.',
+        ),
+      );
     }
 
     stars = totalStars;
@@ -1336,7 +1472,12 @@ This is simulated offline prompts.md content.
     }
 
     // Calculate dynamic Developer Score with real commits
-    developerScore = double.parse(((totalStars * 0.2 + reposData.length * 0.3 + commits * 0.01 + 3.0).clamp(1.0, 10.0)).toStringAsFixed(1));
+    developerScore = double.parse(
+      ((totalStars * 0.2 + reposData.length * 0.3 + commits * 0.01 + 3.0).clamp(
+        1.0,
+        10.0,
+      )).toStringAsFixed(1),
+    );
 
     // Determine strengths and gaps dynamically
     strengths = [];
@@ -1352,10 +1493,19 @@ This is simulated offline prompts.md content.
     bool hasFrontend = false;
     for (var lang in langCounts.keys) {
       final l = lang.toLowerCase();
-      if (l == 'typescript' || l == 'javascript' || l == 'html' || l == 'css' || l == 'dart') {
+      if (l == 'typescript' ||
+          l == 'javascript' ||
+          l == 'html' ||
+          l == 'css' ||
+          l == 'dart') {
         hasFrontend = true;
       }
-      if (l == 'go' || l == 'rust' || l == 'python' || l == 'java' || l == 'c#' || l == 'ruby') {
+      if (l == 'go' ||
+          l == 'rust' ||
+          l == 'python' ||
+          l == 'java' ||
+          l == 'c#' ||
+          l == 'ruby') {
         hasBackend = true;
       }
     }
@@ -1428,7 +1578,7 @@ This is simulated offline prompts.md content.
     await _persistSessionSnapshot();
 
     await fetchGithubData(githubUsername);
-    
+
     if (token != null) {
       try {
         final response = await http.post(
@@ -1437,9 +1587,7 @@ This is simulated offline prompts.md content.
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
-            'username': githubUsername,
-          }),
+          body: jsonEncode({'username': githubUsername}),
         );
         if (response.statusCode == 200) {
           debugPrint('Backend sync-username succeeded');
@@ -1461,14 +1609,16 @@ This is simulated offline prompts.md content.
             if (details['developer_score'] != null) {
               developerScore = (details['developer_score'] as num).toDouble();
             }
-            debugPrint('Real GitHub metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+            debugPrint(
+              'Real GitHub metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore',
+            );
           } catch (parseError) {
             debugPrint('Error parsing sync response: $parseError');
           }
 
           await _saveCachedGithubStats();
           notifyListeners();
-          
+
           await fetchActivityData();
           await fetchFollowingActivity();
           await fetchDeveloperDna();
@@ -1489,10 +1639,17 @@ This is simulated offline prompts.md content.
     }
   }
 
-  Future<void> setGithubSession(String username, String sessionToken, {String? displayName, String? avatar}) async {
+  Future<void> setGithubSession(
+    String username,
+    String sessionToken, {
+    String? displayName,
+    String? avatar,
+  }) async {
     token = sessionToken;
     githubUsername = username.trim().replaceAll('@', '');
-    this.username = (displayName != null && displayName.isNotEmpty) ? displayName : githubUsername;
+    this.username = (displayName != null && displayName.isNotEmpty)
+        ? displayName
+        : githubUsername;
     avatarUrl = avatar;
     sessionLoginTimestamp = DateTime.now().toIso8601String();
     showLinkGitHubPrompt = false;
@@ -1524,9 +1681,7 @@ This is simulated offline prompts.md content.
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'username': githubUsername,
-        }),
+        body: jsonEncode({'username': githubUsername}),
       );
       if (response.statusCode == 200) {
         try {
@@ -1544,7 +1699,9 @@ This is simulated offline prompts.md content.
           if (details['developer_score'] != null) {
             developerScore = (details['developer_score'] as num).toDouble();
           }
-          debugPrint('OAuth sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+          debugPrint(
+            'OAuth sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore',
+          );
         } catch (parseError) {
           debugPrint('Error parsing OAuth sync response: $parseError');
         }
@@ -1587,9 +1744,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/users/me'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body);
@@ -1611,7 +1766,7 @@ This is simulated offline prompts.md content.
               await prefs.setString('github_avatar_url', avatarUrl!);
             }
           } catch (_) {}
-          
+
           await _persistSessionSnapshot();
 
           await fetchGithubData(githubUsername);
@@ -1641,7 +1796,9 @@ This is simulated offline prompts.md content.
               if (details['developer_score'] != null) {
                 developerScore = (details['developer_score'] as num).toDouble();
               }
-              debugPrint('Profile sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore');
+              debugPrint(
+                'Profile sync metrics: stars=$stars, commits=$commits, repos=$repos, score=$developerScore',
+              );
               await _saveCachedGithubStats();
               notifyListeners();
             }
@@ -1723,17 +1880,22 @@ This is simulated offline prompts.md content.
     } catch (_) {}
   }
 
-
   Future<void> fetchActivityData({bool force = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastTime = prefs.getInt('activity_data_timestamp_$selectedActivityYear') ?? 0;
+      final lastTime =
+          prefs.getInt('activity_data_timestamp_$selectedActivityYear') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 3600000) { // 1 hour
-        final cachedRaw = prefs.getString('activity_data_cache_$selectedActivityYear');
+      if (!force && (now - lastTime) < 3600000) {
+        // 1 hour
+        final cachedRaw = prefs.getString(
+          'activity_data_cache_$selectedActivityYear',
+        );
         if (cachedRaw != null) {
           final List<dynamic> rawList = jsonDecode(cachedRaw);
-          activityData = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+          activityData = rawList
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           notifyListeners();
           return;
         }
@@ -1745,22 +1907,29 @@ This is simulated offline prompts.md content.
     isLoadingActivity = true;
     notifyListeners();
     try {
-      final String urlString = '${AppConfig.apiBaseUrl}/github/activity?year=$selectedActivityYear';
+      final String urlString =
+          '${AppConfig.apiBaseUrl}/github/activity?year=$selectedActivityYear';
       final response = await http.get(
         Uri.parse(urlString),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> rawList = data['activity'] ?? [];
-        activityData = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+        activityData = rawList
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('activity_data_cache_$selectedActivityYear', jsonEncode(rawList));
-          await prefs.setInt('activity_data_timestamp_$selectedActivityYear', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setString(
+            'activity_data_cache_$selectedActivityYear',
+            jsonEncode(rawList),
+          );
+          await prefs.setInt(
+            'activity_data_timestamp_$selectedActivityYear',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -1779,13 +1948,19 @@ This is simulated offline prompts.md content.
   Future<void> fetchFollowingActivity({bool force = false}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final lastTime = prefs.getInt('following_activity_timestamp_$githubUsername') ?? 0;
+      final lastTime =
+          prefs.getInt('following_activity_timestamp_$githubUsername') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 1800000) { // 30 minutes
-        final cachedRaw = prefs.getString('following_activity_cache_$githubUsername');
+      if (!force && (now - lastTime) < 1800000) {
+        // 30 minutes
+        final cachedRaw = prefs.getString(
+          'following_activity_cache_$githubUsername',
+        );
         if (cachedRaw != null) {
           final List<dynamic> rawEvents = jsonDecode(cachedRaw);
-          followingActivity = rawEvents.map((e) => Map<String, dynamic>.from(e)).toList();
+          followingActivity = rawEvents
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
           notifyListeners();
           return;
         }
@@ -1798,20 +1973,28 @@ This is simulated offline prompts.md content.
     notifyListeners();
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/github/following-activity?username=$githubUsername'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        Uri.parse(
+          '${AppConfig.apiBaseUrl}/github/following-activity?username=$githubUsername',
+        ),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> rawEvents = data['events'] ?? [];
-        followingActivity = rawEvents.map((e) => Map<String, dynamic>.from(e)).toList();
+        followingActivity = rawEvents
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('following_activity_cache_$githubUsername', jsonEncode(rawEvents));
-          await prefs.setInt('following_activity_timestamp_$githubUsername', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setString(
+            'following_activity_cache_$githubUsername',
+            jsonEncode(rawEvents),
+          );
+          await prefs.setInt(
+            'following_activity_timestamp_$githubUsername',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       } else {
         debugPrint('Failed to load following activity: ${response.statusCode}');
@@ -1830,7 +2013,7 @@ This is simulated offline prompts.md content.
       final cachedJson = prefs.getString('dna_response_cache');
       final cachedTime = prefs.getInt('dna_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      
+
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         dnaArchetype = data['archetype'];
@@ -1850,9 +2033,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/dna'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -1871,7 +2052,8 @@ This is simulated offline prompts.md content.
             notifications.insert(0, {
               'id': 'dna_${DateTime.now().millisecondsSinceEpoch}',
               'title': 'DNA Archetype Identified: $dnaArchetype',
-              'body': 'Your alignment score is $dnaScore%. Click to inspect details.',
+              'body':
+                  'Your alignment score is $dnaScore%. Click to inspect details.',
               'timestamp': DateTime.now(),
               'isRead': false,
               'type': 'dna',
@@ -1879,7 +2061,10 @@ This is simulated offline prompts.md content.
             });
           }
           await prefs.setString('dna_response_cache', bodyText);
-          await prefs.setInt('dna_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'dna_cache_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -1896,7 +2081,7 @@ This is simulated offline prompts.md content.
       final cachedJson = prefs.getString('roast_response_cache');
       final cachedTime = prefs.getInt('roast_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      
+
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         profileRoast = data['roast'];
@@ -1913,9 +2098,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/roast'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -1931,7 +2114,8 @@ This is simulated offline prompts.md content.
             notifications.insert(0, {
               'id': 'roast_${DateTime.now().millisecondsSinceEpoch}',
               'title': 'GitHub Profile Roasted! 🔥',
-              'body': 'Brutal review is ready. Click to inspect tips and issues.',
+              'body':
+                  'Brutal review is ready. Click to inspect tips and issues.',
               'timestamp': DateTime.now(),
               'isRead': false,
               'type': 'roast',
@@ -1939,7 +2123,10 @@ This is simulated offline prompts.md content.
             });
           }
           await prefs.setString('roast_response_cache', bodyText);
-          await prefs.setInt('roast_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'roast_cache_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -1965,10 +2152,16 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         resumeAtsScore = data['ats_score'];
-        resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
+        resumeMissingTech = List<String>.from(
+          data['missing_technologies'] ?? [],
+        );
         resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
-        resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
-        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
+        resumeProjectImprovements = List<String>.from(
+          data['project_improvements'] ?? [],
+        );
+        resumeMindsetUpgrades = List<String>.from(
+          data['mindset_upgrades'] ?? [],
+        );
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
         lastUploadedResumeText = resumeText;
       }
@@ -1991,11 +2184,9 @@ This is simulated offline prompts.md content.
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        fileBytes,
-        filename: filename,
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+      );
 
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
@@ -2003,10 +2194,16 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         resumeAtsScore = data['ats_score'];
-        resumeMissingTech = List<String>.from(data['missing_technologies'] ?? []);
+        resumeMissingTech = List<String>.from(
+          data['missing_technologies'] ?? [],
+        );
         resumeWeakBullets = List<String>.from(data['weak_bullet_points'] ?? []);
-        resumeProjectImprovements = List<String>.from(data['project_improvements'] ?? []);
-        resumeMindsetUpgrades = List<String>.from(data['mindset_upgrades'] ?? []);
+        resumeProjectImprovements = List<String>.from(
+          data['project_improvements'] ?? [],
+        );
+        resumeMindsetUpgrades = List<String>.from(
+          data['mindset_upgrades'] ?? [],
+        );
         resumeSkillUpgrades = List<String>.from(data['skill_upgrades'] ?? []);
         lastUploadedResumeText = data['extracted_text'];
         lastUploadedResumeFileName = filename;
@@ -2043,9 +2240,13 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         generatedResumeText = data['tailored_resume'];
-        generatedResumeOptimizations = List<String>.from(data['applied_optimizations'] ?? []);
+        generatedResumeOptimizations = List<String>.from(
+          data['applied_optimizations'] ?? [],
+        );
         generatedResumeAtsForecast = data['ats_match_forecast'];
-        googleDriveSyncInfo = Map<String, dynamic>.from(data['google_drive_sync'] ?? {});
+        googleDriveSyncInfo = Map<String, dynamic>.from(
+          data['google_drive_sync'] ?? {},
+        );
       }
     } catch (e) {
       debugPrint('Error generating resume: $e');
@@ -2089,28 +2290,35 @@ This is simulated offline prompts.md content.
     required String jobDescription,
   }) async {
     if (lastUploadedResumeText == null || lastUploadedResumeText!.isEmpty) {
-      chatMessages.add(MentorMessage(
-        content: "Error: Please upload a PDF resume first before tailoring.",
-        role: MessageRole.assistant,
-        timestamp: DateTime.now(),
-      ));
+      chatMessages.add(
+        MentorMessage(
+          content: "Error: Please upload a PDF resume first before tailoring.",
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ),
+      );
       notifyListeners();
       return;
     }
 
-    chatMessages.add(MentorMessage(
-      content: "Tailor my resume for $jobTitle:\n\n**Job Description:**\n$jobDescription",
-      role: MessageRole.user,
-      timestamp: DateTime.now(),
-    ));
-    
+    chatMessages.add(
+      MentorMessage(
+        content:
+            "Tailor my resume for $jobTitle:\n\n**Job Description:**\n$jobDescription",
+        role: MessageRole.user,
+        timestamp: DateTime.now(),
+      ),
+    );
+
     // Add a loading message
     final loadingMsgIndex = chatMessages.length;
-    chatMessages.add(MentorMessage(
-      content: "⏳ Tailoring resume and syncing with Google Drive...",
-      role: MessageRole.assistant,
-      timestamp: DateTime.now(),
-    ));
+    chatMessages.add(
+      MentorMessage(
+        content: "⏳ Tailoring resume and syncing with Google Drive...",
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
 
     try {
@@ -2126,34 +2334,39 @@ This is simulated offline prompts.md content.
           final status = googleDriveSyncInfo!['status'];
           final fileName = googleDriveSyncInfo!['file_name'] ?? '';
           final webLink = googleDriveSyncInfo!['web_view_link'];
-          
+
           if (status == 'success') {
-            syncMsg = "✅ **Successfully Synced to Google Drive!**\n"
-                      "• **File Name**: `$fileName`\n"
-                      "• **Link**: [Open Google Drive File]($webLink)";
+            syncMsg =
+                "✅ **Successfully Synced to Google Drive!**\n"
+                "• **File Name**: `$fileName`\n"
+                "• **Link**: [Open Google Drive File]($webLink)";
           } else {
-            final msg = googleDriveSyncInfo!['message'] ?? 'Saved to local workspace.';
+            final msg =
+                googleDriveSyncInfo!['message'] ?? 'Saved to local workspace.';
             final localPath = googleDriveSyncInfo!['file_path'] ?? '';
-            syncMsg = "⚠️ **Saved to Local Workspace Only**\n"
-                      "• *Reason*: $msg\n"
-                      "• *File path*: `$localPath`\n"
-                      "• *Action*: Please link Google Drive in the status bar/input area to sync automatically next time.";
+            syncMsg =
+                "⚠️ **Saved to Local Workspace Only**\n"
+                "• *Reason*: $msg\n"
+                "• *File path*: `$localPath`\n"
+                "• *Action*: Please link Google Drive in the status bar/input area to sync automatically next time.";
           }
         }
 
         chatMessages[loadingMsgIndex] = MentorMessage(
-          content: "### 📄 Tailored Resume Generated!\n\n"
-                   "• **Target Role**: $jobTitle\n"
-                   "• **ATS Forecast Score**: ${generatedResumeAtsForecast ?? 0}%\n\n"
-                   "#### **Applied Optimizations:**\n"
-                   "${(generatedResumeOptimizations ?? []).map((o) => '• $o').join('\n')}\n\n"
-                   "$syncMsg",
+          content:
+              "### 📄 Tailored Resume Generated!\n\n"
+              "• **Target Role**: $jobTitle\n"
+              "• **ATS Forecast Score**: ${generatedResumeAtsForecast ?? 0}%\n\n"
+              "#### **Applied Optimizations:**\n"
+              "${(generatedResumeOptimizations ?? []).map((o) => '• $o').join('\n')}\n\n"
+              "$syncMsg",
           role: MessageRole.assistant,
           timestamp: DateTime.now(),
         );
       } else {
         chatMessages[loadingMsgIndex] = MentorMessage(
-          content: "Error: Failed to generate tailored resume. Please try again.",
+          content:
+              "Error: Failed to generate tailored resume. Please try again.",
           role: MessageRole.assistant,
           timestamp: DateTime.now(),
         );
@@ -2186,10 +2399,13 @@ This is simulated offline prompts.md content.
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final analysis = data['analysis'] ?? '';
-        
+
         // Parse score from analysis text or use a robust fallback (e.g. 8/10)
         int score = 8;
-        final scoreReg = RegExp(r'(Score|Rating|Value Score|ATS Score):\s*(\d+)/10', caseSensitive: false);
+        final scoreReg = RegExp(
+          r'(Score|Rating|Value Score|ATS Score):\s*(\d+)/10',
+          caseSensitive: false,
+        );
         final match = scoreReg.firstMatch(analysis);
         if (match != null) {
           score = int.tryParse(match.group(2) ?? '8') ?? 8;
@@ -2200,23 +2416,27 @@ This is simulated offline prompts.md content.
             score = int.tryParse(matchAlt.group(1) ?? '8') ?? 8;
           }
         }
-        
+
         evaluatedProjectScore = score;
         evaluatedProjectExplanation = analysis;
-        
+
         // Split milestones/recommendations to populate a 4-step upgrade path
         List<String> path = [];
         final lines = analysis.split('\n');
         for (var line in lines) {
           final trimmed = line.trim();
-          if (trimmed.startsWith('-') || trimmed.startsWith('•') || RegExp(r'^\d+\.').hasMatch(trimmed)) {
-            final cleaned = trimmed.replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '').trim();
+          if (trimmed.startsWith('-') ||
+              trimmed.startsWith('•') ||
+              RegExp(r'^\d+\.').hasMatch(trimmed)) {
+            final cleaned = trimmed
+                .replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '')
+                .trim();
             if (cleaned.length > 10 && path.length < 4) {
               path.add(cleaned);
             }
           }
         }
-        
+
         if (path.length < 4) {
           // Provide sensible default/extracted steps if text-parsing was sparse
           path = [
@@ -2226,7 +2446,7 @@ This is simulated offline prompts.md content.
             'Establish automated deployment pipeline & track analytics',
           ];
         }
-        
+
         evaluatedProjectUpgradePath = path;
       } else if (response.statusCode == 429) {
         handleRateLimit();
@@ -2274,7 +2494,7 @@ This is simulated offline prompts.md content.
       final cachedJson = prefs.getString('weekly_report_response_cache');
       final cachedTime = prefs.getInt('weekly_report_cache_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      
+
       if (!force && cachedJson != null && (now - cachedTime) < 604800000) {
         final data = jsonDecode(cachedJson);
         weeklyExplored = data['repositories_explored'];
@@ -2282,7 +2502,9 @@ This is simulated offline prompts.md content.
         weeklyImprovement = data['improvement_percentage'];
         weeklyChartData = List<int>.from(data['chart_data'] ?? []);
         weeklyAchievements = data['achievements'];
-        weeklyNextSteps = data['next_steps'] != null ? List<String>.from(data['next_steps']) : null;
+        weeklyNextSteps = data['next_steps'] != null
+            ? List<String>.from(data['next_steps'])
+            : null;
         notifyListeners();
         return;
       }
@@ -2295,9 +2517,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/weekly-report'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final bodyText = response.body;
@@ -2307,18 +2527,24 @@ This is simulated offline prompts.md content.
         weeklyImprovement = data['improvement_percentage'];
         weeklyChartData = List<int>.from(data['chart_data'] ?? []);
         weeklyAchievements = data['achievements'];
-        weeklyNextSteps = data['next_steps'] != null ? List<String>.from(data['next_steps']) : null;
+        weeklyNextSteps = data['next_steps'] != null
+            ? List<String>.from(data['next_steps'])
+            : null;
 
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('weekly_report_response_cache', bodyText);
-          await prefs.setInt('weekly_report_cache_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'weekly_report_cache_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
 
         notifications.insert(0, {
           'id': 'weekly_${DateTime.now().millisecondsSinceEpoch}',
           'title': 'AI Weekly Report Ready',
-          'body': 'You improved by $weeklyImprovement% this week. Click to check chart.',
+          'body':
+              'You improved by $weeklyImprovement% this week. Click to check chart.',
           'timestamp': DateTime.now(),
           'isRead': false,
           'type': 'weekly_report',
@@ -2338,7 +2564,8 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
       final lastTime = prefs.getInt('learning_paths_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 14400000) { // 4 hours
+      if (!force && (now - lastTime) < 14400000) {
+        // 4 hours
         final cachedRaw = prefs.getString('learning_paths_cache');
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
@@ -2359,9 +2586,13 @@ This is simulated offline prompts.md content.
     try {
       // Split preferred stack tags or default to a standard set
       final techs = preferredStack.isNotEmpty
-          ? preferredStack.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList()
+          ? preferredStack
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList()
           : ['Flutter', 'Python', 'FastAPI'];
-      
+
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/research/learning-path'),
         headers: {
@@ -2369,7 +2600,9 @@ This is simulated offline prompts.md content.
           if (token != null) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'role': personalGoal.isNotEmpty ? personalGoal : 'Full Stack Developer',
+          'role': personalGoal.isNotEmpty
+              ? personalGoal
+              : 'Full Stack Developer',
           'target_technologies': techs,
         }),
       );
@@ -2377,13 +2610,16 @@ This is simulated offline prompts.md content.
         final data = jsonDecode(response.body);
         learningPathTitle = data['roadmap_title'] ?? 'Developer Career Path';
         final String rawPathText = data['learning_path'] ?? '';
-        
+
         _parseAndSetLearningPath(rawPathText);
 
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('learning_paths_cache', response.body);
-          await prefs.setInt('learning_paths_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'learning_paths_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       } else if (response.statusCode == 429) {
         handleRateLimit();
@@ -2399,17 +2635,22 @@ This is simulated offline prompts.md content.
   void _parseAndSetLearningPath(String rawPathText) {
     // Parse the markdown string into 5 Duolingo-style steps
     final List<Map<String, dynamic>> parsedSteps = [];
-    final regex = RegExp(r'(?:^|\n)(?:Step\s+\d+|Milestone\s+\d+|###?\s+\d+)\b', caseSensitive: false);
+    final regex = RegExp(
+      r'(?:^|\n)(?:Step\s+\d+|Milestone\s+\d+|###?\s+\d+)\b',
+      caseSensitive: false,
+    );
     final parts = rawPathText.split(regex);
-    
+
     int stepIdx = 1;
     for (var part in parts) {
       final trimmed = part.trim();
       if (trimmed.isEmpty) continue;
-      
+
       // Try to extract a repository name from the text
       String repoName = 'GitHub Reference';
-      final repoMatch = RegExp(r'\b([a-zA-Z0-9\-_]+/[a-zA-Z0-9\-_.]+)\b').firstMatch(trimmed);
+      final repoMatch = RegExp(
+        r'\b([a-zA-Z0-9\-_]+/[a-zA-Z0-9\-_.]+)\b',
+      ).firstMatch(trimmed);
       if (repoMatch != null) {
         repoName = repoMatch.group(1)!;
       } else {
@@ -2424,12 +2665,16 @@ This is simulated offline prompts.md content.
           repoName = 'open-source/project';
         }
       }
-      
+
       // Extract description and task
       String desc = trimmed;
-      String task = 'Inspect typical project configuration and package dependency tree.';
-      
-      final taskMatch = RegExp(r'(?:Task|Actionable\s+Task|Action):\s*(.*)', caseSensitive: false).firstMatch(trimmed);
+      String task =
+          'Inspect typical project configuration and package dependency tree.';
+
+      final taskMatch = RegExp(
+        r'(?:Task|Actionable\s+Task|Action):\s*(.*)',
+        caseSensitive: false,
+      ).firstMatch(trimmed);
       if (taskMatch != null) {
         task = taskMatch.group(1)!.trim();
         desc = trimmed.substring(0, taskMatch.start).trim();
@@ -2438,33 +2683,42 @@ This is simulated offline prompts.md content.
         final paragraphs = trimmed.split('\n\n');
         if (paragraphs.length > 1) {
           task = paragraphs.last.trim();
-          desc = paragraphs.sublist(0, paragraphs.length - 1).join('\n\n').trim();
+          desc = paragraphs
+              .sublist(0, paragraphs.length - 1)
+              .join('\n\n')
+              .trim();
         }
       }
-      
+
       parsedSteps.add({
         'step_num': stepIdx++,
         'repo_name': repoName,
         'description': desc,
         'task': task,
-        'is_completed': stepIdx == 2, // first step marked completed for UI matchup
+        'is_completed':
+            stepIdx == 2, // first step marked completed for UI matchup
       });
     }
-    
+
     // If parsing didn't produce any items, fallback or create structured steps
     if (parsedSteps.isEmpty) {
-      final lines = rawPathText.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      final lines = rawPathText
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty)
+          .toList();
       for (var i = 0; i < lines.length && i < 5; i++) {
         parsedSteps.add({
           'step_num': i + 1,
           'repo_name': i == 0 ? 'flutter/flutter' : 'git/git',
-          'description': lines[i].replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '').trim(),
+          'description': lines[i]
+              .replaceFirst(RegExp(r'^[-•\d+\.\s]+'), '')
+              .trim(),
           'task': 'Examine repository code structure and main files.',
           'is_completed': i == 0,
         });
       }
     }
-    
+
     learningPathSteps = parsedSteps;
   }
 
@@ -2473,7 +2727,8 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
       final lastTime = prefs.getInt('opportunities_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 14400000) { // 4 hours
+      if (!force && (now - lastTime) < 14400000) {
+        // 4 hours
         final cachedRaw = prefs.getString('opportunities_cache');
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
@@ -2491,9 +2746,7 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/advanced/opportunities'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -2502,15 +2755,20 @@ This is simulated offline prompts.md content.
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('opportunities_cache', response.body);
-          await prefs.setInt('opportunities_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'opportunities_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
 
         if (techOpportunities != null && techOpportunities!.isNotEmpty) {
-          final firstOppTitle = techOpportunities!.first['title'] ?? 'AI Trend Project';
+          final firstOppTitle =
+              techOpportunities!.first['title'] ?? 'AI Trend Project';
           notifications.insert(0, {
             'id': 'opp_${DateTime.now().millisecondsSinceEpoch}',
             'title': 'New Build Opportunity',
-            'body': 'Trending: "$firstOppTitle". Click to view recommended stack.',
+            'body':
+                'Trending: "$firstOppTitle". Click to view recommended stack.',
             'timestamp': DateTime.now(),
             'isRead': false,
             'type': 'opportunity',
@@ -2547,7 +2805,9 @@ This is simulated offline prompts.md content.
         copilotIssueExplanation = data['issue_explanation'];
         copilotCodebaseExplanation = data['codebase_explanation'];
         copilotFilesToEdit = List<String>.from(data['files_to_edit'] ?? []);
-        copilotImplementationPlan = List<String>.from(data['implementation_plan'] ?? []);
+        copilotImplementationPlan = List<String>.from(
+          data['implementation_plan'] ?? [],
+        );
       }
     } catch (e) {
       debugPrint('Error running copilot: $e');
@@ -2570,10 +2830,7 @@ This is simulated offline prompts.md content.
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'personal_goal': goal,
-          'preferred_stack': stack,
-        }),
+        body: jsonEncode({'personal_goal': goal, 'preferred_stack': stack}),
       );
       if (response.statusCode == 200) {
         // Force refresh all AI features to match the new goals
@@ -2623,18 +2880,26 @@ This is simulated offline prompts.md content.
     notifyListeners();
   }
 
-  Future<void> fetchPromptHistory({String? query, String? workflow, bool force = false}) async {
+  Future<void> fetchPromptHistory({
+    String? query,
+    String? workflow,
+    bool force = false,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final cacheKey = 'prompt_history_cache_${query ?? ""}_${workflow ?? ""}';
-      final timestampKey = 'prompt_history_timestamp_${query ?? ""}_${workflow ?? ""}';
+      final timestampKey =
+          'prompt_history_timestamp_${query ?? ""}_${workflow ?? ""}';
       final lastTime = prefs.getInt(timestampKey) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 900000) { // 15 minutes cache
+      if (!force && (now - lastTime) < 900000) {
+        // 15 minutes cache
         final cachedRaw = prefs.getString(cacheKey);
         if (cachedRaw != null) {
           final List<dynamic> data = jsonDecode(cachedRaw);
-          promptHistory = data.map((json) => PromptItem.fromJson(json)).toList();
+          promptHistory = data
+              .map((json) => PromptItem.fromJson(json))
+              .toList();
           notifyListeners();
           return;
         }
@@ -2651,8 +2916,10 @@ This is simulated offline prompts.md content.
         promptHistory = [
           PromptItem(
             id: '1',
-            originalPrompt: 'write a python script to scan files for secrets like api keys using regex',
-            refinedPrompt: 'Write a Python script that scans files in a directory for potential secrets (e.g., API keys, passwords, and private keys) using regular expressions.\n\n- Provide a command-line interface where the user can pass a target directory path.\n- Define regex patterns for common secret formats (e.g. AWS Keys, JWTs, generic secrets).\n- Output a clean list of findings including file path, line number, and a masked version of the matched secret.',
+            originalPrompt:
+                'write a python script to scan files for secrets like api keys using regex',
+            refinedPrompt:
+                'Write a Python script that scans files in a directory for potential secrets (e.g., API keys, passwords, and private keys) using regular expressions.\n\n- Provide a command-line interface where the user can pass a target directory path.\n- Define regex patterns for common secret formats (e.g. AWS Keys, JWTs, generic secrets).\n- Output a clean list of findings including file path, line number, and a masked version of the matched secret.',
             score: 88,
             technologies: ['Python', 'Security'],
             workflow: 'Feature Building',
@@ -2661,8 +2928,10 @@ This is simulated offline prompts.md content.
           ),
           PromptItem(
             id: '2',
-            originalPrompt: 'flutter button is not showing centered, how to center it',
-            refinedPrompt: 'I have a Flutter ElevatedButton that is not centered. How can I align it in the center of the screen?\n\n- Show examples using Center widget, Column with MainAxisAlignment.center, and Align.\n- Explain when to use each approach.',
+            originalPrompt:
+                'flutter button is not showing centered, how to center it',
+            refinedPrompt:
+                'I have a Flutter ElevatedButton that is not centered. How can I align it in the center of the screen?\n\n- Show examples using Center widget, Column with MainAxisAlignment.center, and Align.\n- Explain when to use each approach.',
             score: 72,
             technologies: ['Flutter', 'Dart'],
             workflow: 'Debugging',
@@ -2671,8 +2940,10 @@ This is simulated offline prompts.md content.
           ),
           PromptItem(
             id: '3',
-            originalPrompt: 'optimize sql query select * from users join posts where posts.created_at is recent',
-            refinedPrompt: 'Explain how to optimize this SQL query:\n\n```sql\nSELECT * FROM users JOIN posts ON users.id = posts.user_id WHERE posts.created_at >= NOW() - INTERVAL \'7 days\';\n```\n\nProvide recommendations on indexes, query structure, and select fields instead of using `*`.',
+            originalPrompt:
+                'optimize sql query select * from users join posts where posts.created_at is recent',
+            refinedPrompt:
+                'Explain how to optimize this SQL query:\n\n```sql\nSELECT * FROM users JOIN posts ON users.id = posts.user_id WHERE posts.created_at >= NOW() - INTERVAL \'7 days\';\n```\n\nProvide recommendations on indexes, query structure, and select fields instead of using `*`.',
             score: 82,
             technologies: ['SQL', 'PostgreSQL'],
             workflow: 'Refactoring',
@@ -2687,15 +2958,15 @@ This is simulated offline prompts.md content.
 
       String url = '${AppConfig.apiBaseUrl}/prompts/history';
       List<String> params = [];
-      if (query != null && query.isNotEmpty) params.add('q=${Uri.encodeComponent(query)}');
-      if (workflow != null && workflow.isNotEmpty) params.add('workflow=${Uri.encodeComponent(workflow)}');
+      if (query != null && query.isNotEmpty)
+        params.add('q=${Uri.encodeComponent(query)}');
+      if (workflow != null && workflow.isNotEmpty)
+        params.add('workflow=${Uri.encodeComponent(workflow)}');
       if (params.isNotEmpty) url += '?${params.join('&')}';
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -2704,10 +2975,15 @@ This is simulated offline prompts.md content.
 
         try {
           final prefs = await SharedPreferences.getInstance();
-          final cacheKey = 'prompt_history_cache_${query ?? ""}_${workflow ?? ""}';
-          final timestampKey = 'prompt_history_timestamp_${query ?? ""}_${workflow ?? ""}';
+          final cacheKey =
+              'prompt_history_cache_${query ?? ""}_${workflow ?? ""}';
+          final timestampKey =
+              'prompt_history_timestamp_${query ?? ""}_${workflow ?? ""}';
           await prefs.setString(cacheKey, response.body);
-          await prefs.setInt(timestampKey, DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            timestampKey,
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -2728,10 +3004,15 @@ This is simulated offline prompts.md content.
         promptHistory[index] = PromptItem(
           id: current.id,
           originalPrompt: current.originalPrompt,
-          refinedPrompt: '// Refined with AI:\n${current.originalPrompt}\n\n1. Enhanced readability\n2. Clear intent/context parameters',
+          refinedPrompt:
+              '// Refined with AI:\n${current.originalPrompt}\n\n1. Enhanced readability\n2. Clear intent/context parameters',
           score: 85,
-          technologies: current.technologies.isEmpty ? ['Flutter', 'Dart'] : current.technologies,
-          workflow: current.workflow == 'Development' ? 'Feature Building' : current.workflow,
+          technologies: current.technologies.isEmpty
+              ? ['Flutter', 'Dart']
+              : current.technologies,
+          workflow: current.workflow == 'Development'
+              ? 'Feature Building'
+              : current.workflow,
           projectName: current.projectName,
           createdAt: current.createdAt,
         );
@@ -2805,7 +3086,8 @@ This is simulated offline prompts.md content.
         fetchPromptHistory(force: true);
         fetchPromptAnalytics(force: true);
         fetchPromptRecommendations(force: true);
-        return data['message'] ?? 'Successfully synchronized prompts from GitHub.';
+        return data['message'] ??
+            'Successfully synchronized prompts from GitHub.';
       } else {
         final data = jsonDecode(response.body);
         final String? msg = data['error']?['message'] ?? data['detail'];
@@ -2821,7 +3103,8 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
       final lastTime = prefs.getInt('prompt_analytics_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 900000) { // 15 minutes cache
+      if (!force && (now - lastTime) < 900000) {
+        // 15 minutes cache
         final cachedRaw = prefs.getString('prompt_analytics_cache');
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
@@ -2868,9 +3151,7 @@ This is simulated offline prompts.md content.
 
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/prompts/analytics'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -2880,7 +3161,10 @@ This is simulated offline prompts.md content.
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('prompt_analytics_cache', response.body);
-          await prefs.setInt('prompt_analytics_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'prompt_analytics_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -2896,10 +3180,10 @@ This is simulated offline prompts.md content.
     averagePromptScore = (data['average_score'] as num?)?.toDouble() ?? 0.0;
     promptWorkflowCounts = Map<String, int>.from(data['workflow_counts'] ?? {});
     topPromptTechnologies = List<Map<String, dynamic>>.from(
-      (data['top_technologies'] ?? []).map((e) => Map<String, dynamic>.from(e))
+      (data['top_technologies'] ?? []).map((e) => Map<String, dynamic>.from(e)),
     );
     promptScoreHistory = List<Map<String, dynamic>>.from(
-      (data['score_history'] ?? []).map((e) => Map<String, dynamic>.from(e))
+      (data['score_history'] ?? []).map((e) => Map<String, dynamic>.from(e)),
     );
   }
 
@@ -2908,11 +3192,14 @@ This is simulated offline prompts.md content.
       final prefs = await SharedPreferences.getInstance();
       final lastTime = prefs.getInt('prompt_recommendations_timestamp') ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      if (!force && (now - lastTime) < 3600000) { // 1 hour cache
+      if (!force && (now - lastTime) < 3600000) {
+        // 1 hour cache
         final cachedRaw = prefs.getString('prompt_recommendations_cache');
         if (cachedRaw != null) {
           final data = jsonDecode(cachedRaw);
-          promptRecommendations = List<dynamic>.from(data['recommendations'] ?? []);
+          promptRecommendations = List<dynamic>.from(
+            data['recommendations'] ?? [],
+          );
           notifyListeners();
           return;
         }
@@ -2929,15 +3216,17 @@ This is simulated offline prompts.md content.
         promptRecommendations = [
           {
             'title': 'Mastering Flutter Layout Constraints',
-            'description': 'Based on your debugging prompts about Button alignments, you could benefit from understanding Flutter box constraints layout rules.',
+            'description':
+                'Based on your debugging prompts about Button alignments, you could benefit from understanding Flutter box constraints layout rules.',
             'tags': ['Flutter', 'Layouts'],
-            'url': 'https://flutter.dev/docs/development/ui/layout/constraints'
+            'url': 'https://flutter.dev/docs/development/ui/layout/constraints',
           },
           {
             'title': 'Security Scanners & Secret Scanning in CI/CD',
-            'description': 'You have been writing script prompts to scan files for secrets. Check out how tools like GitGuardian or TruffleHog automate this.',
+            'description':
+                'You have been writing script prompts to scan files for secrets. Check out how tools like GitGuardian or TruffleHog automate this.',
             'tags': ['DevOps', 'Security'],
-            'url': 'https://github.com/trufflesecurity/trufflehog'
+            'url': 'https://github.com/trufflesecurity/trufflehog',
           },
         ];
         isLoadingPromptRecommendations = false;
@@ -2947,19 +3236,22 @@ This is simulated offline prompts.md content.
 
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/prompts/recommendations'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        promptRecommendations = List<dynamic>.from(data['recommendations'] ?? []);
+        promptRecommendations = List<dynamic>.from(
+          data['recommendations'] ?? [],
+        );
 
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('prompt_recommendations_cache', response.body);
-          await prefs.setInt('prompt_recommendations_timestamp', DateTime.now().millisecondsSinceEpoch);
+          await prefs.setInt(
+            'prompt_recommendations_timestamp',
+            DateTime.now().millisecondsSinceEpoch,
+          );
         } catch (_) {}
       }
     } catch (e) {
@@ -2970,7 +3262,11 @@ This is simulated offline prompts.md content.
     }
   }
 
-  Future<void> submitPromptEvent(String originalPrompt, {String? projectName, String? fileContext}) async {
+  Future<void> submitPromptEvent(
+    String originalPrompt, {
+    String? projectName,
+    String? fileContext,
+  }) async {
     if (originalPrompt.trim().isEmpty) return;
     isSubmittingPromptEvent = true;
     notifyListeners();
@@ -2981,7 +3277,8 @@ This is simulated offline prompts.md content.
         final newPrompt = PromptItem(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           originalPrompt: originalPrompt,
-          refinedPrompt: 'Refined Version of:\n$originalPrompt\n\n- Added context\n- Clearly defined inputs, processing steps, and expected outputs.',
+          refinedPrompt:
+              'Refined Version of:\n$originalPrompt\n\n- Added context\n- Clearly defined inputs, processing steps, and expected outputs.',
           score: 85,
           technologies: ['Dart', 'General'],
           workflow: 'Feature Building',
@@ -2990,8 +3287,9 @@ This is simulated offline prompts.md content.
         );
         promptHistory.insert(0, newPrompt);
         totalPrompts += 1;
-        averagePromptScore = ((averagePromptScore * (totalPrompts - 1) + 85) / totalPrompts);
-        
+        averagePromptScore =
+            ((averagePromptScore * (totalPrompts - 1) + 85) / totalPrompts);
+
         notifications.insert(0, {
           'id': 'prompt_${DateTime.now().millisecondsSinceEpoch}',
           'title': 'Prompt Telemetry Synced! 🚀',
@@ -3000,7 +3298,7 @@ This is simulated offline prompts.md content.
           'isRead': false,
           'type': 'prompt_intelligence',
         });
-        
+
         isSubmittingPromptEvent = false;
         notifyListeners();
         return;
@@ -3023,11 +3321,11 @@ This is simulated offline prompts.md content.
         final data = jsonDecode(response.body);
         final newItem = PromptItem.fromJson(data);
         promptHistory.insert(0, newItem);
-        
+
         // Refresh analytics & recommendations to update profile dna
         await fetchPromptAnalytics();
         await fetchPromptRecommendations();
-        
+
         notifications.insert(0, {
           'id': 'prompt_${newItem.id}',
           'title': 'New CLI Prompt Recorded 🚀',
@@ -3064,11 +3362,13 @@ This is simulated offline prompts.md content.
   }
 
   void addSystemMessageToChat(String text) {
-    chatMessages.add(MentorMessage(
-      content: text,
-      role: MessageRole.assistant,
-      timestamp: DateTime.now(),
-    ));
+    chatMessages.add(
+      MentorMessage(
+        content: text,
+        role: MessageRole.assistant,
+        timestamp: DateTime.now(),
+      ),
+    );
     notifyListeners();
     saveChatHistory();
   }
@@ -3080,22 +3380,23 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/research/digest?topic=general'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         weeklyTechDigest = data['digest'];
-        
+
         final prefs = await SharedPreferences.getInstance();
         final lastDigest = prefs.getString('last_weekly_digest');
-        if (weeklyTechDigest != null && weeklyTechDigest!.isNotEmpty && weeklyTechDigest != lastDigest) {
+        if (weeklyTechDigest != null &&
+            weeklyTechDigest!.isNotEmpty &&
+            weeklyTechDigest != lastDigest) {
           await prefs.setString('last_weekly_digest', weeklyTechDigest!);
           notifications.insert(0, {
             'id': 'digest_${DateTime.now().millisecondsSinceEpoch}',
             'title': 'New Technical Digest Available',
-            'body': 'Your Deep Research Agent has compiled the latest tech news.',
+            'body':
+                'Your Deep Research Agent has compiled the latest tech news.',
             'timestamp': DateTime.now(),
             'isRead': false,
             'type': 'digest',
@@ -3112,7 +3413,10 @@ This is simulated offline prompts.md content.
     }
   }
 
-  Future<void> fetchResearchData(String tool, Map<String, dynamic> payload) async {
+  Future<void> fetchResearchData(
+    String tool,
+    Map<String, dynamic> payload,
+  ) async {
     isResearching = true;
     researchError = null;
     researchResult = null;
@@ -3157,7 +3461,8 @@ This is simulated offline prompts.md content.
       if (cachedRaw != null) {
         whatsNewDigest = jsonDecode(cachedRaw);
         notifyListeners();
-        if (!force && (nowMs - lastTime) < 43200000) { // 12 hours
+        if (!force && (nowMs - lastTime) < 43200000) {
+          // 12 hours
           isLoadingWhatsNewDigest = false;
           notifyListeners();
           return;
@@ -3169,29 +3474,34 @@ This is simulated offline prompts.md content.
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/research/whats-new'),
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         try {
           final ghRes = await http.get(
-            Uri.parse('https://api.github.com/search/repositories?q=stars:>50+created:>2026-06-01&sort=stars&order=desc'),
+            Uri.parse(
+              'https://api.github.com/search/repositories?q=stars:>50+created:>2026-06-01&sort=stars&order=desc',
+            ),
           );
           if (ghRes.statusCode == 200) {
             final ghData = jsonDecode(ghRes.body);
             final items = ghData['items'] as List?;
             if (items != null && items.isNotEmpty) {
-              data['github'] = items.take(5).map((item) => {
-                "name": item['name'] ?? "",
-                "owner": item['owner']?['login'] ?? "",
-                "description": item['description'] ?? "No description",
-                "stars": item['stargazers_count'] ?? 0,
-                "url": item['html_url'] ?? "",
-              }).toList();
+              data['github'] = items
+                  .take(5)
+                  .map(
+                    (item) => {
+                      "name": item['name'] ?? "",
+                      "owner": item['owner']?['login'] ?? "",
+                      "description": item['description'] ?? "No description",
+                      "stars": item['stargazers_count'] ?? 0,
+                      "url": item['html_url'] ?? "",
+                    },
+                  )
+                  .toList();
             }
           }
         } catch (_) {}
@@ -3205,7 +3515,9 @@ This is simulated offline prompts.md content.
         final nowMs = DateTime.now().millisecondsSinceEpoch;
 
         // Limit to max twice daily (12 hours = 43200000 ms)
-        if (digestText.isNotEmpty && digestText != lastDigest && (nowMs - lastTime) > 43200000) {
+        if (digestText.isNotEmpty &&
+            digestText != lastDigest &&
+            (nowMs - lastTime) > 43200000) {
           await prefs.setString('last_whats_new_digest', digestText);
           await prefs.setInt('last_whats_new_time', nowMs);
 
@@ -3243,19 +3555,26 @@ This is simulated offline prompts.md content.
     notifyListeners();
     try {
       final response = await http.get(
-        Uri.parse('https://api.github.com/search/repositories?q=topic:awesome&sort=stars&order=desc'),
+        Uri.parse(
+          'https://api.github.com/search/repositories?q=topic:awesome&sort=stars&order=desc',
+        ),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final items = data['items'] as List?;
         if (items != null && items.isNotEmpty) {
-          awesomeLists = items.take(20).map((item) => {
-            "name": item['name'] ?? "",
-            "owner": item['owner']?['login'] ?? "",
-            "description": item['description'] ?? "No description",
-            "stars": item['stargazers_count'] ?? 0,
-            "url": item['html_url'] ?? "",
-          }).toList();
+          awesomeLists = items
+              .take(20)
+              .map(
+                (item) => {
+                  "name": item['name'] ?? "",
+                  "owner": item['owner']?['login'] ?? "",
+                  "description": item['description'] ?? "No description",
+                  "stars": item['stargazers_count'] ?? 0,
+                  "url": item['html_url'] ?? "",
+                },
+              )
+              .toList();
         }
       }
     } catch (e) {
@@ -3266,5 +3585,3 @@ This is simulated offline prompts.md content.
     }
   }
 }
-
-

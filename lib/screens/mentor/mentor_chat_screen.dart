@@ -102,7 +102,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textMain),
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppTheme.textMain,
+              ),
               onPressed: () => context.pop(),
             ),
             title: Column(
@@ -130,7 +133,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           ),
           body: Column(
             children: [
-              if (appState.lastUploadedResumeText != null && appState.lastUploadedResumeText!.isNotEmpty)
+              if (appState.lastUploadedResumeText != null &&
+                  appState.lastUploadedResumeText!.isNotEmpty)
                 _buildResumeStatusBar(appState),
               Expanded(
                 child: NotificationListener<ScrollNotification>(
@@ -146,14 +150,20 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       ? _buildEmptyState(appState)
                       : ListView.builder(
                           controller: _scrollController,
-                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 16,
+                          ),
                           itemCount: messages.length,
                           itemBuilder: (context, index) {
                             final msg = messages[index];
                             return Center(
                               child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 800),
+                                constraints: const BoxConstraints(
+                                  maxWidth: 800,
+                                ),
                                 child: _buildMessageRow(msg, appState),
                               ),
                             );
@@ -161,6 +171,34 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         ),
                 ),
               ),
+              if (appState.isMentorTyping)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Tatvik is thinking...',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               _buildInputArea(appState),
             ],
           ),
@@ -192,7 +230,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             children: [
               Icon(
                 Icons.description_rounded,
-                color: state.isGoogleDriveConnected ? AppTheme.accent : Colors.amber,
+                color: state.isGoogleDriveConnected
+                    ? AppTheme.accent
+                    : Colors.amber,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -234,7 +274,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               icon: const Icon(Icons.auto_awesome_rounded, size: 14),
               label: Text(
                 'Tailor & Sync',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               color: AppTheme.accent,
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -312,8 +355,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty ? 'Please enter job title' : null,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Please enter job title'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -333,8 +377,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty ? 'Please enter job description' : null,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Please enter job description'
+                        : null,
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -342,7 +387,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       LiquidGlassButton(
@@ -358,7 +406,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         },
                         color: AppTheme.accent,
                         borderRadius: 16,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                         child: const Text('Tailor & Sync'),
                       ),
                     ],
@@ -410,15 +461,24 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
-                    child: Icon(Icons.picture_as_pdf_rounded, color: AppTheme.accent),
+                    child: Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: AppTheme.accent,
+                    ),
                   ),
                   title: Text(
                     'Upload PDF Resume',
-                    style: TextStyle(color: AppTheme.textMain, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: AppTheme.textMain,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   subtitle: Text(
                     'Upload a new resume to guide the mentoring sessions',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () async {
                     Navigator.pop(context);
@@ -443,30 +503,48 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         ? Colors.green.withValues(alpha: 0.15)
                         : Colors.amber.withValues(alpha: 0.15),
                     child: Icon(
-                      state.isGoogleDriveConnected ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
-                      color: state.isGoogleDriveConnected ? Colors.green : Colors.amber,
+                      state.isGoogleDriveConnected
+                          ? Icons.cloud_done_rounded
+                          : Icons.cloud_off_rounded,
+                      color: state.isGoogleDriveConnected
+                          ? Colors.green
+                          : Colors.amber,
                     ),
                   ),
                   title: Text(
-                    state.isGoogleDriveConnected ? 'Google Drive Connected' : 'Connect Google Drive',
-                    style: TextStyle(color: AppTheme.textMain, fontWeight: FontWeight.w600),
+                    state.isGoogleDriveConnected
+                        ? 'Google Drive Connected'
+                        : 'Connect Google Drive',
+                    style: TextStyle(
+                      color: AppTheme.textMain,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   subtitle: Text(
                     state.isGoogleDriveConnected
                         ? 'Email: ${state.googleDriveEmail ?? ''}'
                         : 'Connect Google Drive to auto-sync tailored resumes',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                   trailing: state.isGoogleDriveConnected
                       ? null
-                      : Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
+                      : Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppTheme.textSecondary,
+                        ),
                   onTap: () async {
                     Navigator.pop(context);
                     if (!state.isGoogleDriveConnected) {
                       final url = state.getGoogleDriveAuthorizeUrl();
                       final uri = Uri.parse(url);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     }
                   },
@@ -557,7 +635,14 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               children: [
                 const Icon(Icons.mic_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 8),
-                Text('Voice Code Review', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
+                Text(
+                  'Voice Code Review',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
@@ -577,9 +662,20 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.auto_fix_high_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Text('Auto-Fix Generator', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
+                Text(
+                  'Auto-Fix Generator',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
@@ -590,12 +686,36 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildSuggestionGrid(AppState state) {
     final suggestions = [
-      {'icon': '🔥', 'title': 'Roast my code', 'desc': 'Get critical feedback on your repository style.'},
-      {'icon': '🗺️', 'title': 'Explain my roadmap', 'desc': 'Understand the next milestone in your career.'},
-      {'icon': '💼', 'title': 'Mock interview prep', 'desc': 'Challenge yourself with high-impact tech questions.'},
-      {'icon': '💻', 'title': 'Suggest a project', 'desc': 'Get real-world recommendations matching your stack.'},
-      {'icon': '⚡', 'title': 'Execute a task', 'desc': 'Let OpenClaw write code or create a PR for you.'},
-      {'icon': '🖥️', 'title': 'Run terminal', 'desc': 'Run a command in the agent sandbox environment.'},
+      {
+        'icon': '🔥',
+        'title': 'Roast my code',
+        'desc': 'Get critical feedback on your repository style.',
+      },
+      {
+        'icon': '🗺️',
+        'title': 'Explain my roadmap',
+        'desc': 'Understand the next milestone in your career.',
+      },
+      {
+        'icon': '💼',
+        'title': 'Mock interview prep',
+        'desc': 'Challenge yourself with high-impact tech questions.',
+      },
+      {
+        'icon': '💻',
+        'title': 'Suggest a project',
+        'desc': 'Get real-world recommendations matching your stack.',
+      },
+      {
+        'icon': '⚡',
+        'title': 'Execute a task',
+        'desc': 'Let OpenClaw write code or create a PR for you.',
+      },
+      {
+        'icon': '🖥️',
+        'title': 'Run terminal',
+        'desc': 'Run a command in the agent sandbox environment.',
+      },
     ];
 
     return GridView.builder(
@@ -616,15 +736,20 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             if (cleanText == 'Roast my code') {
               cleanText = 'Roast my current code quality';
             } else if (cleanText == 'Explain my roadmap') {
-              cleanText = 'Explain my current roadmap milestone and what to do next';
+              cleanText =
+                  'Explain my current roadmap milestone and what to do next';
             } else if (cleanText == 'Mock interview prep') {
-              cleanText = 'Give me a challenging technical mock interview question';
+              cleanText =
+                  'Give me a challenging technical mock interview question';
             } else if (cleanText == 'Suggest a project') {
-              cleanText = 'Suggest a real-world coding project based on my stack';
+              cleanText =
+                  'Suggest a real-world coding project based on my stack';
             } else if (cleanText == 'Execute a task') {
-              cleanText = 'Execute a task: add a /health endpoint that returns {status: ok} to my first synced repository';
+              cleanText =
+                  'Execute a task: add a /health endpoint that returns {status: ok} to my first synced repository';
             } else if (cleanText == 'Run terminal') {
-              cleanText = 'Run terminal command: echo Hello from OpenClaw agent';
+              cleanText =
+                  'Run terminal command: echo Hello from OpenClaw agent';
             }
             state.sendMessage(cleanText);
             _scrollToBottom();
@@ -694,18 +819,39 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: isUser ? Colors.white24 : AppTheme.accent.withValues(alpha: 0.5)),
+              border: Border.all(
+                color: isUser
+                    ? Colors.white24
+                    : AppTheme.accent.withValues(alpha: 0.5),
+              ),
               gradient: isUser
-                  ? const LinearGradient(colors: [Color(0xFF2D3748), Color(0xFF1A202C)])
-                  : LinearGradient(colors: [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.7)]),
+                  ? const LinearGradient(
+                      colors: [Color(0xFF2D3748), Color(0xFF1A202C)],
+                    )
+                  : LinearGradient(
+                      colors: [
+                        AppTheme.accent,
+                        AppTheme.accent.withValues(alpha: 0.7),
+                      ],
+                    ),
             ),
             child: Center(
               child: isUser
                   ? Text(
-                      state.username.isNotEmpty ? state.username[0].toUpperCase() : 'U',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+                      state.username.isNotEmpty
+                          ? state.username[0].toUpperCase()
+                          : 'U',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     )
-                  : const Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.white),
+                  : const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -731,33 +877,41 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     if (href != null) {
                       final url = Uri.parse(href);
                       if (await canLaunchUrl(url)) {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          url,
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     }
                   },
-                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                    p: TextStyle(
-                      color: AppTheme.textMain,
-                      fontSize: 15,
-                      height: 1.5,
-                    ),
-                    a: TextStyle(
-                      color: AppTheme.accent,
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    code: TextStyle(
-                      backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                      color: AppTheme.textMain,
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.02),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppTheme.border),
-                    ),
-                  ),
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                      .copyWith(
+                        p: TextStyle(
+                          color: AppTheme.textMain,
+                          fontSize: 15,
+                          height: 1.5,
+                        ),
+                        a: TextStyle(
+                          color: AppTheme.accent,
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        code: TextStyle(
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.08)
+                              : Colors.black.withValues(alpha: 0.05),
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          color: AppTheme.textMain,
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.03)
+                              : Colors.black.withValues(alpha: 0.02),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                      ),
                 ),
                 if (!isUser) ...[
                   const SizedBox(height: 12),
@@ -797,7 +951,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildInputArea(AppState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
 
     return SafeArea(
       child: Padding(
@@ -812,7 +969,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0x330D0E15) : const Color(0x40FFFFFF),
+                color: isDark
+                    ? const Color(0x330D0E15)
+                    : const Color(0x40FFFFFF),
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: AppTheme.border, width: 1.0),
                 boxShadow: [
@@ -826,7 +985,11 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.attach_file_rounded, color: AppTheme.textSecondary, size: 20),
+                    icon: Icon(
+                      Icons.attach_file_rounded,
+                      color: AppTheme.textSecondary,
+                      size: 20,
+                    ),
                     tooltip: 'Attachment Options',
                     onPressed: () => _showAttachmentOptions(state),
                   ),
@@ -839,10 +1002,17 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
                       decoration: InputDecoration(
-                        hintText: 'Message AI Mentor or say "execute a task"...',
-                        hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                        hintText:
+                            'Message AI Mentor or say "execute a task"...',
+                        hintStyle: TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 14,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                       onSubmitted: (val) {
                         if (val.trim().isNotEmpty) {
@@ -878,7 +1048,11 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.arrow_upward_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
@@ -929,8 +1103,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     final Color cardColor = isStub
         ? const Color(0xFF00BFA5)
         : success
-            ? const Color(0xFF00BFA5)
-            : Colors.redAccent;
+        ? const Color(0xFF00BFA5)
+        : Colors.redAccent;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -947,7 +1121,11 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               Icon(Icons.smart_toy_rounded, color: cardColor, size: 16),
               const SizedBox(width: 8),
               Text(
-                isStub ? '🤖 OpenClaw (Stub Mode)' : success ? '🤖 OpenClaw Executed' : '🤖 OpenClaw Error',
+                isStub
+                    ? '🤖 OpenClaw (Stub Mode)'
+                    : success
+                    ? '🤖 OpenClaw Executed'
+                    : '🤖 OpenClaw Error',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -961,7 +1139,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             InkWell(
               onTap: () async {
                 final uri = Uri.parse(prUrl);
-                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                if (await canLaunchUrl(uri))
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
               },
               child: Text(
                 '📎 View Pull Request: $prUrl',
@@ -975,11 +1154,20 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           ],
           if (output != null) ...[
             const SizedBox(height: 8),
-            Text('Output: $output', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+            Text(
+              'Output: $output',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+            ),
           ],
           if (error != null) ...[
             const SizedBox(height: 8),
-            Text('Error: $error', style: GoogleFonts.inter(fontSize: 12, color: Colors.redAccent)),
+            Text(
+              'Error: $error',
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.redAccent),
+            ),
           ],
         ],
       ),

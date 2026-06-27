@@ -118,7 +118,11 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           size: 18,
                           color: AppTheme.textSecondary,
                         ),
-                        onPressed: () => _showCliInstructionsBottomSheet(context, state, isDark),
+                        onPressed: () => _showCliInstructionsBottomSheet(
+                          context,
+                          state,
+                          isDark,
+                        ),
                       ),
                     ),
                     Container(
@@ -280,9 +284,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
-                                color: AppTheme.accent.withValues(
-                                  alpha: 0.15,
-                                ),
+                                color: AppTheme.accent.withValues(alpha: 0.15),
                                 borderRadius: 10,
                                 icon: state.isPushingPrompts
                                     ? const SizedBox(
@@ -360,8 +362,6 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
       ),
     );
   }
-
-
 
   Widget _buildRepoSourcesPanel(AppState state, bool isDark) {
     return GlassCard(
@@ -982,8 +982,6 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
     );
   }
 
-
-
   Widget _buildSearchAndFilters(AppState state, bool isDark) {
     final workflows = [
       'All',
@@ -1272,7 +1270,10 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                           ),
                         ),
                         onPressed: () {
-                          final state = Provider.of<AppState>(context, listen: false);
+                          final state = Provider.of<AppState>(
+                            context,
+                            listen: false,
+                          );
                           _refinePromptOnDemand(context, state, prompt);
                         },
                       ),
@@ -1447,7 +1448,10 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                         if (prompt.refinedPrompt.isEmpty)
                           Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 24,
+                              horizontal: 16,
+                            ),
                             decoration: BoxDecoration(
                               color: isDark
                                   ? const Color(0x0AFFFFFF)
@@ -1504,9 +1508,18 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    final state = Provider.of<AppState>(context, listen: false);
-                                    Navigator.pop(context); // close bottom sheet
-                                    _refinePromptOnDemand(context, state, prompt);
+                                    final state = Provider.of<AppState>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    Navigator.pop(
+                                      context,
+                                    ); // close bottom sheet
+                                    _refinePromptOnDemand(
+                                      context,
+                                      state,
+                                      prompt,
+                                    );
                                   },
                                 ),
                               ],
@@ -1573,9 +1586,18 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                                       ),
                                     ),
                                     onPressed: () {
-                                      final state = Provider.of<AppState>(context, listen: false);
-                                      Navigator.pop(context); // close bottom sheet
-                                      _refinePromptOnDemand(context, state, prompt);
+                                      final state = Provider.of<AppState>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      Navigator.pop(
+                                        context,
+                                      ); // close bottom sheet
+                                      _refinePromptOnDemand(
+                                        context,
+                                        state,
+                                        prompt,
+                                      );
                                     },
                                   ),
                                 ),
@@ -2025,7 +2047,9 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2043,10 +2067,7 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
               Text(
                 'Upgrading clarity, structure, and scoring context.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
+                style: GoogleFonts.inter(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 10),
             ],
@@ -2065,7 +2086,9 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
                 ? 'Prompt refined successfully!'
                 : 'Refinement failed: $res',
           ),
-          backgroundColor: res == 'Success' ? AppTheme.success : AppTheme.destructive,
+          backgroundColor: res == 'Success'
+              ? AppTheme.success
+              : AppTheme.destructive,
         ),
       );
     }

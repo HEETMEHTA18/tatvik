@@ -13,14 +13,19 @@ import '../providers/app_state.dart';
 FirebaseOptions? _readFirebaseOptions() {
   const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
   const appId = String.fromEnvironment('FIREBASE_APP_ID');
-  const messagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  const messagingSenderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
   const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   const authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
   const storageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
   const measurementId = String.fromEnvironment('FIREBASE_MEASUREMENT_ID');
   const iosBundleId = String.fromEnvironment('FIREBASE_IOS_BUNDLE_ID');
 
-  if (apiKey.isEmpty || appId.isEmpty || messagingSenderId.isEmpty || projectId.isEmpty) {
+  if (apiKey.isEmpty ||
+      appId.isEmpty ||
+      messagingSenderId.isEmpty ||
+      projectId.isEmpty) {
     return null;
   }
 
@@ -72,12 +77,17 @@ class PushNotificationService {
 
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    await FirebaseMessaging.instance.requestPermission(alert: true, badge: true, sound: true);
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
 
     FirebaseMessaging.onMessage.listen(_showForegroundNotification);
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
@@ -100,7 +110,9 @@ class PushNotificationService {
   }
 
   static Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const darwinSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
@@ -142,7 +154,8 @@ class PushNotificationService {
     const androidDetails = AndroidNotificationDetails(
       'tatvik_push',
       'Tatvik Notifications',
-      channelDescription: 'Push notifications for Tatvik background and foreground events.',
+      channelDescription:
+          'Push notifications for Tatvik background and foreground events.',
       importance: Importance.max,
       priority: Priority.high,
     );
@@ -181,7 +194,9 @@ class PushNotificationService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         await prefs.setString('push_device_token', token);
       } else {
-        debugPrint('Push token registration failed: ${response.statusCode} ${response.body}');
+        debugPrint(
+          'Push token registration failed: ${response.statusCode} ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint('Error registering push token: $e');

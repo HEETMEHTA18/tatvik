@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -13,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_state.dart';
 import '../mentor/mentor_chat_screen.dart';
 import '../../widgets/liquid_glass_button.dart';
+import '../world/world_monitor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -53,173 +55,230 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: AppTheme.surface,
         child: Stack(
           children: [
-          // Background Gradient Orbs
-          Positioned(
-            top: -100,
-            right: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.accent.withValues(alpha: 0.15),
+            // Background Gradient Orbs
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.accent.withValues(alpha: 0.15),
+                ),
               ),
             ),
-          ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isDesktop = constraints.maxWidth > 800;
+            SingleChildScrollView(
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 10,
+                bottom: 120,
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isDesktop = constraints.maxWidth > 800;
 
-                final header = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 40),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Dashboard',
-                          style: GoogleFonts.inter(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textMain,
-                            letterSpacing: -0.5,
+                  final header = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 40),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Dashboard',
+                            style: GoogleFonts.inter(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textMain,
+                              letterSpacing: -0.5,
+                            ),
                           ),
-                        ),
-                        Stack(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                padding: EdgeInsets.zero,
-                                onPressed: () => _showNotificationCenter(context, appState),
-                                icon: Icon(
-                                  appState.unreadNotificationsCount > 0
-                                      ? Icons.notifications_active_rounded
-                                      : Icons.notifications_none_rounded,
-                                  size: 18,
-                                  color: appState.unreadNotificationsCount > 0 ? AppTheme.accent : AppTheme.textSecondary,
+                          Stack(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.isDark
+                                      ? Colors.white.withValues(alpha: 0.08)
+                                      : Colors.black.withValues(alpha: 0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  padding: EdgeInsets.zero,
+                                  onPressed: () => _showNotificationCenter(
+                                    context,
+                                    appState,
+                                  ),
+                                  icon: Icon(
+                                    appState.unreadNotificationsCount > 0
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_none_rounded,
+                                    size: 18,
+                                    color: appState.unreadNotificationsCount > 0
+                                        ? AppTheme.accent
+                                        : AppTheme.textSecondary,
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (appState.unreadNotificationsCount > 0)
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 14,
-                                    minHeight: 14,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${appState.unreadNotificationsCount}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold,
+                              if (appState.unreadNotificationsCount > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 14,
+                                      minHeight: 14,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${appState.unreadNotificationsCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildWelcomeHeader(context, appState),
+                      const SizedBox(height: 12),
+                      _buildDemoDataBanner(context, appState),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+
+                  if (isDesktop) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        header,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 7,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Full width World Monitor directly in dashboard for Desktop Web
+                                  if (kIsWeb)
+                                    Container(
+                                      height: 450,
+                                      margin: const EdgeInsets.only(bottom: 24),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(24),
+                                        border: Border.all(
+                                          color: AppTheme.border,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                            blurRadius: 16,
+                                            offset: const Offset(0, 8),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(24),
+                                        child: const WorldMonitorScreen(),
+                                      ),
+                                    ),
+                                  _buildScoreSection(context, appState),
+                                  const SizedBox(height: 24),
+                                  _buildActivityHeatmap(context, appState),
+                                  const SizedBox(height: 24),
+                                  _buildAgentDigestSection(context, appState),
+                                  const SizedBox(height: 24),
+                                  _buildWeeklyReportSection(context, appState),
+                                ],
                               ),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildDnaSection(context, appState),
+                                  const SizedBox(height: 24),
+                                  _buildRoastSection(context, appState),
+                                  const SizedBox(height: 32),
+                                  _buildSectionHeader(context, 'Top Languages'),
+                                  const SizedBox(height: 16),
+                                  _buildLanguageBar(
+                                    context,
+                                    'TypeScript',
+                                    0.65,
+                                    AppTheme.accent,
+                                  ),
+                                  _buildLanguageBar(
+                                    context,
+                                    'Rust',
+                                    0.20,
+                                    AppTheme.peach,
+                                  ),
+                                  _buildLanguageBar(
+                                    context,
+                                    'Python',
+                                    0.15,
+                                    AppTheme.blue,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
+                        const SizedBox(height: 100),
                       ],
-                    ),
-                    const SizedBox(height: 20),
-                    _buildWelcomeHeader(context, appState),
-                    const SizedBox(height: 12),
-                    _buildDemoDataBanner(context, appState),
-                    const SizedBox(height: 12),
-                  ],
-                );
+                    );
+                  }
 
-                if (isDesktop) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       header,
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 7,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildScoreSection(context, appState),
-                                const SizedBox(height: 24),
-                                _buildActivityHeatmap(context, appState),
-                                const SizedBox(height: 24),
-                                _buildAgentDigestSection(context, appState),
-                                const SizedBox(height: 24),
-                                _buildWeeklyReportSection(context, appState),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 32),
-                          Expanded(
-                            flex: 4,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildDnaSection(context, appState),
-                                const SizedBox(height: 24),
-                                _buildRoastSection(context, appState),
-                                const SizedBox(height: 32),
-                                _buildSectionHeader(context, 'Top Languages'),
-                                const SizedBox(height: 16),
-                                _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
-                                _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
-                                _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
-                              ],
-                            ),
-                          ),
-                        ],
+                      _buildScoreSection(context, appState),
+                      const SizedBox(height: 32),
+                      _buildActivityHeatmap(context, appState),
+                      _buildDnaSection(context, appState),
+                      _buildWeeklyReportSection(context, appState),
+                      _buildRoastSection(context, appState),
+                      _buildAgentDigestSection(context, appState),
+                      const SizedBox(height: 32),
+                      _buildSectionHeader(context, 'Top Languages'),
+                      const SizedBox(height: 16),
+                      _buildLanguageBar(
+                        context,
+                        'TypeScript',
+                        0.65,
+                        AppTheme.accent,
                       ),
-                      const SizedBox(height: 100),
+                      _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
+                      _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
+                      const SizedBox(height: 100), // FAB space
                     ],
                   );
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    header,
-                    _buildScoreSection(context, appState),
-                    const SizedBox(height: 32),
-                    _buildActivityHeatmap(context, appState),
-                    _buildDnaSection(context, appState),
-                    _buildWeeklyReportSection(context, appState),
-                    _buildRoastSection(context, appState),
-                    _buildAgentDigestSection(context, appState),
-                    const SizedBox(height: 32),
-                    _buildSectionHeader(context, 'Top Languages'),
-                    const SizedBox(height: 16),
-                    _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent),
-                    _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
-                    _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
-                    const SizedBox(height: 100), // FAB space
-                  ],
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 75),
@@ -247,19 +306,29 @@ class HomeScreen extends StatelessWidget {
             child: Ink(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.8)],
+                  colors: [
+                    AppTheme.accent,
+                    AppTheme.accent.withValues(alpha: 0.8),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 shape: BoxShape.circle,
               ),
               child: Container(
-                constraints: const BoxConstraints(minWidth: 56.0, minHeight: 56.0),
+                constraints: const BoxConstraints(
+                  minWidth: 56.0,
+                  minHeight: 56.0,
+                ),
                 alignment: Alignment.center,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       'AI',
@@ -282,7 +351,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildScoreSection(BuildContext context, AppState state) {
     final scoreProgress = (state.developerScore / 10.0).clamp(0.0, 1.0);
-    
+
     Color scoreColor = Colors.redAccent;
     if (state.developerScore >= 8.0) {
       scoreColor = AppTheme.accent;
@@ -298,12 +367,19 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('DEVELOPER SCORE', style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                letterSpacing: 1.5,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textSecondary,
-              )),
-              Icon(Icons.query_stats, color: AppTheme.accent.withValues(alpha: 0.8), size: 24),
+              Text(
+                'DEVELOPER SCORE',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              Icon(
+                Icons.query_stats,
+                color: AppTheme.accent.withValues(alpha: 0.8),
+                size: 24,
+              ),
             ],
           ),
           const SizedBox(height: 32),
@@ -367,11 +443,11 @@ class HomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      state.developerScore >= 8.0 
-                          ? 'Elite Developer Profile' 
-                          : state.developerScore >= 6.0 
-                              ? 'Pro Developer Profile' 
-                              : 'Rising Developer Profile',
+                      state.developerScore >= 8.0
+                          ? 'Elite Developer Profile'
+                          : state.developerScore >= 6.0
+                          ? 'Pro Developer Profile'
+                          : 'Rising Developer Profile',
                       style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
@@ -404,11 +480,26 @@ class HomeScreen extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem(context, '${state.stars}', 'STARS', Icons.star_border),
+                _buildStatItem(
+                  context,
+                  '${state.stars}',
+                  'STARS',
+                  Icons.star_border,
+                ),
                 Container(width: 1, height: 40, color: Colors.white12),
-                _buildStatItem(context, '${state.commits}', 'COMMITS', Icons.history),
+                _buildStatItem(
+                  context,
+                  '${state.commits}',
+                  'COMMITS',
+                  Icons.history,
+                ),
                 Container(width: 1, height: 40, color: Colors.white12),
-                _buildStatItem(context, '${state.repos}', 'REPOS', Icons.folder_open),
+                _buildStatItem(
+                  context,
+                  '${state.repos}',
+                  'REPOS',
+                  Icons.folder_open,
+                ),
               ],
             ),
           ),
@@ -417,7 +508,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String value, String label, IconData icon) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String value,
+    String label,
+    IconData icon,
+  ) {
     return Column(
       children: [
         Row(
@@ -458,16 +554,28 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('ACTIVITY', style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
-              )),
+              Text(
+                'ACTIVITY',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
               DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: state.selectedActivityYear,
-                  dropdownColor: AppTheme.isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                  icon: Icon(Icons.arrow_drop_down, color: AppTheme.accent, size: 16),
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: AppTheme.accent),
+                  dropdownColor: AppTheme.isDark
+                      ? const Color(0xFF1E1E1E)
+                      : Colors.white,
+                  icon: Icon(
+                    Icons.arrow_drop_down,
+                    color: AppTheme.accent,
+                    size: 16,
+                  ),
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    fontSize: 10,
+                    color: AppTheme.accent,
+                  ),
                   onChanged: (String? newValue) {
                     if (newValue != null) {
                       state.setActivityYear(newValue);
@@ -475,11 +583,15 @@ class HomeScreen extends StatelessWidget {
                   },
                   items: <String>['2026', '2025', '2024', '2023']
                       .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value.toUpperCase(), style: TextStyle(color: AppTheme.textMain)),
-                    );
-                  }).toList(),
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value.toUpperCase(),
+                            style: TextStyle(color: AppTheme.textMain),
+                          ),
+                        );
+                      })
+                      .toList(),
                 ),
               ),
             ],
@@ -488,9 +600,7 @@ class HomeScreen extends StatelessWidget {
           state.isLoadingActivity
               ? const SizedBox(
                   height: 120,
-                  child: Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: Center(child: CircularProgressIndicator()),
                 )
               : (() {
                   int paddingCells = 0;
@@ -503,60 +613,91 @@ class HomeScreen extends StatelessWidget {
                       } catch (_) {}
                     }
                   }
-                  
+
                   return SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        height: 120,
-                        width: ((state.activityData.length + paddingCells) / 7).ceil() * 16.0,
-                        child: GridView.builder(
-                          scrollDirection: Axis.horizontal,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 7,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
-                          itemCount: state.activityData.length + paddingCells,
-                          itemBuilder: (context, index) {
-                            if (index < paddingCells) {
-                              return const SizedBox();
-                            }
-                            final dayData = state.activityData[index - paddingCells];
-                            final int count = dayData['count'] ?? 0;
-                            final String date = dayData['date'] ?? '';
-                            final double opacity = count == 0 ? 0.1 : count <= 2 ? 0.4 : count <= 5 ? 0.7 : 1.0;
-                            return InkWell(
-                              onTap: () {
-                                _showDayActivityDialog(context, date, state.token ?? '');
-                              },
-                              borderRadius: BorderRadius.circular(2),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accent.withValues(alpha: opacity),
-                                  borderRadius: BorderRadius.circular(2),
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      height: 120,
+                      width:
+                          ((state.activityData.length + paddingCells) / 7)
+                              .ceil() *
+                          16.0,
+                      child: GridView.builder(
+                        scrollDirection: Axis.horizontal,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 7,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                            ),
+                        itemCount: state.activityData.length + paddingCells,
+                        itemBuilder: (context, index) {
+                          if (index < paddingCells) {
+                            return const SizedBox();
+                          }
+                          final dayData =
+                              state.activityData[index - paddingCells];
+                          final int count = dayData['count'] ?? 0;
+                          final String date = dayData['date'] ?? '';
+                          final double opacity = count == 0
+                              ? 0.1
+                              : count <= 2
+                              ? 0.4
+                              : count <= 5
+                              ? 0.7
+                              : 1.0;
+                          return InkWell(
+                            onTap: () {
+                              _showDayActivityDialog(
+                                context,
+                                date,
+                                state.token ?? '',
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(2),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent.withValues(
+                                  alpha: opacity,
                                 ),
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
+                    ),
+                  );
                 })(),
           const SizedBox(height: 16),
           Row(
             children: [
-              Text('Less', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10)),
+              Text(
+                'Less',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontSize: 10),
+              ),
               const SizedBox(width: 4),
-              ...List.generate(5, (i) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                width: 8, height: 8,
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withValues(alpha: (i + 1) * 0.2),
-                  borderRadius: BorderRadius.circular(2),
+              ...List.generate(
+                5,
+                (i) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: (i + 1) * 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              )),
+              ),
               const SizedBox(width: 4),
-              Text('More', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10)),
+              Text(
+                'More',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontSize: 10),
+              ),
             ],
           ),
         ],
@@ -564,7 +705,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, {VoidCallback? onSeeAll}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    VoidCallback? onSeeAll,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -572,14 +717,21 @@ class HomeScreen extends StatelessWidget {
         if (onSeeAll != null)
           TextButton(
             onPressed: onSeeAll,
-            child: Text('View all >', style: TextStyle(color: AppTheme.accent, fontSize: 12)),
+            child: Text(
+              'View all >',
+              style: TextStyle(color: AppTheme.accent, fontSize: 12),
+            ),
           ),
       ],
     );
   }
 
-
-  Widget _buildLanguageBar(BuildContext context, String lang, double percentage, Color color) {
+  Widget _buildLanguageBar(
+    BuildContext context,
+    String lang,
+    double percentage,
+    Color color,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -587,8 +739,16 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(lang, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textMain)),
-              Text('${(percentage * 100).toInt()}%', style: GoogleFonts.jetBrainsMono(color: AppTheme.textSecondary)),
+              Text(
+                lang,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textMain),
+              ),
+              Text(
+                '${(percentage * 100).toInt()}%',
+                style: GoogleFonts.jetBrainsMono(color: AppTheme.textSecondary),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -609,7 +769,7 @@ class HomeScreen extends StatelessWidget {
     if (state.githubUsername.toLowerCase() != 'alexjohnson') {
       return const SizedBox.shrink();
     }
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: GlassCard(
@@ -623,7 +783,11 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.amber.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.amber,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -653,9 +817,14 @@ class HomeScreen extends StatelessWidget {
             TextButton(
               onPressed: () => _showEditGitHubDialog(context, state),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: Text(
                 'LINK',
@@ -688,9 +857,9 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Edit GitHub Account',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.textMain,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppTheme.textMain,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -731,12 +900,17 @@ class HomeScreen extends StatelessWidget {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('GitHub handle updated to @$newUsername'),
+                            content: Text(
+                              'GitHub handle updated to @$newUsername',
+                            ),
                             backgroundColor: AppTheme.success,
                           ),
                         );
                       },
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       color: AppTheme.accent,
                       borderRadius: 8,
                       child: const Text('Save'),
@@ -760,7 +934,10 @@ class HomeScreen extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppTheme.accent,
-            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.5), width: 2.0),
+            border: Border.all(
+              color: AppTheme.accent.withValues(alpha: 0.5),
+              width: 2.0,
+            ),
             image: state.avatarUrl != null
                 ? DecorationImage(
                     image: NetworkImage(state.avatarUrl!),
@@ -776,32 +953,39 @@ class HomeScreen extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Welcome back,', style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 14, 
-              color: AppTheme.textSecondary,
-              letterSpacing: 0.5,
-            )),
+            Text(
+              'Welcome back,',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                letterSpacing: 0.5,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               state.username,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 24,
-                    letterSpacing: -0.5,
-                    color: AppTheme.textMain,
-                  ),
+                fontWeight: FontWeight.w800,
+                fontSize: 24,
+                letterSpacing: -0.5,
+                color: AppTheme.textMain,
+              ),
             ),
           ],
         ),
         const Spacer(),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            color: AppTheme.isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.05),
             shape: BoxShape.circle,
           ),
           child: IconButton(
             icon: Icon(
-              state.isDarkTheme ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              state.isDarkTheme
+                  ? Icons.light_mode_rounded
+                  : Icons.dark_mode_rounded,
               color: AppTheme.textSecondary,
               size: 22,
             ),
@@ -819,8 +1003,13 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.isDark ? const Color(0xFF1E1E24) : Colors.white,
-          title: Text('Activity Info — $date', style: TextStyle(color: AppTheme.textMain)),
+          backgroundColor: AppTheme.isDark
+              ? const Color(0xFF1E1E24)
+              : Colors.white,
+          title: Text(
+            'Activity Info — $date',
+            style: TextStyle(color: AppTheme.textMain),
+          ),
           content: FutureBuilder<Map<String, dynamic>>(
             future: _fetchDayActivity(date, token),
             builder: (context, snapshot) {
@@ -831,34 +1020,58 @@ class HomeScreen extends StatelessWidget {
                 );
               }
               if (snapshot.hasError || !snapshot.hasData) {
-                return Text('Error loading details.', style: TextStyle(color: AppTheme.textSecondary));
+                return Text(
+                  'Error loading details.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                );
               }
               final data = snapshot.data!;
               final summary = data['summary'] ?? '';
               final List<dynamic> details = data['details'] ?? [];
-              
+
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(summary, style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textMain)),
+                  Text(
+                    summary,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   if (details.isEmpty)
-                    Text('No repository modifications, pull requests, or issues recorded on this day.', style: TextStyle(color: AppTheme.textSecondary))
+                    Text(
+                      'No repository modifications, pull requests, or issues recorded on this day.',
+                      style: TextStyle(color: AppTheme.textSecondary),
+                    )
                   else
-                    ...details.map((d) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.check_circle_outline, color: AppTheme.accent, size: 14),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(d.toString(), style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                          ),
-                        ],
+                    ...details.map(
+                      (d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: AppTheme.accent,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                d.toString(),
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                 ],
               );
             },
@@ -874,22 +1087,20 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Future<Map<String, dynamic>> _fetchDayActivity(String date, String token) async {
+  Future<Map<String, dynamic>> _fetchDayActivity(
+    String date,
+    String token,
+  ) async {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.apiBaseUrl}/github/day-activity?date=$date'),
-        headers: {
-          if (token.isNotEmpty) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token.isNotEmpty) 'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
     } catch (_) {}
-    return {
-      'summary': 'Failed to load details.',
-      'details': []
-    };
+    return {'summary': 'Failed to load details.', 'details': []};
   }
 
   Widget _buildDnaSection(BuildContext context, AppState state) {
@@ -906,7 +1117,11 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withValues(alpha: 0.8), size: 40),
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    color: AppTheme.peach.withValues(alpha: 0.8),
+                    size: 40,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'AI Insights Disabled',
@@ -933,8 +1148,17 @@ class HomeScreen extends StatelessWidget {
                     },
                     color: AppTheme.peach.withValues(alpha: 0.2),
                     borderRadius: 16,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Text('Enable AI Insights', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.peach)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    child: Text(
+                      'Enable AI Insights',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.peach,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1006,9 +1230,15 @@ class HomeScreen extends StatelessWidget {
 
     final archetype = state.dnaArchetype ?? 'Builder';
     final score = state.dnaScore ?? 86;
-    final desc = state.dnaDescription ?? 'You love shipping products quickly and prototyping fresh ideas.';
-    final strengths = state.dnaStrengths ?? ['Rapid Prototyping', 'Full Stack Development', 'MVP Building'];
-    final weaknesses = state.dnaWeaknesses ?? ['DevOps Pipelines', 'Automated Testing', 'Advanced System Design'];
+    final desc =
+        state.dnaDescription ??
+        'You love shipping products quickly and prototyping fresh ideas.';
+    final strengths =
+        state.dnaStrengths ??
+        ['Rapid Prototyping', 'Full Stack Development', 'MVP Building'];
+    final weaknesses =
+        state.dnaWeaknesses ??
+        ['DevOps Pipelines', 'Automated Testing', 'Advanced System Design'];
 
     String emoji = '🚀';
     Color arcColor = AppTheme.accent;
@@ -1097,24 +1327,30 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ...strengths.map((s) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.check_rounded, color: AppTheme.success, size: 14),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  s,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
+                        ...strengths.map(
+                          (s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.check_rounded,
+                                  color: AppTheme.success,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    s,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        )),
+                        ),
                       ],
                     ),
                   ),
@@ -1132,24 +1368,30 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        ...weaknesses.map((w) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            children: [
-                              Icon(Icons.close_rounded, color: AppTheme.destructive, size: 14),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  w,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary,
+                        ...weaknesses.map(
+                          (w) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.close_rounded,
+                                  color: AppTheme.destructive,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    w,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textSecondary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        )),
+                        ),
                       ],
                     ),
                   ),
@@ -1176,7 +1418,11 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.accent.withValues(alpha: 0.8), size: 40),
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    color: AppTheme.accent.withValues(alpha: 0.8),
+                    size: 40,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Weekly Report Disabled',
@@ -1203,8 +1449,17 @@ class HomeScreen extends StatelessWidget {
                     },
                     color: AppTheme.accent.withValues(alpha: 0.2),
                     borderRadius: 16,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Text('Enable Weekly Report', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppTheme.accent)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    child: Text(
+                      'Enable Weekly Report',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.accent,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1234,14 +1489,17 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(4, (index) => Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
+                  children: List.generate(
+                    4,
+                    (index) => Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  )),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Container(
@@ -1260,7 +1518,9 @@ class HomeScreen extends StatelessWidget {
     final skills = state.weeklySkills ?? 2;
     final improvement = state.weeklyImprovement ?? 7;
     final chartData = state.weeklyChartData ?? [12, 19, 3, 5, 2, 3, 10];
-    final maxVal = chartData.isNotEmpty ? chartData.reduce((curr, next) => curr > next ? curr : next) : 1;
+    final maxVal = chartData.isNotEmpty
+        ? chartData.reduce((curr, next) => curr > next ? curr : next)
+        : 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1299,7 +1559,10 @@ class HomeScreen extends StatelessWidget {
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
@@ -1356,7 +1619,9 @@ class HomeScreen extends StatelessWidget {
                   }),
                 ),
               ),
-              if (state.weeklyAchievements != null || (state.weeklyNextSteps != null && state.weeklyNextSteps!.isNotEmpty)) ...[
+              if (state.weeklyAchievements != null ||
+                  (state.weeklyNextSteps != null &&
+                      state.weeklyNextSteps!.isNotEmpty)) ...[
                 const Divider(height: 32, color: Colors.white12),
                 if (state.weeklyAchievements != null) ...[
                   Text(
@@ -1383,7 +1648,8 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                 ],
-                if (state.weeklyNextSteps != null && state.weeklyNextSteps!.isNotEmpty) ...[
+                if (state.weeklyNextSteps != null &&
+                    state.weeklyNextSteps!.isNotEmpty) ...[
                   Text(
                     'NEXT ACTION STEPS',
                     style: GoogleFonts.jetBrainsMono(
@@ -1394,25 +1660,31 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...state.weeklyNextSteps!.map((step) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.arrow_right_rounded, color: AppTheme.accent, size: 18),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            step,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
+                  ...state.weeklyNextSteps!.map(
+                    (step) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.arrow_right_rounded,
+                            color: AppTheme.accent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              step,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
+                  ),
                 ],
               ],
             ],
@@ -1450,7 +1722,11 @@ class HomeScreen extends StatelessWidget {
                     color: AppTheme.success,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: AppTheme.success.withValues(alpha: 0.6), blurRadius: 6, spreadRadius: 1),
+                      BoxShadow(
+                        color: AppTheme.success.withValues(alpha: 0.6),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
                     ],
                   ),
                 ),
@@ -1471,15 +1747,24 @@ class HomeScreen extends StatelessWidget {
             GestureDetector(
               onTap: () => state.fetchWhatsNewDigest(),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.success.withValues(alpha: 0.4)),
+                  border: Border.all(
+                    color: AppTheme.success.withValues(alpha: 0.4),
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.refresh_rounded, size: 12, color: AppTheme.success),
+                    Icon(
+                      Icons.refresh_rounded,
+                      size: 12,
+                      color: AppTheme.success,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'REFRESH',
@@ -1510,13 +1795,18 @@ class HomeScreen extends StatelessWidget {
                       height: 28,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.success),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppTheme.success,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
                       'Agent scanning GitHub & YouTube…',
-                      style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -1538,7 +1828,11 @@ class HomeScreen extends StatelessWidget {
                         color: AppTheme.accent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Icon(Icons.radar_rounded, color: AppTheme.accent, size: 26),
+                      child: Icon(
+                        Icons.radar_rounded,
+                        color: AppTheme.accent,
+                        size: 26,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1556,12 +1850,19 @@ class HomeScreen extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             'Tap to fetch the latest GitHub & YouTube tech digest',
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textSecondary),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 14,
+                      color: AppTheme.textSecondary,
+                    ),
                   ],
                 ),
               ),
@@ -1579,7 +1880,11 @@ class HomeScreen extends StatelessWidget {
                   if ((digest['digest'] as String? ?? '').isNotEmpty) ...[
                     Row(
                       children: [
-                        Icon(Icons.auto_awesome_rounded, size: 14, color: AppTheme.accent),
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          size: 14,
+                          color: AppTheme.accent,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'AI SUMMARY',
@@ -1597,9 +1902,13 @@ class HomeScreen extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0x0AFFFFFF) : const Color(0x08000000),
+                        color: isDark
+                            ? const Color(0x0AFFFFFF)
+                            : const Color(0x08000000),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppTheme.border.withValues(alpha: 0.2)),
+                        border: Border.all(
+                          color: AppTheme.border.withValues(alpha: 0.2),
+                        ),
                       ),
                       child: MarkdownBody(
                         data: digest['digest'] as String,
@@ -1620,7 +1929,11 @@ class HomeScreen extends StatelessWidget {
                   if ((digest['github'] as List?)?.isNotEmpty == true) ...[
                     Row(
                       children: [
-                        Icon(Icons.code_rounded, size: 14, color: AppTheme.textSecondary),
+                        Icon(
+                          Icons.code_rounded,
+                          size: 14,
+                          color: AppTheme.textSecondary,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'TRENDING ON GITHUB',
@@ -1638,20 +1951,37 @@ class HomeScreen extends StatelessWidget {
                       final repo = item as Map<String, dynamic>;
                       return GestureDetector(
                         onTap: () async {
-                          final url = Uri.tryParse(repo['url'] as String? ?? '');
-                          if (url != null) await launchUrl(url, mode: LaunchMode.externalApplication);
+                          final url = Uri.tryParse(
+                            repo['url'] as String? ?? '',
+                          );
+                          if (url != null)
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0x0DFFFFFF) : const Color(0x06000000),
+                            color: isDark
+                                ? const Color(0x0DFFFFFF)
+                                : const Color(0x06000000),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.15)),
+                            border: Border.all(
+                              color: AppTheme.border.withValues(alpha: 0.15),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.star_rounded, size: 14, color: AppTheme.peach),
+                              Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: AppTheme.peach,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 '${repo['stars'] ?? 0}',
@@ -1673,7 +2003,11 @@ class HomeScreen extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              Icon(Icons.open_in_new_rounded, size: 13, color: AppTheme.textSecondary),
+                              Icon(
+                                Icons.open_in_new_rounded,
+                                size: 13,
+                                color: AppTheme.textSecondary,
+                              ),
                             ],
                           ),
                         ),
@@ -1686,7 +2020,11 @@ class HomeScreen extends StatelessWidget {
                   if ((digest['youtube'] as List?)?.isNotEmpty == true) ...[
                     Row(
                       children: [
-                        Icon(Icons.play_circle_outline_rounded, size: 14, color: AppTheme.destructive),
+                        Icon(
+                          Icons.play_circle_outline_rounded,
+                          size: 14,
+                          color: AppTheme.destructive,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'TRENDING ON YOUTUBE',
@@ -1704,20 +2042,37 @@ class HomeScreen extends StatelessWidget {
                       final video = item as Map<String, dynamic>;
                       return GestureDetector(
                         onTap: () async {
-                          final url = Uri.tryParse(video['url'] as String? ?? '');
-                          if (url != null) await launchUrl(url, mode: LaunchMode.externalApplication);
+                          final url = Uri.tryParse(
+                            video['url'] as String? ?? '',
+                          );
+                          if (url != null)
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0x0DFFFFFF) : const Color(0x06000000),
+                            color: isDark
+                                ? const Color(0x0DFFFFFF)
+                                : const Color(0x06000000),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.15)),
+                            border: Border.all(
+                              color: AppTheme.border.withValues(alpha: 0.15),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.play_arrow_rounded, size: 16, color: AppTheme.destructive),
+                              Icon(
+                                Icons.play_arrow_rounded,
+                                size: 16,
+                                color: AppTheme.destructive,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Column(
@@ -1743,7 +2098,11 @@ class HomeScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              Icon(Icons.open_in_new_rounded, size: 13, color: AppTheme.textSecondary),
+                              Icon(
+                                Icons.open_in_new_rounded,
+                                size: 13,
+                                color: AppTheme.textSecondary,
+                              ),
                             ],
                           ),
                         ),
@@ -1756,7 +2115,10 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       'Last updated: ${_formatTimestamp(digest['timestamp'] as String)}',
-                      style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
                     ),
                   ],
                 ],
@@ -1787,7 +2149,10 @@ class HomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 32),
-          Text('GitHub Profile Roast', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'GitHub Profile Roast',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
@@ -1795,7 +2160,11 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.lock_outline_rounded, color: AppTheme.peach.withValues(alpha: 0.8), size: 40),
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    color: AppTheme.peach.withValues(alpha: 0.8),
+                    size: 40,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Profile Roast Locked',
@@ -1831,7 +2200,10 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('GitHub Profile Roast', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'GitHub Profile Roast',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -1876,12 +2248,16 @@ class HomeScreen extends StatelessWidget {
       );
     }
 
-    final roastText = state.profileRoast ?? "Your GitHub profile looks like a digital graveyard of unfinished tutorials. You have repositories with no READMEs and more generic boilerplates than a WordPress agency.";
-    final tips = state.roastTips ?? [
-      "Archive or delete repositories that are just cloned templates.",
-      "Write a proper README with screenshots for your top 3 repos.",
-      "Choose descriptive names instead of 'test-app' or 'demo-1'."
-    ];
+    final roastText =
+        state.profileRoast ??
+        "Your GitHub profile looks like a digital graveyard of unfinished tutorials. You have repositories with no READMEs and more generic boilerplates than a WordPress agency.";
+    final tips =
+        state.roastTips ??
+        [
+          "Archive or delete repositories that are just cloned templates.",
+          "Write a proper README with screenshots for your top 3 repos.",
+          "Choose descriptive names instead of 'test-app' or 'demo-1'.",
+        ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1890,10 +2266,14 @@ class HomeScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('GitHub Profile Roast', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'GitHub Profile Roast',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             if (state.isLoadingRoast)
               const SizedBox(
-                width: 16, height: 16,
+                width: 16,
+                height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             else
@@ -1961,25 +2341,33 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              ...tips.map((t) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('•', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        t,
+              ...tips.map(
+                (t) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '•',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
+                          color: AppTheme.accent,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          t,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              )),
+              ),
             ],
           ),
         ),
@@ -2005,7 +2393,9 @@ class HomeScreen extends StatelessWidget {
                 child: Container(
                   height: MediaQuery.of(context).size.height * 0.7,
                   decoration: BoxDecoration(
-                    color: AppTheme.isDark ? const Color(0xE6121214) : const Color(0xE6F8F9FA),
+                    color: AppTheme.isDark
+                        ? const Color(0xE6121214)
+                        : const Color(0xE6F8F9FA),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -2038,7 +2428,10 @@ class HomeScreen extends StatelessWidget {
                                 },
                                 child: Text(
                                   'Read All',
-                                  style: TextStyle(color: AppTheme.accent, fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppTheme.accent,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                               TextButton(
@@ -2048,7 +2441,10 @@ class HomeScreen extends StatelessWidget {
                                 },
                                 child: Text(
                                   'Clear All',
-                                  style: TextStyle(color: AppTheme.destructive, fontSize: 12),
+                                  style: TextStyle(
+                                    color: AppTheme.destructive,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
                             ],
@@ -2061,15 +2457,21 @@ class HomeScreen extends StatelessWidget {
                             ? Center(
                                 child: Text(
                                   'No notifications yet.',
-                                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               )
                             : ListView.builder(
                                 itemCount: state.notifications.length,
                                 itemBuilder: (context, index) {
-                                  final notification = state.notifications[index];
-                                  final isRead = notification['isRead'] ?? false;
-                                  final type = notification['type'] ?? 'welcome';
+                                  final notification =
+                                      state.notifications[index];
+                                  final isRead =
+                                      notification['isRead'] ?? false;
+                                  final type =
+                                      notification['type'] ?? 'welcome';
 
                                   IconData icon = Icons.info_outline;
                                   Color color = AppTheme.accent;
@@ -2091,8 +2493,13 @@ class HomeScreen extends StatelessWidget {
                                     margin: const EdgeInsets.only(bottom: 12),
                                     child: InkWell(
                                       onTap: () {
-                                        state.markNotificationAsRead(notification['id']);
-                                        _showNotificationDetail(context, notification);
+                                        state.markNotificationAsRead(
+                                          notification['id'],
+                                        );
+                                        _showNotificationDetail(
+                                          context,
+                                          notification,
+                                        );
                                       },
                                       child: GlassCard(
                                         padding: const EdgeInsets.all(16),
@@ -2102,36 +2509,55 @@ class HomeScreen extends StatelessWidget {
                                             Container(
                                               padding: const EdgeInsets.all(8),
                                               decoration: BoxDecoration(
-                                                color: color.withValues(alpha: 0.15),
+                                                color: color.withValues(
+                                                  alpha: 0.15,
+                                                ),
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: Icon(icon, color: color, size: 20),
+                                              child: Icon(
+                                                icon,
+                                                color: color,
+                                                size: 20,
+                                              ),
                                             ),
                                             const SizedBox(width: 16),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
                                                     children: [
                                                       Expanded(
                                                         child: Text(
-                                                          notification['title'] ?? '',
+                                                          notification['title'] ??
+                                                              '',
                                                           style: TextStyle(
-                                                            fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                                                            color: AppTheme.textMain,
+                                                            fontWeight: isRead
+                                                                ? FontWeight
+                                                                      .normal
+                                                                : FontWeight
+                                                                      .bold,
+                                                            color: AppTheme
+                                                                .textMain,
                                                             fontSize: 13,
                                                           ),
                                                         ),
                                                       ),
                                                       if (!isRead)
                                                         Container(
-                                                          width: 6, height: 6,
-                                                          decoration: const BoxDecoration(
-                                                            color: Colors.red,
-                                                            shape: BoxShape.circle,
-                                                          ),
+                                                          width: 6,
+                                                          height: 6,
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                                color:
+                                                                    Colors.red,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                              ),
                                                         ),
                                                     ],
                                                   ),
@@ -2139,7 +2565,8 @@ class HomeScreen extends StatelessWidget {
                                                   Text(
                                                     notification['body'] ?? '',
                                                     style: TextStyle(
-                                                      color: AppTheme.textSecondary,
+                                                      color: AppTheme
+                                                          .textSecondary,
                                                       fontSize: 11,
                                                     ),
                                                   ),
@@ -2165,7 +2592,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showNotificationDetail(BuildContext context, Map<String, dynamic> notification) {
+  void _showNotificationDetail(
+    BuildContext context,
+    Map<String, dynamic> notification,
+  ) {
     final type = notification['type'] ?? 'welcome';
     final extraData = notification['extraData'] ?? {};
 
@@ -2183,18 +2613,53 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             'ARCHETYPE: $archetype ($score% Match)',
-            style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.accent),
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.accent,
+            ),
           ),
           const SizedBox(height: 12),
-          Text(desc, style: TextStyle(color: AppTheme.textMain, fontSize: 13, height: 1.4)),
+          Text(
+            desc,
+            style: TextStyle(
+              color: AppTheme.textMain,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
           const Divider(height: 24, color: Colors.white12),
-          Text('STRENGTHS:', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.success)),
+          Text(
+            'STRENGTHS:',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.success,
+            ),
+          ),
           const SizedBox(height: 6),
-          ...strengths.map((s) => Text('• $s', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
+          ...strengths.map(
+            (s) => Text(
+              '• $s',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+          ),
           const SizedBox(height: 16),
-          Text('WEAKNESSES:', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.destructive)),
+          Text(
+            'WEAKNESSES:',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.destructive,
+            ),
+          ),
           const SizedBox(height: 6),
-          ...weaknesses.map((w) => Text('• $w', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
+          ...weaknesses.map(
+            (w) => Text(
+              '• $w',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+          ),
         ],
       );
     } else if (type == 'roast') {
@@ -2206,37 +2671,71 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             '🔥 BRUTAL PROFILE ROAST',
-            style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.destructive),
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.destructive,
+            ),
           ),
           const SizedBox(height: 12),
-          Text(roast, style: TextStyle(color: AppTheme.textMain, fontSize: 13, fontStyle: FontStyle.italic, height: 1.4)),
-          const Divider(height: 24, color: Colors.white12),
-          Text('CLEANUP CHECKLIST:', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.accent)),
-          const SizedBox(height: 8),
-          ...tips.map((t) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('• ', style: TextStyle(color: AppTheme.accent)),
-                Expanded(child: Text(t, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
-              ],
+          Text(
+            roast,
+            style: TextStyle(
+              color: AppTheme.textMain,
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+              height: 1.4,
             ),
-          )),
+          ),
+          const Divider(height: 24, color: Colors.white12),
+          Text(
+            'CLEANUP CHECKLIST:',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.accent,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...tips.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• ', style: TextStyle(color: AppTheme.accent)),
+                  Expanded(
+                    child: Text(
+                      t,
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       );
     } else if (type == 'weekly_report') {
       final explored = extraData['repositories_explored'] ?? 3;
       final skills = extraData['skills_learned'] ?? 2;
       final improvement = extraData['improvement_percentage'] ?? 7;
-      final List<dynamic> chart = extraData['chart_data'] ?? [12, 19, 3, 5, 2, 3, 10];
+      final List<dynamic> chart =
+          extraData['chart_data'] ?? [12, 19, 3, 5, 2, 3, 10];
 
       detailContent = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '📈 GROWTH REPORT DETAILS',
-            style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.blue),
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.blue,
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -2244,11 +2743,21 @@ class HomeScreen extends StatelessWidget {
             children: [
               _buildMetricCard('Repos Explored', '+$explored', AppTheme.accent),
               _buildMetricCard('Skills Learned', '+$skills', AppTheme.peach),
-              _buildMetricCard('Improvement', '+$improvement%', AppTheme.success),
+              _buildMetricCard(
+                'Improvement',
+                '+$improvement%',
+                AppTheme.success,
+              ),
             ],
           ),
           const Divider(height: 32, color: Colors.white12),
-          Text('DAILY COMMIT BREAKDOWN (MON-SUN):', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.textSecondary)),
+          Text(
+            'DAILY COMMIT BREAKDOWN (MON-SUN):',
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 10,
+              color: AppTheme.textSecondary,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2256,9 +2765,22 @@ class HomeScreen extends StatelessWidget {
               final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
               return Column(
                 children: [
-                  Text('${chart[i]}', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMain)),
+                  Text(
+                    '${chart[i]}',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(days[i], style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                  Text(
+                    days[i],
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 10,
+                    ),
+                  ),
                 ],
               );
             }),
@@ -2273,7 +2795,11 @@ class HomeScreen extends StatelessWidget {
         children: [
           Text(
             '💡 RECOMMENDED PROJECTS TO BUILD',
-            style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.peach),
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.peach,
+            ),
           ),
           const SizedBox(height: 16),
           ...opportunities.map((opp) {
@@ -2285,11 +2811,31 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(oTitle, style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textMain, fontSize: 13)),
+                  Text(
+                    oTitle,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMain,
+                      fontSize: 13,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(oWhy, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.3)),
+                  Text(
+                    oWhy,
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Stack: $oStack', style: GoogleFonts.jetBrainsMono(color: AppTheme.accent, fontSize: 10)),
+                  Text(
+                    'Stack: $oStack',
+                    style: GoogleFonts.jetBrainsMono(
+                      color: AppTheme.accent,
+                      fontSize: 10,
+                    ),
+                  ),
                   const Divider(height: 16, color: Colors.white10),
                 ],
               ),
@@ -2308,7 +2854,11 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             notification['body'] ?? '',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
         ],
       );
@@ -2318,8 +2868,12 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.isDark ? const Color(0xFF1E1E24) : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: AppTheme.isDark
+              ? const Color(0xFF1E1E24)
+              : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           content: SingleChildScrollView(child: detailContent),
           actions: [
             TextButton(
@@ -2341,9 +2895,19 @@ class HomeScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(val, style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.bold, color: col)),
+          Text(
+            val,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: col,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 9, color: AppTheme.textSecondary)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 9, color: AppTheme.textSecondary),
+          ),
         ],
       ),
     );
@@ -2366,9 +2930,9 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Link your GitHub Account',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppTheme.textMain,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppTheme.textMain,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -2402,7 +2966,9 @@ class HomeScreen extends StatelessWidget {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('You can link your GitHub account later in Settings.'),
+                            content: Text(
+                              'You can link your GitHub account later in Settings.',
+                            ),
                           ),
                         );
                       },
@@ -2420,13 +2986,18 @@ class HomeScreen extends StatelessWidget {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Linking GitHub account @$username...'),
+                              content: Text(
+                                'Linking GitHub account @$username...',
+                              ),
                               backgroundColor: AppTheme.success,
                             ),
                           );
                         }
                       },
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       color: AppTheme.accent,
                       borderRadius: 8,
                       child: const Text('Link Account'),
@@ -2441,4 +3012,3 @@ class HomeScreen extends StatelessWidget {
     );
   }
 }
-

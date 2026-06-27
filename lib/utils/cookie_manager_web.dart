@@ -3,7 +3,8 @@ import 'package:web/web.dart' as web;
 void saveCookie(String name, String value) {
   try {
     // Save cookie with 365 days expiry, Secure and SameSite=Strict
-    web.document.cookie = "$name=$value; path=/; max-age=31536000; Secure; SameSite=Strict";
+    web.document.cookie =
+        "$name=$value; path=/; max-age=31536000; Secure; SameSite=Strict";
   } catch (_) {}
 }
 

@@ -7,6 +7,7 @@ import '../../core/utils/web_helper.dart';
 import '../../routes/route_paths.dart';
 import '../../widgets/liquid_glass_background.dart';
 import '../../widgets/liquid_glass_button.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,7 +22,8 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     const clientId = 'Ov23liN1MaudLGibnAcW';
     final redirectUri = '${AppConfig.apiBaseUrl}/auth/github/callback';
-    final url = 'https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirectUri&scope=read:user,repo';
+    final url =
+        'https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirectUri&scope=read:user,repo';
     openUrl(url);
   }
 
@@ -36,62 +38,93 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              const SizedBox(height: 20),
-              Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.accent),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.auto_awesome_rounded, color: AppTheme.accent, size: 24),
-              ),
-              const Spacer(),
-              Text(
-                'Ready to grow?',
-                style: GoogleFonts.inter(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.textMain, height: 1.1),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Connect your GitHub to start your personalized journey with Tatvik.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 48),
-              _isLoading
-                ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
-                : Column(
-                    children: [
-                      LiquidGlassButton.icon(
-                        onPressed: _handleGithubLogin,
-                        icon: const Icon(Icons.hub_rounded),
-                        label: Text('CONTINUE WITH GITHUB', style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.bold)),
-                        width: double.infinity,
-                        height: 60,
-                      ),
-                      const SizedBox(height: 16),
-                      OutlinedButton(
-                        onPressed: () => context.push(RoutePaths.emailAuth),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 56),
-                          side: BorderSide(color: AppTheme.border),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        ),
-                        child: Text('CONTINUE WITH EMAIL', style: GoogleFonts.jetBrainsMono(color: AppTheme.textMain, fontSize: 14)),
-                      ),
-                    ],
+                const SizedBox(height: 20),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.accent),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-              const Spacer(),
-              Center(
-                child: Text(
-                  'By continuing, you agree to our Terms and Privacy Policy.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppTheme.accent,
+                    size: 24,
+                  ),
                 ),
-              ),
-            ],
+                const Spacer(),
+                Text(
+                  'Ready to grow?',
+                  style: GoogleFonts.inter(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textMain,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Connect your GitHub to start your personalized journey with Tatvik.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 48),
+                _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.accent,
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          LiquidGlassButton.icon(
+                            onPressed: _handleGithubLogin,
+                            icon: const Icon(Icons.hub_rounded),
+                            label: Text(
+                              'CONTINUE WITH GITHUB',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            width: double.infinity,
+                            height: 60,
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton(
+                            onPressed: () => context.push(RoutePaths.emailAuth),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 56),
+                              side: BorderSide(color: AppTheme.border),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: Text(
+                              'CONTINUE WITH EMAIL',
+                              style: GoogleFonts.jetBrainsMono(
+                                color: AppTheme.textMain,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                const Spacer(),
+                Center(
+                  child: Text(
+                    'By continuing, you agree to our Terms and Privacy Policy.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

@@ -118,9 +118,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.isDark ? const Color(0xFF141414) : const Color(0xFFF0F0F5),
+      backgroundColor: AppTheme.isDark
+          ? const Color(0xFF141414)
+          : const Color(0xFFF0F0F5),
       appBar: AppBar(
-        title: Text('Developer Timeline', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.textMain)),
+        title: Text(
+          'Developer Timeline',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textMain,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: AppTheme.textMain),
@@ -128,171 +136,213 @@ class _TimelineScreenState extends State<TimelineScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _timeline.isEmpty
-              ? Center(
-                  child: Text(
-                    'No timeline events found.\nStart chatting or coding to build your history!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.textSecondary),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  itemCount: _timeline.length,
-                  itemBuilder: (context, index) {
-                    final item = _timeline[index];
-                    final type = item['type'] ?? 'unknown';
-                    final dateStr = item['timestamp'] ?? '';
-                    
-                    String displayDate = '';
-                    if (dateStr.isNotEmpty) {
-                      try {
-                        final dt = DateTime.parse(dateStr).toLocal();
-                        displayDate = _formatTimeAgo(dt);
-                      } catch (_) {
-                        displayDate = dateStr;
-                      }
-                    }
+          ? Center(
+              child: Text(
+                'No timeline events found.\nStart chatting or coding to build your history!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              itemCount: _timeline.length,
+              itemBuilder: (context, index) {
+                final item = _timeline[index];
+                final type = item['type'] ?? 'unknown';
+                final dateStr = item['timestamp'] ?? '';
 
-                    // Dynamic colors & styling
-                    String title = item['title'] ?? 'Event';
-                    String description = item['description'] ?? '';
-                    Color itemColor = _getColorForType(type);
-                    
-                    if (type == 'repository') {
-                      // Extract repo name to colorize beautifully
-                      String repoName = description.replaceFirst('Synced repository ', '');
-                      itemColor = _getColorForRepo(repoName);
-                      title = repoName.split('/').last; // Just the project name
-                      description = 'Repository Synced • ${item['language'] ?? 'Code'}';
-                    }
+                String displayDate = '';
+                if (dateStr.isNotEmpty) {
+                  try {
+                    final dt = DateTime.parse(dateStr).toLocal();
+                    displayDate = _formatTimeAgo(dt);
+                  } catch (_) {
+                    displayDate = dateStr;
+                  }
+                }
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                // Dynamic colors & styling
+                String title = item['title'] ?? 'Event';
+                String description = item['description'] ?? '';
+                Color itemColor = _getColorForType(type);
+
+                if (type == 'repository') {
+                  // Extract repo name to colorize beautifully
+                  String repoName = description.replaceFirst(
+                    'Synced repository ',
+                    '',
+                  );
+                  itemColor = _getColorForRepo(repoName);
+                  title = repoName.split('/').last; // Just the project name
+                  description =
+                      'Repository Synced • ${item['language'] ?? 'Code'}';
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Column(
                         children: [
-                          Column(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: itemColor.withValues(alpha: 0.15),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: itemColor.withValues(alpha: 0.3), width: 1.5),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: itemColor.withValues(alpha: 0.2),
-                                      blurRadius: 8,
-                                      spreadRadius: 1,
-                                    )
-                                  ]
-                                ),
-                                child: Icon(
-                                  _getIconForType(type),
-                                  color: itemColor,
-                                  size: 20,
-                                ),
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: itemColor.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: itemColor.withValues(alpha: 0.3),
+                                width: 1.5,
                               ),
-                              if (index != _timeline.length - 1)
-                                Container(
-                                  width: 2,
-                                  height: 60,
-                                  margin: const EdgeInsets.symmetric(vertical: 8),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [itemColor.withValues(alpha: 0.5), AppTheme.border],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: itemColor.withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
                                 ),
-                            ],
+                              ],
+                            ),
+                            child: Icon(
+                              _getIconForType(type),
+                              color: itemColor,
+                              size: 20,
+                            ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
+                          if (index != _timeline.length - 1)
+                            Container(
+                              width: 2,
+                              height: 60,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    itemColor.withValues(alpha: 0.5),
+                                    AppTheme.border,
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: GlassCard(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            title,
-                                            style: TextStyle(
-                                              color: AppTheme.textMain,
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 15,
-                                              letterSpacing: 0.3,
-                                            ),
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        title,
+                                        style: TextStyle(
+                                          color: AppTheme.textMain,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          letterSpacing: 0.3,
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.surface.withValues(alpha: 0.5),
-                                            borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
-                                          ),
-                                          child: Text(
-                                            displayDate,
-                                            style: TextStyle(
-                                              color: AppTheme.textSecondary,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      description,
-                                      style: TextStyle(
-                                        color: AppTheme.textSecondary.withValues(alpha: 0.9),
-                                        fontSize: 13,
-                                        height: 1.4,
                                       ),
                                     ),
-                                    if (type == 'prompt' && item['technologies'] != null && (item['technologies'] as List).isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 12.0),
-                                        child: Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children: (item['technologies'] as List).take(3).map((tech) {
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.surface.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppTheme.border.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        displayDate,
+                                        style: TextStyle(
+                                          color: AppTheme.textSecondary,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  description,
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondary.withValues(
+                                      alpha: 0.9,
+                                    ),
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                                if (type == 'prompt' &&
+                                    item['technologies'] != null &&
+                                    (item['technologies'] as List).isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12.0),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: (item['technologies'] as List)
+                                          .take(3)
+                                          .map((tech) {
                                             return Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 4,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: itemColor.withValues(alpha: 0.1),
-                                                borderRadius: BorderRadius.circular(6),
-                                                border: Border.all(color: itemColor.withValues(alpha: 0.2)),
+                                                color: itemColor.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: itemColor.withValues(
+                                                    alpha: 0.2,
+                                                  ),
+                                                ),
                                               ),
                                               child: Text(
                                                 tech.toString(),
-                                                style: TextStyle(color: itemColor, fontSize: 11, fontWeight: FontWeight.w500),
+                                                style: TextStyle(
+                                                  color: itemColor,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
                                               ),
                                             );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
+                                          })
+                                          .toList(),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    );
-                  },
-                ),
+                    ],
+                  ),
+                );
+              },
+            ),
     );
   }
 }

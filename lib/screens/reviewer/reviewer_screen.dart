@@ -19,11 +19,13 @@ class ReviewerScreen extends StatefulWidget {
 }
 
 class _ReviewerScreenState extends State<ReviewerScreen> {
-  final _pathController = TextEditingController(text: 'https://github.com/HEETMEHTA18/tatvik');
+  final _pathController = TextEditingController(
+    text: 'https://github.com/HEETMEHTA18/tatvik',
+  );
   bool _isLoading = false;
   Map<String, dynamic>? _reviewData;
   String _errorMsg = '';
-  
+
   Timer? _loadingTimer;
   int _loadingMsgIndex = 0;
   final List<String> _loadingMessages = [
@@ -69,11 +71,11 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
       _errorMsg = '';
       _reviewData = null;
     });
-    
+
     _startLoadingMessages();
 
     final appState = Provider.of<AppState>(context, listen: false);
-    
+
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.apiBaseUrl}/reviewer/'),
@@ -81,9 +83,7 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${appState.token}',
         },
-        body: jsonEncode({
-          'repo_url': path,
-        }),
+        body: jsonEncode({'repo_url': path}),
       );
 
       if (response.statusCode == 200) {
@@ -142,10 +142,7 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: AppTheme.textSecondary,
-          ),
+          style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary),
         ),
       ],
     );
@@ -190,7 +187,9 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
                     labelText: 'Repository URL',
                     labelStyle: TextStyle(color: AppTheme.textSecondary),
                     filled: true,
-                    fillColor: AppTheme.isDark ? const Color(0x10FFFFFF) : const Color(0x05000000),
+                    fillColor: AppTheme.isDark
+                        ? const Color(0x10FFFFFF)
+                        : const Color(0x05000000),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: AppTheme.border),
@@ -210,8 +209,12 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               const SizedBox(
-                                width: 16, height: 16,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Text(
@@ -240,10 +243,7 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
           if (_errorMsg.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                _errorMsg,
-                style: const TextStyle(color: Colors.red),
-              ),
+              child: Text(_errorMsg, style: const TextStyle(color: Colors.red)),
             ),
           if (_reviewData != null && _reviewData!['success'] == true) ...[
             const SizedBox(height: 24),
@@ -261,10 +261,26 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildScoreRing('Security', _reviewData!['security_score'] ?? 0, AppTheme.destructive),
-                  _buildScoreRing('Performance', _reviewData!['performance_score'] ?? 0, AppTheme.peach),
-                  _buildScoreRing('Arch', _reviewData!['architecture_score'] ?? 0, AppTheme.blue),
-                  _buildScoreRing('Maint.', _reviewData!['maintainability_score'] ?? 0, AppTheme.success),
+                  _buildScoreRing(
+                    'Security',
+                    _reviewData!['security_score'] ?? 0,
+                    AppTheme.destructive,
+                  ),
+                  _buildScoreRing(
+                    'Performance',
+                    _reviewData!['performance_score'] ?? 0,
+                    AppTheme.peach,
+                  ),
+                  _buildScoreRing(
+                    'Arch',
+                    _reviewData!['architecture_score'] ?? 0,
+                    AppTheme.blue,
+                  ),
+                  _buildScoreRing(
+                    'Maint.',
+                    _reviewData!['maintainability_score'] ?? 0,
+                    AppTheme.success,
+                  ),
                 ],
               ),
             ),
@@ -278,7 +294,8 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            if (_reviewData!['issues'] != null && (_reviewData!['issues'] as List).isNotEmpty)
+            if (_reviewData!['issues'] != null &&
+                (_reviewData!['issues'] as List).isNotEmpty)
               ...(_reviewData!['issues'] as List).map((issue) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -287,7 +304,11 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.warning_amber_rounded, color: AppTheme.peach, size: 20),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppTheme.peach,
+                          size: 20,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -320,11 +341,15 @@ class _ReviewerScreenState extends State<ReviewerScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 _reviewData!['summary'] ?? '',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
               ),
             ),
             const SizedBox(height: 80),
-          ]
+          ],
         ],
       ),
     );

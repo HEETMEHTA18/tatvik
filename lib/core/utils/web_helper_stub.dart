@@ -11,4 +11,3 @@ Future<bool> requestNotificationPermissionGesture() async => false;
 bool isAppWindowBackgrounded() => false;
 
 void showBrowserNotification(String title, String body) {}
-

@@ -44,10 +44,11 @@ class WalkthroughStep {
   });
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> with SingleTickerProviderStateMixin {
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   bool _isUpdatingUrl = false;
-  
+
   late AnimationController _transitionController;
   late Animation<double> _transitionAnimation;
 
@@ -62,31 +63,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
     WalkthroughStep(
       icon: Icons.grid_view_rounded,
       title: 'Personalized Hub 🚀',
-      description: 'Your home dashboard showing Tatvik Insights, Developer DNA, and your profile Roast. All dynamically tailored to your stack and goals.',
+      description:
+          'Your home dashboard showing Tatvik Insights, Developer DNA, and your profile Roast. All dynamically tailored to your stack and goals.',
       tabIndex: 0,
     ),
     WalkthroughStep(
       icon: Icons.explore_outlined,
       title: 'Explore Projects 📂',
-      description: 'Discover curated open-source repositories and hands-on projects suited to your learning aspirations and goals.',
+      description:
+          'Discover curated open-source repositories and hands-on projects suited to your learning aspirations and goals.',
       tabIndex: 1,
     ),
     WalkthroughStep(
       icon: Icons.psychology_outlined,
       title: 'Tatvik Chat & Prompts 💬',
-      description: 'Interact with your AI Mentor. Save topics directly to your Development Memory to customize your future roadmaps.',
+      description:
+          'Interact with your AI Mentor. Save topics directly to your Development Memory to customize your future roadmaps.',
       tabIndex: 2,
     ),
     WalkthroughStep(
       icon: Icons.route_outlined,
       title: 'Interactive Roadmaps 🗺️',
-      description: 'Follow milestones and structured step-by-step paths curated for you. Tap nodes to see advanced details.',
+      description:
+          'Follow milestones and structured step-by-step paths curated for you. Tap nodes to see advanced details.',
       tabIndex: 3,
     ),
     WalkthroughStep(
       icon: Icons.settings_outlined,
       title: 'Settings & Security ⚙️',
-      description: 'Manage preferences, update your personal memory, and lock down your GitHub account sync to ensure your data stays private.',
+      description:
+          'Manage preferences, update your personal memory, and lock down your GitHub account sync to ensure your data stays private.',
       tabIndex: 4,
     ),
   ];
@@ -104,7 +110,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   void initState() {
     super.initState();
     _appState = Provider.of<AppState>(context, listen: false);
-    
+
     if (widget.initialTabIndex >= 0) {
       _selectedIndex = widget.initialTabIndex;
     } else {
@@ -118,11 +124,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
 
     _transitionAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 40.0,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 60.0,
       ),
     ]).animate(_transitionController);
@@ -132,7 +144,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
       _lastNotificationId = _appState.notifications.first['id'] as String?;
     }
     _appState.addListener(_onAppStateChanged);
-    
+
     // Sync AppState with the initial tab from URL
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
@@ -143,15 +155,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
 
   void _onAppStateChanged() {
     if (!mounted) return;
-    
+
     if (_appState.notifications.length > _lastNotificationCount) {
       final newNotification = _appState.notifications.first;
       final newId = newNotification['id'] as String?;
-      
+
       if (newId != _lastNotificationId) {
         _lastNotificationId = newId;
         _lastNotificationCount = _appState.notifications.length;
-        
+
         if (_appState.pushNotifications) {
           if (isAppWindowBackgrounded()) {
             showBrowserNotification(
@@ -179,7 +191,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   void _showSimulatedPushNotification(String title, String body) {
     final overlayState = Overlay.of(context);
     late OverlayEntry overlayEntry;
-    
+
     overlayEntry = OverlayEntry(
       builder: (context) => _SimulatedPushNotificationBanner(
         title: title,
@@ -189,7 +201,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
         },
       ),
     );
-    
+
     overlayState.insert(overlayEntry);
   }
 
@@ -219,7 +231,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
       final state = GoRouterState.of(context);
       final username = state.uri.queryParameters['username'];
       final token = state.uri.queryParameters['token'];
-      if (username != null && username.isNotEmpty && token != null && token.isNotEmpty) {
+      if (username != null &&
+          username.isNotEmpty &&
+          token != null &&
+          token.isNotEmpty) {
         final appState = Provider.of<AppState>(context, listen: false);
         if (appState.githubUsername != username) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -233,7 +248,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   @override
   void didUpdateWidget(covariant MainNavigationScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialTabIndex >= 0 && widget.initialTabIndex != oldWidget.initialTabIndex) {
+    if (widget.initialTabIndex >= 0 &&
+        widget.initialTabIndex != oldWidget.initialTabIndex) {
       setState(() {
         _selectedIndex = widget.initialTabIndex;
       });
@@ -260,17 +276,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
 
   void _onTabSelected(int index) {
     if (_selectedIndex == index) return;
-    
+
     // Apple HIG: light haptic response on tab selection
     HapticFeedback.lightImpact();
-    
+
     setState(() {
       _selectedIndex = index;
     });
     _appState.setSelectedTab(index);
     _updateUrlSilently(index);
-    
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
     if (!isMobileBrowser) {
       // Trigger transition overlay shutter animation in parallel for visual polish
       _transitionController.forward(from: 0.0);
@@ -335,11 +354,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                           width: 1.5,
                         ),
                       ),
-                      child: Icon(
-                        step.icon,
-                        size: 32,
-                        color: AppTheme.accent,
-                      ),
+                      child: Icon(step.icon, size: 32, color: AppTheme.accent),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -368,7 +383,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                         TextButton(
                           onPressed: () async {
                             final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('has_completed_walkthrough', true);
+                            await prefs.setBool(
+                              'has_completed_walkthrough',
+                              true,
+                            );
                             setState(() {
                               _showWalkthrough = false;
                             });
@@ -414,7 +432,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return AnimatedBuilder(
@@ -431,11 +452,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
             DesktopScaffold(
               selectedIndex: _selectedIndex,
               onTabSelected: _onTabSelected,
-              constrainBodyWidth: _selectedIndex != 4, // Allow World Monitor to be full width
-              body: IndexedStack(
-                index: _selectedIndex,
-                children: _screens,
-              ),
+              constrainBodyWidth:
+                  _selectedIndex != 4, // Allow World Monitor to be full width
+              body: IndexedStack(index: _selectedIndex, children: _screens),
               // We can add a TatvikContextPanel here later. For now, let the screens breathe.
               rightPanel: null,
             )
@@ -443,207 +462,262 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
             Scaffold(
               backgroundColor: Colors.transparent,
               extendBody: true,
-              body: IndexedStack(
-                index: _selectedIndex,
-                children: _screens,
-            ),
-            bottomNavigationBar: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 12, right: 12, bottom: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      // Deep ambient shadow
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.50 : 0.12),
-                        blurRadius: 32,
-                        offset: const Offset(0, 12),
-                        spreadRadius: -4,
-                      ),
-                      // Tight shadow for depth
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+              body: IndexedStack(index: _selectedIndex, children: _screens),
+              bottomNavigationBar: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 12,
+                    right: 12,
+                    bottom: 8,
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: isMobileBrowser ? 25.0 : (isDark ? 40.0 : 30.0),
-                        sigmaY: isMobileBrowser ? 25.0 : (isDark ? 40.0 : 30.0),
-                      ),
-                      child: Container(
-                        height: 68,
-                        decoration: BoxDecoration(
-                          color: isMobileBrowser
-                              ? (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: isDark ? 0.45 : 0.70)
-                              : (isDark ? const Color(0xFF1C1C1E) : Colors.white).withValues(alpha: isDark ? 0.25 : 0.55),
-                          borderRadius: BorderRadius.circular(28),
-                          border: Border.all(
-                            color: Colors.white.withValues(
-                              alpha: isMobileBrowser ? 0.25 : (isDark ? 0.18 : 0.45),
-                            ),
-                            width: 0.5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        // Deep ambient shadow
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.50 : 0.12,
                           ),
+                          blurRadius: 32,
+                          offset: const Offset(0, 12),
+                          spreadRadius: -4,
                         ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final totalWidth = constraints.maxWidth;
-                            final itemWidth = totalWidth / 6;
-                            return Stack(
-                              children: [
-                                // iOS Liquid Glass Pill Indicator
-                                AnimatedPositioned(
-                                  duration: const Duration(milliseconds: 350),
-                                  curve: Curves.easeOutCubic,
-                                  left: _selectedIndex * itemWidth + 6,
-                                  top: 6,
-                                  bottom: 6,
-                                  width: itemWidth - 12,
-                                  child: OCLiquidGlassGroup(
-                                    settings: const OCLiquidGlassSettings(
-                                      refractStrength: -0.07,
-                                      blurRadiusPx: 4.0,
-                                      specStrength: 28.0,
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        // 1. Refractive liquid glass shader
-                                        Positioned.fill(
-                                          child: OCLiquidGlass(
-                                            borderRadius: 22,
-                                            color: Colors.transparent,
-                                            child: const SizedBox.expand(),
+                        // Tight shadow for depth
+                        BoxShadow(
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.30 : 0.08,
+                          ),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(
+                          sigmaX: isMobileBrowser
+                              ? 25.0
+                              : (isDark ? 40.0 : 30.0),
+                          sigmaY: isMobileBrowser
+                              ? 25.0
+                              : (isDark ? 40.0 : 30.0),
+                        ),
+                        child: Container(
+                          height: 68,
+                          decoration: BoxDecoration(
+                            color: isMobileBrowser
+                                ? (isDark
+                                          ? const Color(0xFF1C1C1E)
+                                          : Colors.white)
+                                      .withValues(alpha: isDark ? 0.45 : 0.70)
+                                : (isDark
+                                          ? const Color(0xFF1C1C1E)
+                                          : Colors.white)
+                                      .withValues(alpha: isDark ? 0.25 : 0.55),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: Colors.white.withValues(
+                                alpha: isMobileBrowser
+                                    ? 0.25
+                                    : (isDark ? 0.18 : 0.45),
+                              ),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final totalWidth = constraints.maxWidth;
+                              final itemWidth = totalWidth / 5;
+                              return Stack(
+                                children: [
+                                  // iOS Liquid Glass Pill Indicator
+                                  AnimatedPositioned(
+                                    duration: const Duration(milliseconds: 350),
+                                    curve: Curves.easeOutCubic,
+                                    left: _selectedIndex >= 4
+                                        ? (_selectedIndex - 1) * itemWidth + 6
+                                        : _selectedIndex * itemWidth + 6,
+                                    top: 6,
+                                    bottom: 6,
+                                    width: itemWidth - 12,
+                                    child: OCLiquidGlassGroup(
+                                      settings: const OCLiquidGlassSettings(
+                                        refractStrength: -0.07,
+                                        blurRadiusPx: 4.0,
+                                        specStrength: 28.0,
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          // 1. Refractive liquid glass shader
+                                          Positioned.fill(
+                                            child: OCLiquidGlass(
+                                              borderRadius: 22,
+                                              color: Colors.transparent,
+                                              child: const SizedBox.expand(),
+                                            ),
                                           ),
-                                        ),
-                                        // 2. High fidelity glass container backing (with sheen and thin border)
-                                        Positioned.fill(
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? Colors.white.withValues(alpha: 0.12)
-                                                  : Colors.white.withValues(alpha: 0.70),
-                                              borderRadius: BorderRadius.circular(22),
-                                              border: Border.all(
-                                                color: Colors.white.withValues(alpha: isDark ? 0.20 : 0.60),
-                                                width: 0.5,
+                                          // 2. High fidelity glass container backing (with sheen and thin border)
+                                          Positioned.fill(
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? Colors.white.withValues(
+                                                        alpha: 0.12,
+                                                      )
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.70,
+                                                      ),
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                border: Border.all(
+                                                  color: Colors.white
+                                                      .withValues(
+                                                        alpha: isDark
+                                                            ? 0.20
+                                                            : 0.60,
+                                                      ),
+                                                  width: 0.5,
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(
+                                                          alpha: isDark
+                                                              ? 0.25
+                                                              : 0.06,
+                                                        ),
+                                                    blurRadius: 8,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
                                               ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Stack(
-                                              children: [
-                                                // Glossy specular reflection gradient
-                                                Positioned.fill(
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      borderRadius: BorderRadius.circular(22),
-                                                      gradient: LinearGradient(
-                                                        begin: Alignment.topCenter,
-                                                        end: Alignment.bottomCenter,
-                                                        colors: [
-                                                          Colors.white.withValues(alpha: isDark ? 0.15 : 0.45),
-                                                          Colors.white.withValues(alpha: 0.0),
-                                                        ],
-                                                        stops: const [0.0, 0.5],
+                                              child: Stack(
+                                                children: [
+                                                  // Glossy specular reflection gradient
+                                                  Positioned.fill(
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              22,
+                                                            ),
+                                                        gradient: LinearGradient(
+                                                          begin: Alignment
+                                                              .topCenter,
+                                                          end: Alignment
+                                                              .bottomCenter,
+                                                          colors: [
+                                                            Colors.white
+                                                                .withValues(
+                                                                  alpha: isDark
+                                                                      ? 0.15
+                                                                      : 0.45,
+                                                                ),
+                                                            Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.0,
+                                                                ),
+                                                          ],
+                                                          stops: const [
+                                                            0.0,
+                                                            0.5,
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                                // Xcode style glossy top reflection lip
-                                                Positioned(
-                                                  top: 0.5,
-                                                  left: 11.0,
-                                                  right: 11.0,
-                                                  height: 1.0,
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      gradient: LinearGradient(
-                                                        colors: [
-                                                          Colors.white.withValues(alpha: 0.0),
-                                                          Colors.white.withValues(alpha: isDark ? 0.40 : 0.80),
-                                                          Colors.white.withValues(alpha: 0.0),
-                                                        ],
+                                                  // Xcode style glossy top reflection lip
+                                                  Positioned(
+                                                    top: 0.5,
+                                                    left: 11.0,
+                                                    right: 11.0,
+                                                    height: 1.0,
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        gradient: LinearGradient(
+                                                          colors: [
+                                                            Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.0,
+                                                                ),
+                                                            Colors.white
+                                                                .withValues(
+                                                                  alpha: isDark
+                                                                      ? 0.40
+                                                                      : 0.80,
+                                                                ),
+                                                            Colors.white
+                                                                .withValues(
+                                                                  alpha: 0.0,
+                                                                ),
+                                                          ],
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Nav Items
+                                  Positioned.fill(
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _MainNavigationItem(
+                                          index: 0,
+                                          label: 'Home',
+                                          icon: Icons.home_rounded,
+                                          width: itemWidth,
+                                          isSelected: _selectedIndex == 0,
+                                          onTap: () => _onTabSelected(0),
+                                        ),
+                                        _MainNavigationItem(
+                                          index: 1,
+                                          label: 'Explore',
+                                          icon: Icons.explore_rounded,
+                                          width: itemWidth,
+                                          isSelected: _selectedIndex == 1,
+                                          onTap: () => _onTabSelected(1),
+                                        ),
+                                        _MainNavigationItem(
+                                          index: 2,
+                                          label: 'Prompts',
+                                          icon: Icons.auto_awesome_rounded,
+                                          width: itemWidth,
+                                          isSelected: _selectedIndex == 2,
+                                          onTap: () => _onTabSelected(2),
+                                        ),
+                                        _MainNavigationItem(
+                                          index: 3,
+                                          label: 'Roadmap',
+                                          icon: Icons.route_rounded,
+                                          width: itemWidth,
+                                          isSelected: _selectedIndex == 3,
+                                          onTap: () => _onTabSelected(3),
+                                        ),
+                                        _MainNavigationItem(
+                                          index: 5,
+                                          label: 'Settings',
+                                          icon: Icons.settings_rounded,
+                                          width: itemWidth,
+                                          isSelected: _selectedIndex == 5,
+                                          onTap: () => _onTabSelected(5),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                                // Nav Items
-                                Positioned.fill(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                    children: [
-                                      _MainNavigationItem(
-                                        index: 0,
-                                        label: 'Home',
-                                        icon: Icons.home_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 0,
-                                        onTap: () => _onTabSelected(0),
-                                      ),
-                                      _MainNavigationItem(
-                                        index: 1,
-                                        label: 'Explore',
-                                        icon: Icons.explore_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 1,
-                                        onTap: () => _onTabSelected(1),
-                                      ),
-                                      _MainNavigationItem(
-                                        index: 2,
-                                        label: 'Prompts',
-                                        icon: Icons.auto_awesome_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 2,
-                                        onTap: () => _onTabSelected(2),
-                                      ),
-                                      _MainNavigationItem(
-                                        index: 3,
-                                        label: 'Roadmap',
-                                        icon: Icons.route_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 3,
-                                        onTap: () => _onTabSelected(3),
-                                      ),
-                                      _MainNavigationItem(
-                                        index: 4,
-                                        label: 'World',
-                                        icon: Icons.public_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 4,
-                                        onTap: () => _onTabSelected(4),
-                                      ),
-                                      _MainNavigationItem(
-                                        index: 5,
-                                        label: 'Settings',
-                                        icon: Icons.settings_rounded,
-                                        width: itemWidth,
-                                        isSelected: _selectedIndex == 5,
-                                        onTap: () => _onTabSelected(5),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
+                                ],
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
@@ -651,7 +725,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                 ),
               ),
             ),
-          ),
           if (_showWalkthrough) _buildWalkthroughOverlay(),
         ],
       ),
@@ -678,7 +751,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
           child: GlassCard(
             borderRadius: 24,
             padding: const EdgeInsets.all(24),
@@ -691,7 +767,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                     color: AppTheme.accent.withValues(alpha: 0.15),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.notifications_active_outlined, color: AppTheme.accent, size: 36),
+                  child: Icon(
+                    Icons.notifications_active_outlined,
+                    color: AppTheme.accent,
+                    size: 36,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -733,13 +813,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
                     Expanded(
                       child: LiquidGlassButton(
                         onPressed: () async {
-                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(
+                            context,
+                          );
                           Navigator.pop(context);
-                          final granted = await requestNotificationPermissionGesture();
+                          final granted =
+                              await requestNotificationPermissionGesture();
                           if (granted) {
                             scaffoldMessenger.showSnackBar(
                               SnackBar(
-                                content: const Text('Notifications enabled successfully!'),
+                                content: const Text(
+                                  'Notifications enabled successfully!',
+                                ),
                                 backgroundColor: AppTheme.success,
                               ),
                             );
@@ -781,10 +866,13 @@ class _SimulatedPushNotificationBanner extends StatefulWidget {
   });
 
   @override
-  State<_SimulatedPushNotificationBanner> createState() => _SimulatedPushNotificationBannerState();
+  State<_SimulatedPushNotificationBanner> createState() =>
+      _SimulatedPushNotificationBannerState();
 }
 
-class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotificationBanner> with SingleTickerProviderStateMixin {
+class _SimulatedPushNotificationBannerState
+    extends State<_SimulatedPushNotificationBanner>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _yAnimation;
   late Animation<double> _opacityAnimation;
@@ -797,13 +885,15 @@ class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotifica
       duration: const Duration(milliseconds: 400),
     );
 
-    _yAnimation = Tween<double>(begin: -100, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _yAnimation = Tween<double>(
+      begin: -100,
+      end: 0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+    _opacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
 
     _controller.forward();
 
@@ -847,7 +937,10 @@ class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotifica
                         decoration: BoxDecoration(
                           color: AppTheme.accent.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3), width: 1.5),
+                          border: Border.all(
+                            color: AppTheme.accent.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
                         ),
                         child: Icon(
                           Icons.notifications_active_rounded,
@@ -883,7 +976,11 @@ class _SimulatedPushNotificationBannerState extends State<_SimulatedPushNotifica
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.close_rounded, size: 18, color: AppTheme.textSecondary),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppTheme.textSecondary,
+                        ),
                         onPressed: () {
                           _controller.reverse().then((_) {
                             widget.onDismiss();
@@ -923,7 +1020,8 @@ class _MainNavigationItem extends StatefulWidget {
   State<_MainNavigationItem> createState() => _MainNavigationItemState();
 }
 
-class _MainNavigationItemState extends State<_MainNavigationItem> with SingleTickerProviderStateMixin {
+class _MainNavigationItemState extends State<_MainNavigationItem>
+    with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -981,7 +1079,9 @@ class _MainNavigationItemState extends State<_MainNavigationItem> with SingleTic
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               color: _isHovered
-                  ? (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03))
+                  ? (isDark
+                        ? Colors.white.withValues(alpha: 0.04)
+                        : Colors.black.withValues(alpha: 0.03))
                   : Colors.transparent,
             ),
             child: Column(
@@ -995,7 +1095,9 @@ class _MainNavigationItemState extends State<_MainNavigationItem> with SingleTic
                     widget.icon,
                     color: widget.isSelected
                         ? (isDark ? Colors.white : const Color(0xFF007AFF))
-                        : (isDark ? const Color(0xFF8E8E93) : const Color(0xFF8E8E93)),
+                        : (isDark
+                              ? const Color(0xFF8E8E93)
+                              : const Color(0xFF8E8E93)),
                     size: 22,
                   ),
                 ),
@@ -1005,10 +1107,14 @@ class _MainNavigationItemState extends State<_MainNavigationItem> with SingleTic
                   style: TextStyle(
                     fontFamily: 'SF Pro Text',
                     fontSize: 10,
-                    fontWeight: widget.isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: widget.isSelected
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                     color: widget.isSelected
                         ? (isDark ? Colors.white : const Color(0xFF007AFF))
-                        : (isDark ? const Color(0xFF8E8E93) : const Color(0xFF8E8E93)),
+                        : (isDark
+                              ? const Color(0xFF8E8E93)
+                              : const Color(0xFF8E8E93)),
                   ),
                 ),
               ],
@@ -1019,4 +1125,3 @@ class _MainNavigationItemState extends State<_MainNavigationItem> with SingleTic
     );
   }
 }
-

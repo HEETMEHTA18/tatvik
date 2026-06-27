@@ -4,7 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 
 // Conditionally import the web implementation
-import 'world_monitor_unsupported.dart' if (dart.library.html) 'world_monitor_web.dart';
+import 'world_monitor_unsupported.dart'
+    if (dart.library.html) 'world_monitor_web.dart';
 
 class WorldMonitorScreen extends StatelessWidget {
   const WorldMonitorScreen({super.key});
@@ -14,7 +15,7 @@ class WorldMonitorScreen extends StatelessWidget {
     if (kIsWeb) {
       return const WorldMonitorWeb();
     }
-    
+
     // Fallback UI for Native Desktop/Mobile builds
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -22,11 +23,7 @@ class WorldMonitorScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.public_rounded,
-              size: 64,
-              color: AppTheme.accent,
-            ),
+            Icon(Icons.public_rounded, size: 64, color: AppTheme.accent),
             const SizedBox(height: 24),
             Text(
               'World Monitor',

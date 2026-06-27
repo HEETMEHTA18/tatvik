@@ -39,7 +39,8 @@ GoRouter createAppRouter(AppState appState) {
         if (appState.token != queryToken) {
           appState.setGithubSession(queryUsername ?? '', queryToken);
         }
-        return RoutePaths.app; // Redirect to clean URL path without query params
+        return RoutePaths
+            .app; // Redirect to clean URL path without query params
       }
 
       final isLoggedIn = appState.token != null && appState.token!.isNotEmpty;
@@ -64,7 +65,8 @@ GoRouter createAppRouter(AppState appState) {
       ),
       GoRoute(
         path: '/app',
-        redirect: (context, state) => state.uri.replace(path: RoutePaths.app).toString(),
+        redirect: (context, state) =>
+            state.uri.replace(path: RoutePaths.app).toString(),
       ),
       GoRoute(
         path: RoutePaths.onboarding,
@@ -85,7 +87,9 @@ GoRouter createAppRouter(AppState appState) {
           // After that, the MainNavigationScreen manages its own tab state
           // via a stable ValueKey so it is never rebuilt from scratch.
           final tabName = state.uri.queryParameters['tab'];
-          final tabIndex = tabName != null ? RoutePaths.tabIndexFromName(tabName) : -1;
+          final tabIndex = tabName != null
+              ? RoutePaths.tabIndexFromName(tabName)
+              : -1;
           return MainNavigationScreen(
             key: const ValueKey('main_nav'),
             initialTabIndex: tabIndex,

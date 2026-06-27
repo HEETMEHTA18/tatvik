@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oc_liquid_glass/oc_liquid_glass.dart';
@@ -22,11 +21,14 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser = kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android);
+    final bool isMobileBrowser =
+        kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.android);
     final double activeBlur = isMobileBrowser ? 16.0 : blur;
 
-    final Color glassColor = isDark 
-        ? Colors.white.withValues(alpha: isMobileBrowser ? 0.05 : 0.08) 
+    final Color glassColor = isDark
+        ? Colors.white.withValues(alpha: isMobileBrowser ? 0.05 : 0.08)
         : Colors.white.withValues(alpha: isMobileBrowser ? 0.35 : 0.45);
 
     return Container(
@@ -62,8 +64,8 @@ class GlassCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius),
                   border: Border.all(
-                    color: isDark 
-                        ? Colors.white.withValues(alpha: 0.15) 
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
                         : Colors.white.withValues(alpha: 0.45),
                     width: 0.8,
                   ),

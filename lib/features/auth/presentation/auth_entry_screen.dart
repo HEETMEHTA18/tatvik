@@ -7,4 +7,3 @@ class AuthEntryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const LoginScreen();
 }
-

@@ -7,4 +7,3 @@ class RepositoryDiscoveryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const DiscoverReposScreen();
 }
-

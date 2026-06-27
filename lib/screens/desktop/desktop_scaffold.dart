@@ -8,7 +8,7 @@ class DesktopScaffold extends StatefulWidget {
   final Widget body;
   final Widget? rightPanel;
   final bool constrainBodyWidth;
-  
+
   const DesktopScaffold({
     super.key,
     required this.selectedIndex,
@@ -57,7 +57,10 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 32.0,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -65,9 +68,15 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                         decoration: BoxDecoration(
                           color: AppTheme.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppTheme.accent.withValues(alpha: 0.3),
+                          ),
                         ),
-                        child: Icon(Icons.psychology_rounded, color: AppTheme.accent, size: 24),
+                        child: Icon(
+                          Icons.psychology_rounded,
+                          color: AppTheme.accent,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Text(
@@ -86,9 +95,12 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                 ...List.generate(_navItems.length, (index) {
                   final isSelected = widget.selectedIndex == index;
                   final isHovered = _hoveredIndex == index;
-                  
+
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 4.0,
+                    ),
                     child: MouseRegion(
                       onEnter: (_) => setState(() => _hoveredIndex = index),
                       onExit: (_) => setState(() => _hoveredIndex = null),
@@ -97,16 +109,19 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                         borderRadius: BorderRadius.circular(12),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            color: isSelected 
-                                ? AppTheme.accent.withValues(alpha: 0.15) 
-                                : isHovered 
-                                    ? AppTheme.textMain.withValues(alpha: 0.05)
-                                    : Colors.transparent,
+                            color: isSelected
+                                ? AppTheme.accent.withValues(alpha: 0.15)
+                                : isHovered
+                                ? AppTheme.textMain.withValues(alpha: 0.05)
+                                : Colors.transparent,
                             border: Border.all(
-                              color: isSelected 
+                              color: isSelected
                                   ? AppTheme.accent.withValues(alpha: 0.3)
                                   : Colors.transparent,
                             ),
@@ -116,14 +131,24 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                               Icon(
                                 _navIcons[index],
                                 size: 22,
-                                color: isSelected ? AppTheme.accent : (isHovered ? AppTheme.textMain : AppTheme.textSecondary),
+                                color: isSelected
+                                    ? AppTheme.accent
+                                    : (isHovered
+                                          ? AppTheme.textMain
+                                          : AppTheme.textSecondary),
                               ),
                               const SizedBox(width: 16),
                               Text(
                                 _navItems[index],
                                 style: GoogleFonts.inter(
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                  color: isSelected ? AppTheme.accent : (isHovered ? AppTheme.textMain : AppTheme.textSecondary),
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: isSelected
+                                      ? AppTheme.accent
+                                      : (isHovered
+                                            ? AppTheme.textMain
+                                            : AppTheme.textSecondary),
                                 ),
                               ),
                             ],
@@ -136,14 +161,14 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
               ],
             ),
           ),
-          
+
           // Vertical Divider
           Container(width: 1, color: AppTheme.border.withValues(alpha: 0.2)),
-          
+
           // Center Content
           Expanded(
             flex: 5,
-            child: widget.constrainBodyWidth 
+            child: widget.constrainBodyWidth
                 ? Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
@@ -152,14 +177,11 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                   )
                 : widget.body,
           ),
-          
+
           // Right Context Panel (Only if provided)
           if (widget.rightPanel != null) ...[
             Container(width: 1, color: AppTheme.border.withValues(alpha: 0.2)),
-            Expanded(
-              flex: 3,
-              child: widget.rightPanel!,
-            ),
+            Expanded(flex: 3, child: widget.rightPanel!),
           ],
         ],
       ),

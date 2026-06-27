@@ -48,10 +48,7 @@ class _TatvikLoaderState extends State<TatvikLoader> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            color: AppTheme.accent,
-            strokeWidth: 3,
-          ),
+          CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 3),
           const SizedBox(height: 24),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 500),

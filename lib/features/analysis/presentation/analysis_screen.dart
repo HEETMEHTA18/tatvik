@@ -6,10 +6,7 @@ class AnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: Text('Analysis screen scaffold ready'),
-      ),
+      body: Center(child: Text('Analysis screen scaffold ready')),
     );
   }
 }
-

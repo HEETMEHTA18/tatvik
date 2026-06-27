@@ -20,7 +20,8 @@ class AnimatedCopyButton extends StatefulWidget {
   State<AnimatedCopyButton> createState() => _AnimatedCopyButtonState();
 }
 
-class _AnimatedCopyButtonState extends State<AnimatedCopyButton> with SingleTickerProviderStateMixin {
+class _AnimatedCopyButtonState extends State<AnimatedCopyButton>
+    with SingleTickerProviderStateMixin {
   bool _isCopied = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -32,9 +33,10 @@ class _AnimatedCopyButtonState extends State<AnimatedCopyButton> with SingleTick
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.8).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.8,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -45,14 +47,14 @@ class _AnimatedCopyButtonState extends State<AnimatedCopyButton> with SingleTick
 
   Future<void> _handleCopy() async {
     if (_isCopied || widget.text.isEmpty) return;
-    
+
     await _controller.forward();
     await Clipboard.setData(ClipboardData(text: widget.text));
-    
+
     setState(() {
       _isCopied = true;
     });
-    
+
     await _controller.reverse();
 
     // Revert back after a delay

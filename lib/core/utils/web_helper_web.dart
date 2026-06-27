@@ -42,9 +42,9 @@ bool isAppWindowBackgrounded() {
 
 void showBrowserNotification(String title, String body) {
   try {
-    if (html.Notification.supported && html.Notification.permission == 'granted') {
+    if (html.Notification.supported &&
+        html.Notification.permission == 'granted') {
       html.Notification(title, body: body, icon: 'icons/Icon-192.png');
     }
   } catch (_) {}
 }
-
