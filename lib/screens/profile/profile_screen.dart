@@ -754,7 +754,7 @@ class ProfileScreen extends StatelessWidget {
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(
-                                              'Enter the 6-digit verification code sent to your registered email.',
+                                              'Set up a 6-digit PIN to enable Two-Factor Authentication.',
                                               style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                                               textAlign: TextAlign.center,
                                             ),
@@ -773,7 +773,7 @@ class ProfileScreen extends StatelessWidget {
                                                 hintText: '------',
                                                 hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.5)),
                                                 counterText: '',
-                                                errorText: hasError ? 'Invalid code. Try 123456.' : null,
+                                                errorText: hasError ? 'Invalid PIN. Must be 6 digits.' : null,
                                                 filled: true,
                                                 fillColor: AppTheme.background,
                                                 border: OutlineInputBorder(
@@ -802,7 +802,7 @@ class ProfileScreen extends StatelessWidget {
                                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                             ),
                                             onPressed: () {
-                                              if (codeController.text == '123456') {
+                                              if (codeController.text.length == 6) {
                                                 Navigator.pop(ctx, true);
                                               } else {
                                                 setState(() => hasError = true);
@@ -845,13 +845,28 @@ class ProfileScreen extends StatelessWidget {
                             final LocalAuthentication auth = LocalAuthentication();
                             bool authenticated = false;
                             try {
-                              authenticated = await auth.authenticate(
-                                localizedReason: state.biometricLock
-                                    ? 'Authenticate to disable Biometric Lock'
-                                    : 'Authenticate to enable Biometric Lock',
-                                biometricOnly: true,
-                                persistAcrossBackgrounding: true,
-                              );
+                              final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+                              final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+                              
+                              if (canAuthenticate) {
+                                authenticated = await auth.authenticate(
+                                  localizedReason: state.biometricLock
+                                      ? 'Authenticate to disable Biometric Lock'
+                                      : 'Authenticate to enable Biometric Lock',
+                                  biometricOnly: true,
+                                  persistAcrossBackgrounding: true,
+                                );
+                              } else {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Biometric authentication is not supported or enrolled on this device.'),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
                             } on PlatformException catch (e) {
                               debugPrint('Biometric Error: $e');
                               if (context.mounted) {

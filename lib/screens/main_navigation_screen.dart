@@ -461,9 +461,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
           else
             Scaffold(
               backgroundColor: Colors.transparent,
-              extendBody: true,
-              body: IndexedStack(index: _selectedIndex, children: _screens),
-              bottomNavigationBar: SafeArea(
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: IndexedStack(index: _selectedIndex, children: _screens),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.only(
                     left: 12,
@@ -729,6 +736,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     ),
                   ),
                 ),
+                    ),
+                  ),
+                ],
               ),
             ),
           if (_showWalkthrough) _buildWalkthroughOverlay(),

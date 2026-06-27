@@ -25,7 +25,7 @@ async def test_openclaw_pr_generation(repo_url: str, task: str):
     # Since we know free-tier HF spaces time out on heavy browser automation,
     # we will send a pure code-based API request that the LLM can handle quickly.
     payload = {
-        "model": "openai/meta/llama-3.3-70b-instruct",
+        "model": "meta/llama-3.3-70b-instruct",
         "messages": [
             {
                 "role": "system",
@@ -50,7 +50,7 @@ async def test_openclaw_pr_generation(repo_url: str, task: str):
             f"{OPENCLAW_URL}/v1/chat/completions",
             json=payload,
             headers=headers,
-            timeout=240.0
+            timeout=900.0
         )
         
         if response.status_code == 200:
