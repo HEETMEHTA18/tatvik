@@ -991,6 +991,83 @@ This is simulated offline prompts.md content.
     await saveChatHistory();
   }
 
+  bool isVoicePipelineRunning = false;
+
+  Future<void> sendVoicePipelineCommand(String transcript) async {
+    if (transcript.trim().isEmpty) return;
+
+    chatMessages.add(
+      MentorMessage(
+        content: '🎙️ Voice Project Command:\n"$transcript"',
+        role: MessageRole.user,
+        timestamp: DateTime.now(),
+      ),
+    );
+    isVoicePipelineRunning = true;
+    isMentorTyping = true;
+    notifyListeners();
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/voice-pipeline'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'transcript': transcript,
+          'repo_url': 'https://github.com/$selectedRepoOwner/$selectedRepoName',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final promptContent = data['prompt_content'] ?? '';
+        final message = data['message'] ?? '';
+        final prUrl = data['pull_request_url'] as String?;
+
+        String reply = '🤖 **Voice Project Pipeline Triggered!**\n\n'
+            '1. **Step 1: AI Prompt Writer Generated `.autodev/prompt.md`**:\n'
+            '```markdown\n$promptContent\n```\n\n'
+            '2. **Step 2: AI Code Builder Status**:\n'
+            '$message\n';
+
+        if (prUrl != null && prUrl.isNotEmpty) {
+          reply += '\n🚀 **Pull Request opened:** [$prUrl]($prUrl)';
+        }
+
+        chatMessages.add(
+          MentorMessage(
+            content: reply,
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
+      } else {
+        chatMessages.add(
+          MentorMessage(
+            content: 'Error: Failed to execute Voice Project Pipeline.',
+            role: MessageRole.assistant,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+    } catch (e) {
+      chatMessages.add(
+        MentorMessage(
+          content: 'Error in Voice Pipeline: $e',
+          role: MessageRole.assistant,
+          timestamp: DateTime.now(),
+        ),
+      );
+    } finally {
+      isVoicePipelineRunning = false;
+      isMentorTyping = false;
+    }
+    notifyListeners();
+    await saveChatHistory();
+  }
+
   Future<void> sendPdfMessage(List<int> fileBytes, String filename) async {
     chatMessages.add(
       MentorMessage(

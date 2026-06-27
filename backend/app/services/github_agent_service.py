@@ -149,8 +149,11 @@ class GithubAgentService:
     async def _ai_generate_content(
         self, task: str, existing_content: str = "", file_path: str = ""
     ) -> str:
-        """Use NVIDIA to generate file content for a coding task."""
-        if not settings.nvidia_api_key:
+        """Use OpenClaw or NVIDIA to generate file content for a coding task."""
+        from app.services.openclaw_service import OpenClawService
+        openclaw = OpenClawService()
+
+        if not openclaw.enabled and not settings.nvidia_api_key:
             return f"# AI-generated content\n# Task: {task}\n"
 
         prompt = (
@@ -163,20 +166,28 @@ class GithubAgentService:
             f"Just the raw file content that should be written to the file."
         )
 
-        url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        if openclaw.enabled:
+            url = f"{openclaw.api_url}/v1/chat/completions"
+            headers = openclaw.headers
+            model_name = "openclaw"
+        else:
+            url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.nvidia_api_key}",
+                "Content-Type": "application/json",
+            }
+            model_name = "meta/llama-3.3-70b-instruct"
+
         async with httpx.AsyncClient() as client:
             try:
                 resp = await client.post(
                     url,
                     json={
-                        "model": "meta/llama-3.3-70b-instruct",
+                        "model": model_name,
                         "messages": [{"role": "user", "content": prompt}],
                     },
-                    headers={
-                        "Authorization": f"Bearer {settings.nvidia_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    timeout=30.0,
+                    headers=headers,
+                    timeout=60.0,
                 )
                 if resp.status_code == 200:
                     return (
@@ -188,9 +199,9 @@ class GithubAgentService:
                         .strip()
                     )
                 else:
-                    logger.error(f"NVIDIA API error: {resp.text}")
+                    logger.error(f"AI content generation error: {resp.text}")
             except Exception as e:
-                logger.warning(f"Gemini content generation failed: {e}")
+                logger.warning(f"AI content generation failed: {e}")
         return f"# Task: {task}\n# (AI generation failed — please implement manually)\n"
 
     def _parse_owner_repo(self, repo_full_name: str):

@@ -44,7 +44,7 @@ class OpenClawService:
         branch_text = f" (branch: {branch_name})" if branch_name else ""
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.5-flash",
+            "model": "openclaw",
             "messages": [
                 {
                     "role": "user",
@@ -89,8 +89,16 @@ class OpenClawService:
                 "output": f"Mock output for: {command}",
             }
 
-        url = f"{self.api_url}/terminal/run"
-        payload = {"command": command}
+        url = f"{self.api_url}/v1/chat/completions"
+        payload = {
+            "model": "openclaw",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Please run the following terminal command and return its output: {command}"
+                }
+            ]
+        }
 
         async with httpx.AsyncClient() as client:
             try:
@@ -98,7 +106,13 @@ class OpenClawService:
                     url, json=payload, headers=self.headers, timeout=80.0
                 )
                 if response.status_code == 200:
-                    return response.json()
+                    data = response.json()
+                    message_content = (
+                        data.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "")
+                    )
+                    return {"success": True, "output": message_content}
                 else:
                     logger.error(
                         f"OpenClaw command execution returned error: {response.text}"
@@ -121,7 +135,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.5-flash",
+            "model": "openclaw",
             "messages": [
                 {
                     "role": "user",
@@ -156,7 +170,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/chat/completions"
         payload = {
-            "model": "gemini-2.5-flash",
+            "model": "openclaw",
             "messages": [
                 {
                     "role": "user",
@@ -192,7 +206,7 @@ class OpenClawService:
 
         url = f"{self.api_url}/v1/voice/stream/init"
         payload = {
-            "model": "gemini-2.5-flash",
+            "model": "openclaw",
             "system_instruction": f"You are Tatvik Voice. Use 'memory-core' to remember user details. Context: {context_prompt}",
         }
         async with httpx.AsyncClient() as client:

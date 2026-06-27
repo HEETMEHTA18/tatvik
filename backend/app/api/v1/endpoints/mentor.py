@@ -358,10 +358,20 @@ async def mentor_chat(
             else:
                 final_reply = "Task execution completed."
 
-        if settings.nvidia_api_key:
+        if _openclaw_service.enabled or settings.nvidia_api_key:
             import re
 
-            url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            if _openclaw_service.enabled:
+                url = f"{_openclaw_service.api_url}/v1/chat/completions"
+                headers = _openclaw_service.headers
+                model_name = "openclaw"
+            else:
+                url = "https://integrate.api.nvidia.com/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {settings.nvidia_api_key}",
+                    "Content-Type": "application/json",
+                }
+                model_name = "meta/llama-3.3-70b-instruct"
 
             # Initialize loop variables
             max_iterations = 3
@@ -394,18 +404,15 @@ async def mentor_chat(
                         response = await client.post(
                             url,
                             json={
-                                "model": "meta/llama-3.3-70b-instruct",
+                                "model": model_name,
                                 "messages": agent_messages,
                             },
-                            headers={
-                                "Authorization": f"Bearer {settings.nvidia_api_key}",
-                                "Content-Type": "application/json",
-                            },
-                            timeout=30.0,
+                            headers=headers,
+                            timeout=60.0,
                         )
 
                         if response.status_code != 200:
-                            logger.error(f"NVIDIA API error: {response.text}")
+                            logger.error(f"Chat API error (status {response.status_code}): {response.text}")
                             break
 
                         data = response.json()

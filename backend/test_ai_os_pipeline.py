@@ -12,8 +12,8 @@ load_dotenv()
 # simulating how it would store "Diff Projects" and "Mindmaps".
 # Note: Full Cognee SDK requires a running VectorDB/Neo4j, so we test the structure.
 
-OPENCLAW_URL = os.getenv("OPENCLAW_API_URL", "https://heetmehta18-openclaw-tatvik.hf.space")
-NVIDIA_KEY = os.getenv("NVIDIA_API_KEY", "")
+OPENCLAW_URL = os.getenv("OPENCLAW_API_URL", "https://heetmehta18-openclaw-devmentor.hf.space")
+OPENCLAW_KEY = os.getenv("OPENCLAW_API_KEY", "")
 
 async def test_openclaw_pr_generation(repo_url: str, task: str):
     print(f"\n[1] 🚀 Sending Agentic Task to OpenClaw at {OPENCLAW_URL}")
@@ -25,7 +25,7 @@ async def test_openclaw_pr_generation(repo_url: str, task: str):
     # Since we know free-tier HF spaces time out on heavy browser automation,
     # we will send a pure code-based API request that the LLM can handle quickly.
     payload = {
-        "model": "meta/llama-3.3-70b-instruct",
+        "model": "openclaw",
         "messages": [
             {
                 "role": "system",
@@ -39,7 +39,7 @@ async def test_openclaw_pr_generation(repo_url: str, task: str):
     }
     
     headers = {
-        "Authorization": f"Bearer {NVIDIA_KEY}",
+        "Authorization": f"Bearer {OPENCLAW_KEY}",
         "Content-Type": "application/json",
     }
     

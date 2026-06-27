@@ -90,10 +90,7 @@ class PulseEngine:
         return items
 
     async def ai_enrichment(self, title: str, description: str) -> Dict[str, Any]:
-        """AI Enricher using Gemini for huge payloads to extract schema metrics"""
-        if not settings.gemini_api_key:
-            return {}
-
+        """AI Enricher using Gemini for huge payloads to extract schema metrics, with Groq and OpenRouter fallbacks"""
         system_prompt = (
             "You are Tatvik AI. Analyze this tech content. Extract JSON: "
             '{"summary": "3 lines max", "beginner_explanation": "...", "advanced_explanation": "...", '
@@ -103,28 +100,136 @@ class PulseEngine:
 
         user_prompt = f"Title: {title}\nDescription: {description[:2000]}"
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.post(
-                    url,
-                    json={
-                        "contents": [
-                            {"parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}
-                        ]
+        # 1. Try Gemini
+        if settings.gemini_api_key:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
+            max_retries = 3
+            backoff_factor = 4.0  # seconds
+
+            async with httpx.AsyncClient() as client:
+                for attempt in range(max_retries):
+                    try:
+                        resp = await client.post(
+                            url,
+                            json={
+                                "contents": [
+                                    {
+                                        "parts": [
+                                            {
+                                                "text": f"{system_prompt}\n\n{user_prompt}"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            timeout=20.0,
+                        )
+                        if resp.status_code == 200:
+                            txt = resp.json()["candidates"][0]["content"]["parts"][0][
+                                "text"
+                            ]
+                            # Extract JSON from Markdown
+                            start = txt.find("{")
+                            end = txt.rfind("}") + 1
+                            if start != -1 and end != -1:
+                                return json.loads(txt[start:end])
+                            break
+                        elif resp.status_code == 429:
+                            wait_time = backoff_factor * (2**attempt)
+                            logger.warning(
+                                f"Gemini API rate limit hit (429). Retrying in {wait_time:.1f}s... (Attempt {attempt + 1}/{max_retries})"
+                            )
+                            await asyncio.sleep(wait_time)
+                        else:
+                            logger.error(
+                                f"Gemini API failed with status code {resp.status_code}: {resp.text}"
+                            )
+                            break
+                    except Exception as e:
+                        logger.error(
+                            f"Gemini AI Enrichment Failed on attempt {attempt + 1}: {e}"
+                        )
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(backoff_factor * (2**attempt))
+                        else:
+                            break
+
+        # 2. Try Groq Fallback
+        if settings.groq_api_key:
+            logger.info("Falling back to Groq for AI Enrichment...")
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.groq_api_key}",
+                "Content-Type": "application/json",
+            }
+            json_payload = {
+                "model": "llama-3.1-8b-instant",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.3,
+            }
+            async with httpx.AsyncClient() as client:
+                try:
+                    resp = await client.post(
+                        url,
+                        json=json_payload,
+                        headers=headers,
+                        timeout=20.0,
+                    )
+                    if resp.status_code == 200:
+                        reply = resp.json()["choices"][0]["message"]["content"]
+                        return json.loads(reply)
+                    else:
+                        logger.error(
+                            f"Groq API failed with status code {resp.status_code}: {resp.text}"
+                        )
+                except Exception as e:
+                    logger.error(f"Groq AI Enrichment Failed: {e}")
+
+        # 3. Try OpenRouter Fallback
+        if settings.openrouter_api_key:
+            logger.info("Falling back to OpenRouter for AI Enrichment...")
+            url = "https://openrouter.ai/api/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "HTTP-Referer": "https://tatvik.ai",
+                "X-Title": "Tatvik",
+                "Content-Type": "application/json",
+            }
+            json_payload = {
+                "model": "meta-llama/llama-3.1-8b-instruct:free",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {
+                        "role": "user",
+                        "content": f"{user_prompt}\nReturn exactly a valid JSON object.",
                     },
-                    timeout=20.0,
-                )
-                if resp.status_code == 200:
-                    txt = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-                    # Extract JSON from Markdown
-                    start = txt.find("{")
-                    end = txt.rfind("}") + 1
-                    if start != -1 and end != -1:
-                        return json.loads(txt[start:end])
-            except Exception as e:
-                logger.error(f"AI Enrichment Failed: {e}")
-        return {}
+                ],
+                "response_format": {"type": "json_object"},
+            }
+            async with httpx.AsyncClient() as client:
+                try:
+                    resp = await client.post(
+                        url,
+                        json=json_payload,
+                        headers=headers,
+                        timeout=20.0,
+                    )
+                    if resp.status_code == 200:
+                        reply = resp.json()["choices"][0]["message"]["content"]
+                        clean_reply = (
+                            reply.replace("```json", "").replace("```", "").strip()
+                        )
+                        return json.loads(clean_reply)
+                    else:
+                        logger.error(
+                            f"OpenRouter API failed with status code {resp.status_code}: {resp.text}"
+                        )
+                except Exception as e:
+                    logger.error(f"OpenRouter AI Enrichment Failed: {e}")
 
     def deduplicate(self, url: str) -> bool:
         """Check if item exists in PostgreSQL"""
@@ -149,6 +254,10 @@ class PulseEngine:
 
             # 3. AI Summarize & Tag
             enriched = await self.ai_enrichment(item["title"], item["description"])
+
+            # Proactively space out requests to stay within free-tier rate limits (15 RPM)
+            if settings.gemini_api_key:
+                await asyncio.sleep(4.0)
 
             # 4. Store
             db_item = PulseItem(

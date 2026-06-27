@@ -12,7 +12,7 @@ async def test_scraping():
     }
     
     payload = {
-        "model": "openai/meta/llama-3.3-70b-instruct",
+        "model": "openclaw",
         "messages": [
             {
                 "role": "user", 

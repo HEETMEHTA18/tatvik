@@ -29,6 +29,146 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  bool _isListening = false;
+
+  void _toggleListening(AppState state) {
+    if (_isListening) {
+      SpeechHelper.stopListening();
+      setState(() {
+        _isListening = false;
+      });
+    } else {
+      SpeechHelper.startListening(
+        onStart: () {
+          setState(() {
+            _isListening = true;
+          });
+        },
+        onEnd: () {
+          setState(() {
+            _isListening = false;
+          });
+        },
+        onResult: (text) {
+          if (text.isNotEmpty) {
+            _showVoicePipelineConfirmation(state, text);
+          }
+        },
+        onError: (err) {
+          setState(() {
+            _isListening = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(err),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        },
+      );
+    }
+  }
+
+  void _showVoicePipelineConfirmation(AppState state, String transcript) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.psychology_rounded, color: Colors.blueAccent, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Voice Project Creator',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'AI parsed your voice instructions as:',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: Text(
+                  '"$transcript"',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontStyle: FontStyle.italic,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'This will generate .autodev/prompt.md specifications in your repository and start the autonomous agentic implementation loop.',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.inter(color: Colors.redAccent),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      state.sendVoicePipelineCommand(transcript);
+                    },
+                    child: Text(
+                      'Trigger Pipeline',
+                      style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -992,6 +1132,15 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     ),
                     tooltip: 'Attachment Options',
                     onPressed: () => _showAttachmentOptions(state),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _isListening ? Colors.redAccent : AppTheme.textSecondary,
+                      size: 20,
+                    ),
+                    tooltip: 'Voice Project Creator',
+                    onPressed: () => _toggleListening(state),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
