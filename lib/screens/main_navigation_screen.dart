@@ -102,7 +102,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     const DiscoverReposScreen(),
     const PromptHubScreen(),
     const RoadmapScreen(),
-    const WorldMonitorScreen(),
     const ProfileScreen(),
   ];
 
@@ -452,8 +451,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
             DesktopScaffold(
               selectedIndex: _selectedIndex,
               onTabSelected: _onTabSelected,
-              constrainBodyWidth:
-                  _selectedIndex != 4, // Allow World Monitor to be full width
+              constrainBodyWidth: true,
               body: IndexedStack(index: _selectedIndex, children: _screens),
               // We can add a TatvikContextPanel here later. For now, let the screens breathe.
               rightPanel: null,
@@ -536,14 +534,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               final totalWidth = constraints.maxWidth;
-                              final itemWidth = totalWidth / 6;
+                              final itemWidth = totalWidth / 5;
+                              final int mobileIndex = _selectedIndex;
                               return Stack(
                                 children: [
                                   // iOS Liquid Glass Pill Indicator
-                                  AnimatedPositioned(
-                                    duration: const Duration(milliseconds: 350),
-                                    curve: Curves.easeOutCubic,
-                                    left: _selectedIndex * itemWidth + 6,
+                                  if (mobileIndex != -1)
+                                    AnimatedPositioned(
+                                      duration: const Duration(milliseconds: 350),
+                                      curve: Curves.easeOutCubic,
+                                      left: mobileIndex * itemWidth + 6,
                                     top: 6,
                                     bottom: 6,
                                     width: itemWidth - 12,
@@ -710,19 +710,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                                         ),
                                         _MainNavigationItem(
                                           index: 4,
-                                          label: 'World',
-                                          icon: Icons.public_rounded,
-                                          width: itemWidth,
-                                          isSelected: _selectedIndex == 4,
-                                          onTap: () => _onTabSelected(4),
-                                        ),
-                                        _MainNavigationItem(
-                                          index: 5,
                                           label: 'Settings',
                                           icon: Icons.settings_rounded,
                                           width: itemWidth,
-                                          isSelected: _selectedIndex == 5,
-                                          onTap: () => _onTabSelected(5),
+                                          isSelected: _selectedIndex == 4,
+                                          onTap: () => _onTabSelected(4),
                                         ),
                                       ],
                                     ),

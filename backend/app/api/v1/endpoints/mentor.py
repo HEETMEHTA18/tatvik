@@ -162,7 +162,9 @@ async def mentor_chat(
                 for r in search_results:
                     github_context += f"- {r['full_name']} ({r['stars']} stars): {r['description']} (Link: {r['html_url']})\n"
             else:
-                github_context = f"\nNo real-time repositories found for topic {topic}.\n"
+                github_context = (
+                    f"\nNo real-time repositories found for topic {topic}.\n"
+                )
 
         # 4. Fetch the latest scanned tech news
         news_stmt = select(TechNews).order_by(TechNews.scanned_at.desc()).limit(8)
@@ -229,7 +231,71 @@ async def mentor_chat(
         ]
 
         openclaw_result = None
-        target_repo = repos[0].full_name if repos else None
+        target_repo = None
+
+        # 1. Try to match repo by full name or short name from user's synced repos list
+        if repos:
+            # First pass: check if any full name (e.g. owner/name) is explicitly in user message
+            for r in repos:
+                if r.full_name.lower() in msg_lower:
+                    target_repo = r.full_name
+                    break
+
+            # Second pass: check for standalone name matches (e.g. "tatvik" or "autodev")
+            if not target_repo:
+                import re
+
+                for r in repos:
+                    name_lower = r.name.lower()
+                    if re.search(rf"\b{re.escape(name_lower)}\b", msg_lower):
+                        target_repo = r.full_name
+                        break
+
+        # 2. If not found in synced repos, try to parse from the user message (URLs or owner/repo format)
+        if not target_repo:
+            import re
+
+            # Match GitHub URL: e.g. github.com/owner/repo
+            github_url_match = re.search(
+                r"github\.com/([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)",
+                payload.message,
+                re.IGNORECASE,
+            )
+            if github_url_match:
+                owner_part = github_url_match.group(1)
+                repo_part = github_url_match.group(2)
+                # Clean trailing chars like punctuation or slash
+                repo_part = re.sub(r"[.,;/?)].*$", "", repo_part)
+                target_repo = f"{owner_part}/{repo_part}"
+            else:
+                # Match owner/repo pattern: e.g. HEETMEHTA18/tatvik
+                owner_repo_match = re.search(
+                    r"\b([a-zA-Z0-9_.-]+)/([a-zA-Z0-9_.-]+)\b", payload.message
+                )
+                if owner_repo_match:
+                    owner_part = owner_repo_match.group(1)
+                    repo_part = owner_repo_match.group(2)
+                    # Exclude common false positives like "api/v1" or "endpoints/mentor"
+                    false_positives = {
+                        "api",
+                        "endpoints",
+                        "v1",
+                        "v2",
+                        "app",
+                        "src",
+                        "lib",
+                        "http",
+                        "https",
+                    }
+                    if (
+                        owner_part.lower() not in false_positives
+                        and repo_part.lower() not in false_positives
+                    ):
+                        target_repo = f"{owner_part}/{repo_part}"
+
+        # 3. Fallback to the first repository if none was explicitly targeted but repositories exist
+        if not target_repo and repos:
+            target_repo = repos[0].full_name
 
         if target_repo:
             if any(k in msg_lower for k in github_action_keywords):
@@ -249,7 +315,9 @@ async def mentor_chat(
             elif any(k in msg_lower for k in terminal_keywords):
                 try:
                     # Use OpenClaw for isolated terminal execution
-                    logger.info(f"Dispatching OpenClaw terminal task for user {user_id}")
+                    logger.info(
+                        f"Dispatching OpenClaw terminal task for user {user_id}"
+                    )
                     openclaw_result = await _openclaw_service.run_terminal_command(
                         command=payload.message
                     )
@@ -259,14 +327,20 @@ async def mentor_chat(
         # 6. Build the conversation history turns for the LLM
         # Sanitise roles to strictly 'user' or 'assistant' to prevent injection
         safe_history = [
-            {"role": ("user" if h.role == "user" else "assistant"), "content": h.content}
+            {
+                "role": ("user" if h.role == "user" else "assistant"),
+                "content": h.content,
+            }
             for h in payload.history[-20:]  # cap at 20 prior messages
         ]
 
         def clean_response(text: str) -> str:
             # Strip bold symbols and header symbols
             cleaned = (
-                text.replace("**", "").replace("###", "").replace("##", "").replace("#", "")
+                text.replace("**", "")
+                .replace("###", "")
+                .replace("##", "")
+                .replace("#", "")
             )
             # Replace common markdown list markers with clean dashes if needed
             return cleaned.strip()
@@ -278,7 +352,9 @@ async def mentor_chat(
             if openclaw_result.get("pull_request_url"):
                 final_reply = f"I have executed the task! You can view the Pull Request here: {openclaw_result['pull_request_url']}"
             elif openclaw_result.get("output"):
-                final_reply = f"Command executed successfully. Check the terminal output."
+                final_reply = (
+                    f"Command executed successfully. Check the terminal output."
+                )
             else:
                 final_reply = "Task execution completed."
 
@@ -345,7 +421,9 @@ async def mentor_chat(
 
                         if terminal_match:
                             cmd = terminal_match.group(1).strip()
-                            logger.info(f"Agentic loop: Intercepted <run_terminal> '{cmd}'")
+                            logger.info(
+                                f"Agentic loop: Intercepted <run_terminal> '{cmd}'"
+                            )
                             action_res = await _openclaw_service.run_terminal_command(
                                 command=cmd
                             )
@@ -353,7 +431,9 @@ async def mentor_chat(
                             if "ReadTimeout" in output or "Timeout" in output:
                                 output = "Timeout waiting for response. The command is likely still executing securely in the background. Please conclude the current task or assume it will finish shortly."
                             # Append the AI's generation, then the tool output
-                            agent_messages.append({"role": "assistant", "content": reply})
+                            agent_messages.append(
+                                {"role": "assistant", "content": reply}
+                            )
                             agent_messages.append(
                                 {
                                     "role": "user",
@@ -361,7 +441,9 @@ async def mentor_chat(
                                 }
                             )
                             current_iteration += 1
-                            openclaw_result = action_res  # Save to show user what happened
+                            openclaw_result = (
+                                action_res  # Save to show user what happened
+                            )
                             continue
 
                         elif browser_match:
@@ -374,7 +456,9 @@ async def mentor_chat(
                                 task_description=f"Open browser and test {url_to_open}",
                             )
                             output = str(action_res.get("message", action_res))
-                            agent_messages.append({"role": "assistant", "content": reply})
+                            agent_messages.append(
+                                {"role": "assistant", "content": reply}
+                            )
                             agent_messages.append(
                                 {
                                     "role": "user",
@@ -444,7 +528,8 @@ async def mentor_chat(
                     response_data = {
                         "user_id": user_id,
                         "assistant_message": clean_response(
-                            final_reply or "I was unable to complete the agentic workflow."
+                            final_reply
+                            or "I was unable to complete the agentic workflow."
                         ),
                     }
                     if openclaw_result:
@@ -478,7 +563,9 @@ async def mentor_chat(
                     # Append the current user message
                     # If there's no history, inject system prompt into this turn
                     if not safe_history:
-                        current_text = f"{system_prompt}\n\nUser message: {payload.message}"
+                        current_text = (
+                            f"{system_prompt}\n\nUser message: {payload.message}"
+                        )
                     else:
                         current_text = payload.message
                     gemini_contents.append(
@@ -517,7 +604,9 @@ async def mentor_chat(
                         except (KeyError, IndexError):
                             import logging
 
-                            logging.getLogger(__name__).error("Malformed Gemini response")
+                            logging.getLogger(__name__).error(
+                                "Malformed Gemini response"
+                            )
                     else:
                         import logging
 
@@ -538,5 +627,5 @@ async def mentor_chat(
         logger.error(f"Error in mentor chat endpoint: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred during the mentor session."
+            detail="An internal error occurred during the mentor session.",
         )

@@ -647,6 +647,15 @@ async def sync_github_prompts(
 
                 try:
                     response = await client.get(url, headers=headers, timeout=12.0)
+                    if response.status_code in (401, 403) and access_token:
+                        public_headers = {
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": "Tatvik-App",
+                        }
+                        response = await client.get(
+                            url, headers=public_headers, timeout=12.0
+                        )
+
                     if response.status_code == 200:
                         data = response.json()
                         raw_content = data.get("content", "")
@@ -763,7 +772,17 @@ async def sync_github_prompts(
                 except Exception as e:
                     logger.error(f"Error scanning repo {full_name} for prompts: {e}")
 
-    if imported_count > 0:
+    if len(scanned_repos) > 0:
+        try:
+            db.query(PromptHistory).filter(
+                PromptHistory.user_id == user_id,
+                PromptHistory.response
+                == "This is a generated AI response for the refined prompt.",
+            ).delete(synchronize_session=False)
+        except Exception as delete_ex:
+            logger.warning(f"Could not clean up mock seeded prompts: {delete_ex}")
+        db.commit()
+    elif imported_count > 0:
         db.commit()
 
     return {

@@ -20,10 +20,22 @@ class GithubService:
         """
         async with httpx.AsyncClient() as client:
             # 1. Fetch GitHub profile
+            user_stmt = select(User).where(User.id == user_id)
+            user = self.db.scalar(user_stmt)
+            username = user.username if user else "HEETMEHTA18"
+
             profile_response = await client.get(
                 "https://api.github.com/user",
                 headers={"Authorization": f"Bearer {access_token}"},
             )
+            if profile_response.status_code in (401, 403):
+                logger.warning(
+                    f"Access token invalid. Falling back to public GitHub sync for user {username}"
+                )
+                return await self.sync_public_github_data(
+                    user_id=user_id, username=username
+                )
+
             if profile_response.status_code != 200:
                 raise ValueError(
                     f"Failed to fetch GitHub profile: {profile_response.text}"

@@ -143,5 +143,5 @@ async def get_developer_timeline(
         logger.error(f"Error fetching developer timeline: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal error occurred while fetching the developer timeline."
+            detail="An internal error occurred while fetching the developer timeline.",
         )

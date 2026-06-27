@@ -49,7 +49,9 @@ class _TatvikAppState extends State<TatvikApp> {
     return MaterialApp.router(
       title: 'Tatvik',
       debugShowCheckedModeBanner: false,
-      theme: appState.isDarkTheme ? AppTheme.darkTheme : AppTheme.lightTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: appState.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
       routerConfig: _router,
     );
   }

@@ -478,10 +478,38 @@ def test_refine_prompt_endpoint():
     )
     assert history_response.status_code == 200
     history_list = history_response.json()
-    matched = [p for p in history_list if p["id"] == prompt_id]
-    assert len(matched) == 1
+    assertMatched = [p for p in history_list if p["id"] == prompt_id]
+    assert len(assertMatched) == 1
     assert (
-        matched[0]["refined_prompt"]
+        assertMatched[0]["refined_prompt"]
         == "Use indexed subquery or COUNT(1) to avoid sequential scan."
     )
-    assert matched[0]["score"] == 85
+    assert assertMatched[0]["score"] == 85
+
+
+def test_mentor_chat_repository_targeting():
+    headers = get_auth_headers()
+    from unittest.mock import patch, AsyncMock
+
+    with patch("app.api.v1.endpoints.mentor.GithubAgentService") as mock_agent_class:
+        mock_agent_instance = mock_agent_class.return_value
+        mock_agent_instance.execute_task_and_pr = AsyncMock(
+            return_value={
+                "pull_request_url": "https://github.com/test-owner/test-repo/pull/1"
+            }
+        )
+
+        response = client.post(
+            "/api/v1/mentor/chat",
+            json={
+                "message": "implement this feature in test-owner/test-repo",
+                "resume_context": None,
+                "history": [],
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        mock_agent_instance.execute_task_and_pr.assert_called_once()
+        args, kwargs = mock_agent_instance.execute_task_and_pr.call_args
+        assert kwargs.get("repo_full_name") == "test-owner/test-repo"

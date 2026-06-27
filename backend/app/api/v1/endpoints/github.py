@@ -632,6 +632,14 @@ async def github_file_content(
                 res = await client.get(url, headers=headers, timeout=12.0)
                 last_status = res.status_code
 
+                if res.status_code in (401, 403) and access_token:
+                    public_headers = {
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Tatvik-App",
+                    }
+                    res = await client.get(url, headers=public_headers, timeout=12.0)
+                    last_status = res.status_code
+
                 if res.status_code == 200:
                     data = res.json()
                     content = data.get("content", "")

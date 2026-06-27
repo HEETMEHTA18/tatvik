@@ -30,7 +30,6 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
     'Explore',
     'Prompts',
     'Roadmap',
-    'World',
     'Settings',
   ];
 
@@ -39,7 +38,6 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
     Icons.explore_rounded,
     Icons.auto_awesome_rounded,
     Icons.route_rounded,
-    Icons.public_rounded,
     Icons.settings_rounded,
   ];
 
