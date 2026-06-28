@@ -28,8 +28,10 @@ logger = logging.getLogger(__name__)
 
 # ── Event Definitions ────────────────────────────────────────────────────────
 
+
 class WebhookEvent:
     """Represents a normalized inbound webhook event."""
+
     def __init__(
         self,
         source: str,
@@ -37,13 +39,14 @@ class WebhookEvent:
         payload: dict[str, Any],
         received_at: str | None = None,
     ):
-        self.source = source          # "github", "slack", "jira", etc.
+        self.source = source  # "github", "slack", "jira", etc.
         self.event_type = event_type  # "pull_request.opened", "issue.created", etc.
         self.payload = payload
         self.received_at = received_at or datetime.utcnow().isoformat()
 
 
 # ── Webhook Verification ─────────────────────────────────────────────────────
+
 
 def verify_github_signature(payload_bytes: bytes, signature_header: str | None) -> bool:
     """
@@ -52,19 +55,22 @@ def verify_github_signature(payload_bytes: bytes, signature_header: str | None) 
     """
     secret = settings.github_webhook_secret
     if not secret:
-        logger.warning("GitHub webhook secret not set — skipping signature verification.")
+        logger.warning(
+            "GitHub webhook secret not set — skipping signature verification."
+        )
         return True
 
     if not signature_header or not signature_header.startswith("sha256="):
         return False
 
-    expected = "sha256=" + hmac.new(
-        secret.encode(), payload_bytes, hashlib.sha256
-    ).hexdigest()
+    expected = (
+        "sha256=" + hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
+    )
     return hmac.compare_digest(expected, signature_header)
 
 
 # ── Event Parsers ─────────────────────────────────────────────────────────────
+
 
 def parse_github_event(event_header: str, payload: dict) -> WebhookEvent | None:
     """
@@ -97,7 +103,9 @@ def parse_github_event(event_header: str, payload: dict) -> WebhookEvent | None:
                 "branch": payload.get("ref", "").replace("refs/heads/", ""),
                 "commits": len(payload.get("commits", [])),
                 "pusher": payload.get("pusher", {}).get("name"),
-                "commit_messages": [c.get("message") for c in payload.get("commits", [])[:5]],
+                "commit_messages": [
+                    c.get("message") for c in payload.get("commits", [])[:5]
+                ],
             },
         )
 
@@ -111,7 +119,9 @@ def parse_github_event(event_header: str, payload: dict) -> WebhookEvent | None:
                 "body": payload.get("issue", {}).get("body", ""),
                 "repo": payload.get("repository", {}).get("full_name"),
                 "author": payload.get("issue", {}).get("user", {}).get("login"),
-                "labels": [l.get("name") for l in payload.get("issue", {}).get("labels", [])],
+                "labels": [
+                    l.get("name") for l in payload.get("issue", {}).get("labels", [])
+                ],
                 "url": payload.get("issue", {}).get("html_url"),
             },
         )
@@ -198,9 +208,17 @@ def parse_jira_event(payload: dict) -> WebhookEvent | None:
 
 # ── Automation Rules ─────────────────────────────────────────────────────────
 
+
 class AutomationRule:
     """Maps a WebhookEvent type to an automated goal passed to the Tatvik Planner."""
-    def __init__(self, source: str, event_type_prefix: str, goal_template: str, enabled: bool = True):
+
+    def __init__(
+        self,
+        source: str,
+        event_type_prefix: str,
+        goal_template: str,
+        enabled: bool = True,
+    ):
         self.source = source
         self.event_type_prefix = event_type_prefix
         self.goal_template = goal_template
@@ -309,5 +327,11 @@ async def route_webhook_event(
                 "received_at": event.received_at,
             }
 
-    logger.debug(f"[WebhookRouter] No rule matched for {event.source}.{event.event_type}")
-    return {"matched": False, "event_source": event.source, "event_type": event.event_type}
+    logger.debug(
+        f"[WebhookRouter] No rule matched for {event.source}.{event.event_type}"
+    )
+    return {
+        "matched": False,
+        "event_source": event.source,
+        "event_type": event.event_type,
+    }

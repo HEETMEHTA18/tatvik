@@ -44,6 +44,4 @@ api_router.include_router(
     intelligence.router, prefix="/intelligence", tags=["intelligence"]
 )
 # ── OpenClaw Universal Automation Runtime ──────────────────────────────────
-api_router.include_router(
-    openclaw.router, prefix="/openclaw", tags=["openclaw"]
-)
+api_router.include_router(openclaw.router, prefix="/openclaw", tags=["openclaw"])

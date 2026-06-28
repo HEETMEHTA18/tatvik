@@ -27,24 +27,26 @@ logger = logging.getLogger(__name__)
 @dataclass
 class WorkflowStep:
     """A single executable step in a Tatvik Workflow."""
+
     step_number: int
     tool_id: str
     capability: str
     parameters: dict[str, Any]
     description: str
     depends_on: list[int] = field(default_factory=list)
-    status: str = "pending"   # pending | running | done | failed
+    status: str = "pending"  # pending | running | done | failed
     result: dict | None = None
 
 
 @dataclass
 class TatvikWorkflow:
     """A fully-planned, ordered list of steps to achieve a user goal."""
+
     goal: str
     user_id: str
     steps: list[WorkflowStep]
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    status: str = "planned"   # planned | running | completed | failed
+    status: str = "planned"  # planned | running | completed | failed
     memory_context: list[str] = field(default_factory=list)
 
 
@@ -58,56 +60,216 @@ class TatvikPlanner:
 
     WORKFLOW_TEMPLATES: dict[str, list[dict]] = {
         "ship_release": [
-            {"tool_id": "github", "capability": "list_commits", "description": "Read recent commits since last release"},
-            {"tool_id": "jira", "capability": "read_sprint", "description": "Check sprint status and blockers"},
-            {"tool_id": "notion", "capability": "search_knowledge_base", "description": "Pull release checklist from Notion"},
-            {"tool_id": "github", "capability": "trigger_action", "description": "Run test suite via GitHub Actions"},
-            {"tool_id": "github", "capability": "create_release", "description": "Create GitHub release + tag"},
-            {"tool_id": "notion", "capability": "create_doc", "description": "Write release notes to Notion"},
-            {"tool_id": "vercel", "capability": "deploy_production", "description": "Deploy to Vercel production"},
-            {"tool_id": "slack", "capability": "post_release_notes", "description": "Broadcast release notes to Slack"},
-            {"tool_id": "cognee_memory", "capability": "store_memory", "description": "Store release record in memory"},
+            {
+                "tool_id": "github",
+                "capability": "list_commits",
+                "description": "Read recent commits since last release",
+            },
+            {
+                "tool_id": "jira",
+                "capability": "read_sprint",
+                "description": "Check sprint status and blockers",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "search_knowledge_base",
+                "description": "Pull release checklist from Notion",
+            },
+            {
+                "tool_id": "github",
+                "capability": "trigger_action",
+                "description": "Run test suite via GitHub Actions",
+            },
+            {
+                "tool_id": "github",
+                "capability": "create_release",
+                "description": "Create GitHub release + tag",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "create_doc",
+                "description": "Write release notes to Notion",
+            },
+            {
+                "tool_id": "vercel",
+                "capability": "deploy_production",
+                "description": "Deploy to Vercel production",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "post_release_notes",
+                "description": "Broadcast release notes to Slack",
+            },
+            {
+                "tool_id": "cognee_memory",
+                "capability": "store_memory",
+                "description": "Store release record in memory",
+            },
         ],
         "review_pr": [
-            {"tool_id": "github", "capability": "review_code", "description": "AI code review on the PR"},
-            {"tool_id": "cognee_memory", "capability": "recall", "description": "Recall past bugs in similar code"},
-            {"tool_id": "github", "capability": "create_issue", "description": "File issues for critical findings"},
-            {"tool_id": "notion", "capability": "update_roadmap", "description": "Log review outcome to Notion"},
-            {"tool_id": "slack", "capability": "notify_team", "description": "Notify reviewer via Slack"},
+            {
+                "tool_id": "github",
+                "capability": "review_code",
+                "description": "AI code review on the PR",
+            },
+            {
+                "tool_id": "cognee_memory",
+                "capability": "recall",
+                "description": "Recall past bugs in similar code",
+            },
+            {
+                "tool_id": "github",
+                "capability": "create_issue",
+                "description": "File issues for critical findings",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "update_roadmap",
+                "description": "Log review outcome to Notion",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "notify_team",
+                "description": "Notify reviewer via Slack",
+            },
         ],
         "sprint_planning": [
-            {"tool_id": "jira", "capability": "read_sprint", "description": "Read current sprint backlog"},
-            {"tool_id": "cognee_memory", "capability": "recall", "description": "Recall velocity from past sprints"},
-            {"tool_id": "google_calendar", "capability": "get_upcoming", "description": "Check team calendar for deadlines"},
-            {"tool_id": "jira", "capability": "estimate_difficulty", "description": "AI difficulty estimation for backlog"},
-            {"tool_id": "jira", "capability": "assign_task", "description": "Assign tasks based on skill graph"},
-            {"tool_id": "notion", "capability": "update_sprint", "description": "Sync sprint plan to Notion"},
-            {"tool_id": "slack", "capability": "post_message", "description": "Share sprint plan with team"},
+            {
+                "tool_id": "jira",
+                "capability": "read_sprint",
+                "description": "Read current sprint backlog",
+            },
+            {
+                "tool_id": "cognee_memory",
+                "capability": "recall",
+                "description": "Recall velocity from past sprints",
+            },
+            {
+                "tool_id": "google_calendar",
+                "capability": "get_upcoming",
+                "description": "Check team calendar for deadlines",
+            },
+            {
+                "tool_id": "jira",
+                "capability": "estimate_difficulty",
+                "description": "AI difficulty estimation for backlog",
+            },
+            {
+                "tool_id": "jira",
+                "capability": "assign_task",
+                "description": "Assign tasks based on skill graph",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "update_sprint",
+                "description": "Sync sprint plan to Notion",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "post_message",
+                "description": "Share sprint plan with team",
+            },
         ],
         "process_meeting": [
-            {"tool_id": "cognee_memory", "capability": "recall", "description": "Recall context for meeting participants"},
-            {"tool_id": "notion", "capability": "create_meeting_notes", "description": "Create structured Notion meeting notes"},
-            {"tool_id": "linear", "capability": "create_issue", "description": "Create action-item issues in Linear"},
-            {"tool_id": "notion", "capability": "update_roadmap", "description": "Update roadmap from meeting decisions"},
-            {"tool_id": "slack", "capability": "post_message", "description": "Send meeting summary to Slack"},
-            {"tool_id": "cognee_memory", "capability": "store_memory", "description": "Store decisions in knowledge graph"},
+            {
+                "tool_id": "cognee_memory",
+                "capability": "recall",
+                "description": "Recall context for meeting participants",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "create_meeting_notes",
+                "description": "Create structured Notion meeting notes",
+            },
+            {
+                "tool_id": "linear",
+                "capability": "create_issue",
+                "description": "Create action-item issues in Linear",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "update_roadmap",
+                "description": "Update roadmap from meeting decisions",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "post_message",
+                "description": "Send meeting summary to Slack",
+            },
+            {
+                "tool_id": "cognee_memory",
+                "capability": "store_memory",
+                "description": "Store decisions in knowledge graph",
+            },
         ],
         "deploy_feature": [
-            {"tool_id": "github", "capability": "review_code", "description": "Run final AI review before deploy"},
-            {"tool_id": "github", "capability": "merge_pr", "description": "Merge the feature PR"},
-            {"tool_id": "github", "capability": "trigger_action", "description": "Run CI/CD pipeline"},
-            {"tool_id": "vercel", "capability": "deploy_preview", "description": "Deploy preview environment"},
-            {"tool_id": "browser", "capability": "run_ui_test", "description": "Automated UI smoke test"},
-            {"tool_id": "vercel", "capability": "deploy_production", "description": "Promote to production"},
-            {"tool_id": "notion", "capability": "create_doc", "description": "Document the feature in Notion"},
-            {"tool_id": "slack", "capability": "notify_team", "description": "Notify team of deployment"},
+            {
+                "tool_id": "github",
+                "capability": "review_code",
+                "description": "Run final AI review before deploy",
+            },
+            {
+                "tool_id": "github",
+                "capability": "merge_pr",
+                "description": "Merge the feature PR",
+            },
+            {
+                "tool_id": "github",
+                "capability": "trigger_action",
+                "description": "Run CI/CD pipeline",
+            },
+            {
+                "tool_id": "vercel",
+                "capability": "deploy_preview",
+                "description": "Deploy preview environment",
+            },
+            {
+                "tool_id": "browser",
+                "capability": "run_ui_test",
+                "description": "Automated UI smoke test",
+            },
+            {
+                "tool_id": "vercel",
+                "capability": "deploy_production",
+                "description": "Promote to production",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "create_doc",
+                "description": "Document the feature in Notion",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "notify_team",
+                "description": "Notify team of deployment",
+            },
         ],
         "onboard_new_dev": [
-            {"tool_id": "github", "capability": "clone_repo", "description": "Clone main repository"},
-            {"tool_id": "cognee_memory", "capability": "recall", "description": "Retrieve onboarding guide from memory"},
-            {"tool_id": "notion", "capability": "search_knowledge_base", "description": "Pull architecture docs from Notion"},
-            {"tool_id": "jira", "capability": "read_sprint", "description": "Show current sprint to new dev"},
-            {"tool_id": "slack", "capability": "notify_team", "description": "Introduce new dev to the team"},
+            {
+                "tool_id": "github",
+                "capability": "clone_repo",
+                "description": "Clone main repository",
+            },
+            {
+                "tool_id": "cognee_memory",
+                "capability": "recall",
+                "description": "Retrieve onboarding guide from memory",
+            },
+            {
+                "tool_id": "notion",
+                "capability": "search_knowledge_base",
+                "description": "Pull architecture docs from Notion",
+            },
+            {
+                "tool_id": "jira",
+                "capability": "read_sprint",
+                "description": "Show current sprint to new dev",
+            },
+            {
+                "tool_id": "slack",
+                "capability": "notify_team",
+                "description": "Introduce new dev to the team",
+            },
         ],
     }
 
@@ -121,13 +283,19 @@ class TatvikPlanner:
         goal_lower = goal.lower()
         if any(kw in goal_lower for kw in ["ship", "release", "deploy version"]):
             return self.WORKFLOW_TEMPLATES["ship_release"]
-        if any(kw in goal_lower for kw in ["review pr", "review pull request", "code review"]):
+        if any(
+            kw in goal_lower
+            for kw in ["review pr", "review pull request", "code review"]
+        ):
             return self.WORKFLOW_TEMPLATES["review_pr"]
         if any(kw in goal_lower for kw in ["sprint", "planning", "plan sprint"]):
             return self.WORKFLOW_TEMPLATES["sprint_planning"]
         if any(kw in goal_lower for kw in ["meeting", "transcript", "standup"]):
             return self.WORKFLOW_TEMPLATES["process_meeting"]
-        if any(kw in goal_lower for kw in ["deploy feature", "merge feature", "ship feature"]):
+        if any(
+            kw in goal_lower
+            for kw in ["deploy feature", "merge feature", "ship feature"]
+        ):
             return self.WORKFLOW_TEMPLATES["deploy_feature"]
         if any(kw in goal_lower for kw in ["onboard", "new developer", "new dev"]):
             return self.WORKFLOW_TEMPLATES["onboard_new_dev"]
@@ -141,7 +309,9 @@ class TatvikPlanner:
         1. Tries template matching first (fast path)
         2. Falls back to LLM decomposition (slow path)
         """
-        logger.info(f"[Tatvik Planner] Planning workflow for goal: '{goal}' (user={user_id})")
+        logger.info(
+            f"[Tatvik Planner] Planning workflow for goal: '{goal}' (user={user_id})"
+        )
         context = memory_context or []
 
         # Fast path: template matching
@@ -169,9 +339,13 @@ class TatvikPlanner:
         if self.llm_key:
             try:
                 steps = await self._llm_decompose(goal, context)
-                return TatvikWorkflow(goal=goal, user_id=user_id, steps=steps, memory_context=context)
+                return TatvikWorkflow(
+                    goal=goal, user_id=user_id, steps=steps, memory_context=context
+                )
             except Exception as e:
-                logger.warning(f"[Tatvik Planner] LLM decomposition failed: {e}. Using fallback plan.")
+                logger.warning(
+                    f"[Tatvik Planner] LLM decomposition failed: {e}. Using fallback plan."
+                )
 
         # Fallback: single-step generic execution
         return TatvikWorkflow(
@@ -219,7 +393,10 @@ class TatvikPlanner:
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.llm_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.llm_key}", "Content-Type": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {self.llm_key}",
+                    "Content-Type": "application/json",
+                },
                 json={
                     "model": "openclaw",
                     "messages": [
@@ -234,6 +411,7 @@ class TatvikPlanner:
             content = response.json()["choices"][0]["message"]["content"]
 
         import json, re
+
         match = re.search(r"\[.*?\]", content, re.DOTALL)
         raw_steps: list[dict] = json.loads(match.group(0)) if match else []
 

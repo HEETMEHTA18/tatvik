@@ -51,16 +51,16 @@ class Settings(BaseSettings):
     discord_default_channel_id: str = ""
 
     # ── Email via SMTP (iCloud, Gmail app-password, Outlook — simpler than OAuth) ──
-    smtp_host: str = "smtp.mail.me.com"      # iCloud default; use smtp.gmail.com for Gmail
+    smtp_host: str = "smtp.mail.me.com"  # iCloud default; use smtp.gmail.com for Gmail
     smtp_port: int = 587
     smtp_username: str = ""
-    smtp_password: str = ""                  # App-specific password (NOT your account password)
+    smtp_password: str = ""  # App-specific password (NOT your account password)
     smtp_from_email: str = ""
 
     # ── Apple Calendar via CalDAV (alternative to Google Calendar OAuth) ─────────
     apple_caldav_url: str = "https://caldav.icloud.com"
-    apple_caldav_username: str = ""          # Your Apple ID email
-    apple_caldav_password: str = ""          # App-specific password from appleid.apple.com
+    apple_caldav_username: str = ""  # Your Apple ID email
+    apple_caldav_password: str = ""  # App-specific password from appleid.apple.com
 
     # ── Gmail / Google Calendar (OAuth — optional, SMTP is recommended instead) ──
     gmail_credentials_json: str = ""

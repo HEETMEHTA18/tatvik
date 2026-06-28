@@ -16,6 +16,7 @@ load_dotenv()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
@@ -27,22 +28,26 @@ def skip_if_missing(*keys):
         pytest.skip(f"Missing env key(s): {', '.join(missing)}")
 
 
-GITHUB_TOKEN  = os.getenv("GITHUB_TOKEN", "")
-NOTION_KEY    = os.getenv("NOTION_API_KEY", "")
-VERCEL_TOKEN  = os.getenv("VERCEL_TOKEN", "")
-JIRA_TOKEN    = os.getenv("JIRA_API_TOKEN", "")
-JIRA_URL      = os.getenv("JIRA_BASE_URL", "")
-JIRA_EMAIL    = os.getenv("JIRA_EMAIL", "")
-LINEAR_KEY    = os.getenv("LINEAR_API_KEY", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+NOTION_KEY = os.getenv("NOTION_API_KEY", "")
+VERCEL_TOKEN = os.getenv("VERCEL_TOKEN", "")
+JIRA_TOKEN = os.getenv("JIRA_API_TOKEN", "")
+JIRA_URL = os.getenv("JIRA_BASE_URL", "")
+JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
+LINEAR_KEY = os.getenv("LINEAR_API_KEY", "")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  🐙 GITHUB — live tests
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestGitHubLive:
     BASE = "https://api.github.com"
-    HEADERS = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
+    HEADERS = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+    }
 
     def test_github_auth_valid(self):
         """Token authenticates and returns user info."""
@@ -51,7 +56,9 @@ class TestGitHubLive:
         assert r.status_code == 200, f"Auth failed: {r.text}"
         data = r.json()
         assert "login" in data
-        print(f"\n  ✅ Authenticated as: @{data['login']} ({data.get('name', 'no name')})")
+        print(
+            f"\n  ✅ Authenticated as: @{data['login']} ({data.get('name', 'no name')})"
+        )
         print(f"     Public repos: {data['public_repos']}")
         print(f"     Followers: {data['followers']}")
 
@@ -143,6 +150,7 @@ class TestGitHubLive:
 #  📋 NOTION — live tests
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestNotionLive:
     BASE = "https://api.notion.com/v1"
     HEADERS = {
@@ -187,16 +195,17 @@ class TestNotionLive:
         print(f"\n  ✅ Accessible Notion objects: {len(results)}")
         for obj in results:
             obj_type = obj.get("object")
-            title_arr = (
-                obj.get("properties", {}).get("title", {}).get("title", [])
-                or obj.get("title", [])
-            )
+            title_arr = obj.get("properties", {}).get("title", {}).get(
+                "title", []
+            ) or obj.get("title", [])
             title = title_arr[0]["plain_text"] if title_arr else "(untitled)"
             print(f"     [{obj_type}] {title}")
         if not results:
             print("     ⚠️  No pages/databases found.")
             print("     → Share a Notion page/database with your integration first.")
-            print("     → Open page in Notion → ··· → Add connections → select your integration")
+            print(
+                "     → Open page in Notion → ··· → Add connections → select your integration"
+            )
 
     def test_notion_create_and_delete_test_page(self):
         """Create a test page in Notion, verify it, then archive it."""
@@ -209,7 +218,9 @@ class TestNotionLive:
         ).json()
         results = search.get("results", [])
         if not results:
-            pytest.skip("No accessible parent page found — share a Notion page with the integration first")
+            pytest.skip(
+                "No accessible parent page found — share a Notion page with the integration first"
+            )
 
         parent_id = results[0]["id"]
 
@@ -220,14 +231,29 @@ class TestNotionLive:
             json={
                 "parent": {"page_id": parent_id},
                 "properties": {
-                    "title": {"title": [{"text": {"content": "🤖 Tatvik Test Page — safe to delete"}}]}
+                    "title": {
+                        "title": [
+                            {
+                                "text": {
+                                    "content": "🤖 Tatvik Test Page — safe to delete"
+                                }
+                            }
+                        ]
+                    }
                 },
                 "children": [
                     {
                         "object": "block",
                         "type": "paragraph",
                         "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": "Created by Tatvik integration test. Can be deleted."}}]
+                            "rich_text": [
+                                {
+                                    "type": "text",
+                                    "text": {
+                                        "content": "Created by Tatvik integration test. Can be deleted."
+                                    },
+                                }
+                            ]
                         },
                     }
                 ],
@@ -251,6 +277,7 @@ class TestNotionLive:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ▲ VERCEL — live tests
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestVercelLive:
     BASE = "https://api.vercel.com"
@@ -277,7 +304,9 @@ class TestVercelLive:
         for p in projects[:10]:
             framework = p.get("framework", "static")
             latest = p.get("latestDeployments", [{}])
-            deploy_state = latest[0].get("readyState", "no deploys") if latest else "no deploys"
+            deploy_state = (
+                latest[0].get("readyState", "no deploys") if latest else "no deploys"
+            )
             print(f"     - {p['name']}  [{framework}]  last deploy: {deploy_state}")
 
     def test_vercel_list_deployments(self):
@@ -310,7 +339,9 @@ class TestVercelLive:
         r = httpx.get(f"{self.BASE}/v5/user/tokens", headers=self.HEADERS)
         # This endpoint may 403 on some token types — that's OK
         if r.status_code == 403:
-            print(f"\n  ⚠️  Token list requires full account token — current token may be project-scoped")
+            print(
+                f"\n  ⚠️  Token list requires full account token — current token may be project-scoped"
+            )
             return
         assert r.status_code == 200, f"Failed: {r.text}"
         tokens = r.json().get("tokens", [])
@@ -331,18 +362,22 @@ class TestVercelLive:
             return
         assert r.status_code == 200
         envs = r.json().get("envs", [])
-        print(f"\n  ✅ Project '{projects[0]['name']}' env vars: {len(envs)} (values redacted)")
+        print(
+            f"\n  ✅ Project '{projects[0]['name']}' env vars: {len(envs)} (values redacted)"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  🎯 JIRA — live tests
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestJiraLive:
 
     def _headers(self):
         skip_if_missing("JIRA_API_TOKEN", "JIRA_BASE_URL")
         import base64
+
         email = os.getenv("JIRA_EMAIL", "")
         if not email:
             # Try to discover email from Jira myself endpoint
@@ -361,6 +396,7 @@ class TestJiraLive:
         if not email:
             pytest.skip("JIRA_EMAIL not set — add your Atlassian account email to .env")
         import base64
+
         creds = base64.b64encode(f"{email}:{JIRA_TOKEN}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}", "Accept": "application/json"}
         r = httpx.get(f"{JIRA_URL}/rest/api/3/myself", headers=headers)
@@ -376,6 +412,7 @@ class TestJiraLive:
         if not email:
             pytest.skip("JIRA_EMAIL not set")
         import base64
+
         creds = base64.b64encode(f"{email}:{JIRA_TOKEN}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}", "Accept": "application/json"}
         r = httpx.get(f"{JIRA_URL}/rest/api/3/project", headers=headers)
@@ -389,6 +426,7 @@ class TestJiraLive:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  📐 LINEAR — live tests
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestLinearLive:
     BASE = "https://api.linear.app/graphql"
@@ -422,6 +460,7 @@ class TestLinearLive:
 #  📨 SMTP Email — connectivity test (no email actually sent)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestSMTPConnectivity:
 
     def test_smtp_connection(self):
@@ -431,6 +470,7 @@ class TestSMTPConnectivity:
         if not smtp_host:
             pytest.skip("SMTP_HOST not set")
         import socket
+
         try:
             sock = socket.create_connection((smtp_host, smtp_port), timeout=5)
             sock.close()
@@ -446,8 +486,11 @@ class TestSMTPConnectivity:
         if not all([smtp_host, smtp_user, smtp_pass]):
             pytest.skip("SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD not all set")
         import smtplib
+
         try:
-            with smtplib.SMTP(smtp_host, int(os.getenv("SMTP_PORT", "587")), timeout=8) as server:
+            with smtplib.SMTP(
+                smtp_host, int(os.getenv("SMTP_PORT", "587")), timeout=8
+            ) as server:
                 server.ehlo()
                 server.starttls()
                 server.ehlo()
@@ -460,6 +503,7 @@ class TestSMTPConnectivity:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  🍎 Apple Calendar CalDAV — connectivity test
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestAppleCalDAV:
 
@@ -484,7 +528,9 @@ class TestAppleCalDAV:
         )
         # 207 Multi-Status = success, 401 = bad credentials, 404 = wrong URL
         if r.status_code == 401:
-            pytest.fail("CalDAV auth failed — check APPLE_CALDAV_PASSWORD is an app-specific password, not your Apple ID password")
+            pytest.fail(
+                "CalDAV auth failed — check APPLE_CALDAV_PASSWORD is an app-specific password, not your Apple ID password"
+            )
         elif r.status_code == 207:
             print(f"\n  ✅ Apple CalDAV server connected successfully")
             print(f"     User: {user}")

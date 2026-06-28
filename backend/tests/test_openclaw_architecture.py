@@ -36,6 +36,7 @@ def setup_module():
     from app.db.base import Base
     from app.db.session import engine
     import app.api.v1.endpoints.research as research
+
     Base.metadata.create_all(bind=engine)
     research.redis_client = None
 
@@ -43,7 +44,11 @@ def setup_module():
 def get_auth_headers():
     client.post(
         "/api/v1/auth/register",
-        json={"email": "openclaw_test@example.com", "password": "Password123!", "name": "OpenClaw Test"},
+        json={
+            "email": "openclaw_test@example.com",
+            "password": "Password123!",
+            "name": "OpenClaw Test",
+        },
     )
     r = client.post(
         "/api/v1/auth/login",
@@ -53,6 +58,7 @@ def get_auth_headers():
 
 
 # ─── Tool Registry ────────────────────────────────────────────────────────────
+
 
 def test_tool_registry_has_tools():
     tools = get_all_tools_summary()
@@ -69,7 +75,13 @@ def test_tool_registry_github_capabilities():
     tool = get_tool("github")
     assert tool is not None
     cap_names = [c.name for c in tool.capabilities]
-    for cap in ["create_pr", "merge_pr", "review_code", "create_release", "trigger_action"]:
+    for cap in [
+        "create_pr",
+        "merge_pr",
+        "review_code",
+        "create_release",
+        "trigger_action",
+    ]:
         assert cap in cap_names, f"Missing GitHub capability: {cap}"
 
 
@@ -117,6 +129,7 @@ def test_architecture_stats_structure():
 
 # ─── Tatvik Planner ───────────────────────────────────────────────────────────
 
+
 def _plan(goal, user="user-1"):
     return asyncio.get_event_loop().run_until_complete(
         TatvikPlanner().plan_workflow(goal, user)
@@ -150,8 +163,12 @@ def test_planner_pr_review_template():
 
 def test_planner_all_templates_produce_valid_steps():
     goals = [
-        "Ship version 1.0", "Review PR #10", "Sprint planning",
-        "Process meeting transcript", "Deploy feature branch", "Onboard new developer",
+        "Ship version 1.0",
+        "Review PR #10",
+        "Sprint planning",
+        "Process meeting transcript",
+        "Deploy feature branch",
+        "Onboard new developer",
     ]
     for goal in goals:
         wf = _plan(goal)
@@ -162,13 +179,16 @@ def test_planner_all_templates_produce_valid_steps():
 
 def test_planner_workflow_to_dict():
     planner = TatvikPlanner()
-    wf = asyncio.get_event_loop().run_until_complete(planner.plan_workflow("Ship release", "u1"))
+    wf = asyncio.get_event_loop().run_until_complete(
+        planner.plan_workflow("Ship release", "u1")
+    )
     d = planner.workflow_to_dict(wf)
     assert "goal" in d and "steps" in d and isinstance(d["steps"], list)
 
 
 # ─── OpenClaw Service (forced dry-run / stub mode) ───────────────────────────
 # We force enabled=False so tests run fully offline even when OPENCLAW_API_KEY is set.
+
 
 def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
@@ -188,13 +208,19 @@ def test_openclaw_stub_execute_task():
 
 
 def test_openclaw_stub_tool_capability():
-    result = _run(_stub_svc().execute_tool_capability("github", "create_pr", {"repo": "test/repo"}))
+    result = _run(
+        _stub_svc().execute_tool_capability(
+            "github", "create_pr", {"repo": "test/repo"}
+        )
+    )
     assert result["success"] is True
     assert result.get("stub") is True
 
 
 def test_openclaw_stub_github_create_release():
-    result = _run(_stub_svc().github_create_release("test/repo", "v1.0.0", "First release"))
+    result = _run(
+        _stub_svc().github_create_release("test/repo", "v1.0.0", "First release")
+    )
     assert result["success"] is True
 
 
@@ -204,7 +230,9 @@ def test_openclaw_stub_slack_post():
 
 
 def test_openclaw_stub_notion_create_doc():
-    result = _run(_stub_svc().notion_create_doc("Release Notes", "Version 1.0 released"))
+    result = _run(
+        _stub_svc().notion_create_doc("Release Notes", "Version 1.0 released")
+    )
     assert result["success"] is True
 
 
@@ -227,6 +255,7 @@ def test_openclaw_stub_docker_logs():
 
 
 # ─── Webhook Parsers ──────────────────────────────────────────────────────────
+
 
 def test_parse_github_pr_opened():
     payload = {
@@ -358,7 +387,9 @@ def test_parse_jira_issue_created():
 
 
 def test_webhook_signature_skipped_when_no_secret(monkeypatch):
-    monkeypatch.setattr("app.services.webhook_router.settings.github_webhook_secret", "")
+    monkeypatch.setattr(
+        "app.services.webhook_router.settings.github_webhook_secret", ""
+    )
     assert verify_github_signature(b"body", "sha256=anything") is True
 
 
@@ -390,6 +421,7 @@ def test_webhook_goal_rendering():
 
 
 # ─── API Endpoints ────────────────────────────────────────────────────────────
+
 
 def test_api_architecture_endpoint():
     r = client.get("/api/v1/openclaw/architecture")
@@ -446,7 +478,11 @@ def test_api_execute_endpoint_valid_tool():
     headers = get_auth_headers()
     r = client.post(
         "/api/v1/openclaw/execute",
-        json={"tool_id": "slack", "capability": "post_message", "parameters": {"channel": "#test", "message": "hello"}},
+        json={
+            "tool_id": "slack",
+            "capability": "post_message",
+            "parameters": {"channel": "#test", "message": "hello"},
+        },
         headers=headers,
     )
     assert r.status_code == 200
@@ -539,7 +575,10 @@ def test_api_legacy_task_endpoint():
     headers = get_auth_headers()
     r = client.post(
         "/api/v1/openclaw/task",
-        json={"repo_url": "https://github.com/test/repo", "task_description": "Add README"},
+        json={
+            "repo_url": "https://github.com/test/repo",
+            "task_description": "Add README",
+        },
         headers=headers,
     )
     assert r.status_code == 200

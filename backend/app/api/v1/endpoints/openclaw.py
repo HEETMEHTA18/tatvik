@@ -13,12 +13,24 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Request,
+    status,
+)
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user_id
 from app.services.openclaw_service import OpenClawService
-from app.services.openclaw_tools import get_all_tools_summary, get_architecture_stats, get_tool
+from app.services.openclaw_tools import (
+    get_all_tools_summary,
+    get_architecture_stats,
+    get_tool,
+)
 from app.services.tatvik_planner import TatvikPlanner
 from app.services.webhook_router import (
     DEFAULT_AUTOMATION_RULES,
@@ -36,6 +48,7 @@ router = APIRouter()
 
 # ── Request / Response Models ─────────────────────────────────────────────────
 
+
 class ToolCapabilityRequest(BaseModel):
     tool_id: str = Field(..., description="Tool to invoke (e.g. 'github', 'slack')")
     capability: str = Field(..., description="Capability to execute (e.g. 'create_pr')")
@@ -45,11 +58,14 @@ class ToolCapabilityRequest(BaseModel):
 
 class PlanGoalRequest(BaseModel):
     goal: str = Field(..., description="High-level goal in natural language")
-    execute: bool = Field(default=False, description="If true, execute the plan immediately")
+    execute: bool = Field(
+        default=False, description="If true, execute the plan immediately"
+    )
 
 
 class ExecuteTaskRequest(BaseModel):
     """Legacy: direct task execution on a repository."""
+
     repo_url: str
     task_description: str
     branch_name: str | None = None
@@ -76,7 +92,10 @@ class ShipReleaseRequest(BaseModel):
 
 # ── Architecture & Tool Registry ─────────────────────────────────────────────
 
-@router.get("/architecture", summary="Tatvik architecture overview with accurate statistics")
+
+@router.get(
+    "/architecture", summary="Tatvik architecture overview with accurate statistics"
+)
 async def get_architecture():
     """
     Returns the full Tatvik AI OS architecture overview:
@@ -101,7 +120,9 @@ async def get_tool_detail(tool_id: str):
     """Returns full detail for a specific tool including all capabilities."""
     tool = get_tool(tool_id)
     if not tool:
-        raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not found in registry")
+        raise HTTPException(
+            status_code=404, detail=f"Tool '{tool_id}' not found in registry"
+        )
     return {
         "success": True,
         "data": {
@@ -127,6 +148,7 @@ async def get_tool_detail(tool_id: str):
 
 
 # ── Goal Planning ─────────────────────────────────────────────────────────────
+
 
 @router.post("/plan", summary="Plan a workflow from a natural-language goal")
 async def plan_goal(
@@ -177,6 +199,7 @@ async def plan_goal(
 
 # ── Tool Capability Execution ─────────────────────────────────────────────────
 
+
 @router.post("/execute", summary="Execute a specific tool capability")
 async def execute_tool_capability(
     body: ToolCapabilityRequest,
@@ -193,14 +216,16 @@ async def execute_tool_capability(
     """
     tool = get_tool(body.tool_id)
     if not tool:
-        raise HTTPException(status_code=404, detail=f"Tool '{body.tool_id}' not found in registry")
+        raise HTTPException(
+            status_code=404, detail=f"Tool '{body.tool_id}' not found in registry"
+        )
 
     known_capabilities = [c.name for c in tool.capabilities]
     if body.capability not in known_capabilities:
         raise HTTPException(
             status_code=400,
             detail=f"Capability '{body.capability}' not found in tool '{body.tool_id}'. "
-                   f"Available: {known_capabilities}",
+            f"Available: {known_capabilities}",
         )
 
     openclaw = OpenClawService()
@@ -210,10 +235,16 @@ async def execute_tool_capability(
         parameters=body.parameters,
         user_context=body.user_context,
     )
-    return {"success": result.get("success", False), "tool_id": body.tool_id, "capability": body.capability, "result": result}
+    return {
+        "success": result.get("success", False),
+        "tool_id": body.tool_id,
+        "capability": body.capability,
+        "result": result,
+    }
 
 
 # ── High-Level Workflow Shortcuts ─────────────────────────────────────────────
+
 
 @router.post("/workflows/ship-release", summary="Ship a full release (plan → execute)")
 async def ship_release(
@@ -255,7 +286,9 @@ async def ship_release(
         r3 = await openclaw.execute_tool_capability(
             "railway", "deploy", {"project": body.repo, "service": "web"}
         )
-    steps_executed.append({"step": f"{body.deploy_target.title()} Deploy", "result": r3})
+    steps_executed.append(
+        {"step": f"{body.deploy_target.title()} Deploy", "result": r3}
+    )
 
     # 4. Notify Slack
     r4 = await openclaw.slack_post_release_notes(
@@ -272,7 +305,9 @@ async def ship_release(
     }
 
 
-@router.post("/workflows/process-meeting", summary="Process a meeting transcript end-to-end")
+@router.post(
+    "/workflows/process-meeting", summary="Process a meeting transcript end-to-end"
+)
 async def process_meeting(
     body: MeetingTranscriptRequest,
     user_id: str = Depends(get_current_user_id),
@@ -283,7 +318,9 @@ async def process_meeting(
     openclaw = OpenClawService()
     steps = []
 
-    r1 = await openclaw.notion_create_meeting_notes(title=body.title, transcript=body.transcript)
+    r1 = await openclaw.notion_create_meeting_notes(
+        title=body.title, transcript=body.transcript
+    )
     steps.append({"step": "Notion Meeting Notes", "result": r1})
 
     if body.notify_slack_channel:
@@ -297,6 +334,7 @@ async def process_meeting(
 
 
 # ── Legacy Endpoints (backward compatible) ────────────────────────────────────
+
 
 @router.post("/task", summary="[Legacy] Execute a repository task via OpenClaw")
 async def execute_legacy_task(
@@ -324,7 +362,10 @@ async def run_terminal_command(
 
 # ── Webhook Ingestion ─────────────────────────────────────────────────────────
 
-@router.post("/webhooks/github", summary="Ingest GitHub webhook events", include_in_schema=True)
+
+@router.post(
+    "/webhooks/github", summary="Ingest GitHub webhook events", include_in_schema=True
+)
 async def github_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -350,11 +391,17 @@ async def github_webhook(
     event = parse_github_event(event_header=x_github_event or "", payload=payload)
 
     if not event:
-        return {"received": True, "processed": False, "reason": f"Unhandled event type: {x_github_event}"}
+        return {
+            "received": True,
+            "processed": False,
+            "reason": f"Unhandled event type: {x_github_event}",
+        }
 
     async def process_in_background():
         result = await route_webhook_event(event, user_id="system")
-        logger.info(f"[Webhook] GitHub {event.event_type} processed: {result.get('matched')}")
+        logger.info(
+            f"[Webhook] GitHub {event.event_type} processed: {result.get('matched')}"
+        )
 
     background_tasks.add_task(process_in_background)
     return {
@@ -381,7 +428,9 @@ async def slack_webhook(request: Request, background_tasks: BackgroundTasks):
 
     async def process_in_background():
         result = await route_webhook_event(event, user_id="system")
-        logger.info(f"[Webhook] Slack {event.event_type} processed: {result.get('matched')}")
+        logger.info(
+            f"[Webhook] Slack {event.event_type} processed: {result.get('matched')}"
+        )
 
     background_tasks.add_task(process_in_background)
     return {"received": True, "processed": True, "event_type": event.event_type}
@@ -397,7 +446,9 @@ async def jira_webhook(request: Request, background_tasks: BackgroundTasks):
 
     async def process_in_background():
         result = await route_webhook_event(event, user_id="system")
-        logger.info(f"[Webhook] Jira {event.event_type} processed: {result.get('matched')}")
+        logger.info(
+            f"[Webhook] Jira {event.event_type} processed: {result.get('matched')}"
+        )
 
     background_tasks.add_task(process_in_background)
     return {"received": True, "processed": True, "event_type": event.event_type}

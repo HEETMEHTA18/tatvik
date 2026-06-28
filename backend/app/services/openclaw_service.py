@@ -50,7 +50,7 @@ class OpenClawService:
             self.headers["Authorization"] = f"Bearer {self.api_key}"
 
         self.enabled = bool(self.api_key)
-        
+
         # Force stub mode during automated tests to avoid real HTTP calls
         if settings.environment == "testing":
             self.enabled = False
@@ -161,23 +161,24 @@ class OpenClawService:
     ) -> dict:
         """Create a pull request on GitHub."""
         return await self.execute_tool_capability(
-            "github", "create_pr",
+            "github",
+            "create_pr",
             {"repo": repo, "title": title, "body": body, "base": base, "head": head},
         )
 
     async def github_review_code(self, repo: str, pr_number: int) -> dict:
         """AI-powered code review on a GitHub PR."""
         return await self.execute_tool_capability(
-            "github", "review_code",
+            "github",
+            "review_code",
             {"repo": repo, "pr_number": pr_number},
         )
 
-    async def github_create_release(
-        self, repo: str, tag: str, notes: str
-    ) -> dict:
+    async def github_create_release(self, repo: str, tag: str, notes: str) -> dict:
         """Create a tagged release on GitHub."""
         return await self.execute_tool_capability(
-            "github", "create_release",
+            "github",
+            "create_release",
             {"repo": repo, "tag": tag, "notes": notes},
         )
 
@@ -186,7 +187,8 @@ class OpenClawService:
     ) -> dict:
         """Trigger a GitHub Actions workflow."""
         return await self.execute_tool_capability(
-            "github", "trigger_action",
+            "github",
+            "trigger_action",
             {"repo": repo, "workflow_id": workflow_id, "inputs": inputs or {}},
         )
 
@@ -195,7 +197,8 @@ class OpenClawService:
     async def slack_post_message(self, channel: str, message: str) -> dict:
         """Post a message to a Slack channel."""
         return await self.execute_tool_capability(
-            "slack", "post_message",
+            "slack",
+            "post_message",
             {"channel": channel, "message": message},
         )
 
@@ -204,14 +207,16 @@ class OpenClawService:
     ) -> dict:
         """Post formatted release notes to Slack."""
         return await self.execute_tool_capability(
-            "slack", "post_release_notes",
+            "slack",
+            "post_release_notes",
             {"channel": channel, "version": version, "notes": notes},
         )
 
     async def slack_daily_summary(self, channel: str, context: str) -> dict:
         """Generate and post a daily standup summary."""
         return await self.execute_tool_capability(
-            "slack", "daily_summary",
+            "slack",
+            "daily_summary",
             {"channel": channel, "context": context},
         )
 
@@ -222,23 +227,24 @@ class OpenClawService:
     ) -> dict:
         """Create a Notion page with the given content."""
         return await self.execute_tool_capability(
-            "notion", "create_doc",
+            "notion",
+            "create_doc",
             {"title": title, "content": content, "parent_id": parent_id},
         )
 
-    async def notion_create_meeting_notes(
-        self, title: str, transcript: str
-    ) -> dict:
+    async def notion_create_meeting_notes(self, title: str, transcript: str) -> dict:
         """Generate and save structured meeting notes to Notion."""
         return await self.execute_tool_capability(
-            "notion", "create_meeting_notes",
+            "notion",
+            "create_meeting_notes",
             {"title": title, "transcript": transcript},
         )
 
     async def notion_search(self, query: str) -> dict:
         """Search across a Notion workspace."""
         return await self.execute_tool_capability(
-            "notion", "search_knowledge_base",
+            "notion",
+            "search_knowledge_base",
             {"query": query},
         )
 
@@ -247,21 +253,24 @@ class OpenClawService:
     async def jira_read_sprint(self, project_key: str) -> dict:
         """Read the active sprint for a Jira project."""
         return await self.execute_tool_capability(
-            "jira", "read_sprint",
+            "jira",
+            "read_sprint",
             {"project_key": project_key},
         )
 
     async def jira_find_blockers(self, project_key: str) -> dict:
         """Identify blockers in the current sprint."""
         return await self.execute_tool_capability(
-            "jira", "find_blockers",
+            "jira",
+            "find_blockers",
             {"project_key": project_key},
         )
 
     async def jira_generate_sprint_summary(self, project_key: str) -> dict:
         """Generate an AI sprint summary with velocity forecast."""
         return await self.execute_tool_capability(
-            "jira", "generate_sprint_summary",
+            "jira",
+            "generate_sprint_summary",
             {"project_key": project_key},
         )
 
@@ -272,20 +281,23 @@ class OpenClawService:
     ) -> dict:
         """Build a Docker image and run the container."""
         build_result = await self.execute_tool_capability(
-            "docker", "build_image",
+            "docker",
+            "build_image",
             {"dockerfile_path": dockerfile_path, "tag": tag},
         )
         if not build_result.get("success"):
             return build_result
         return await self.execute_tool_capability(
-            "docker", "run_container",
+            "docker",
+            "run_container",
             {"image": tag, "env_vars": env_vars or {}, "ports": {}},
         )
 
     async def docker_view_logs(self, container_name: str, lines: int = 100) -> dict:
         """Tail logs from a running Docker container."""
         return await self.execute_tool_capability(
-            "docker", "view_logs",
+            "docker",
+            "view_logs",
             {"container_name": container_name, "lines": lines},
         )
 
@@ -294,44 +306,54 @@ class OpenClawService:
     async def vercel_deploy(self, repo: str, branch: str = "main") -> dict:
         """Deploy a Vercel project from a branch."""
         return await self.execute_tool_capability(
-            "vercel", "deploy_preview",
+            "vercel",
+            "deploy_preview",
             {"repo": repo, "branch": branch},
         )
 
     async def vercel_promote_production(self, deployment_id: str) -> dict:
         """Promote a Vercel preview deployment to production."""
         return await self.execute_tool_capability(
-            "vercel", "deploy_production",
+            "vercel",
+            "deploy_production",
             {"deployment_id": deployment_id},
         )
 
     # ── Figma Tool ───────────────────────────────────────────────────────────
 
-    async def figma_design_to_code(self, file_key: str, frame_id: str, repo: str) -> dict:
+    async def figma_design_to_code(
+        self, file_key: str, frame_id: str, repo: str
+    ) -> dict:
         """Read Figma design, generate React code, and open a PR."""
         code_result = await self.execute_tool_capability(
-            "figma", "generate_react_code",
+            "figma",
+            "generate_react_code",
             {"file_key": file_key, "frame_id": frame_id},
         )
         if not code_result.get("success"):
             return code_result
         return await self.execute_tool_capability(
-            "figma", "create_pr_from_design",
+            "figma",
+            "create_pr_from_design",
             {"file_key": file_key, "repo": repo},
         )
 
     # ── Gmail Tool ───────────────────────────────────────────────────────────
 
-    async def gmail_process_inbox(self, query: str = "is:unread", limit: int = 10) -> dict:
+    async def gmail_process_inbox(
+        self, query: str = "is:unread", limit: int = 10
+    ) -> dict:
         """Read, summarize, and create tasks from emails."""
         emails = await self.execute_tool_capability(
-            "gmail", "read_emails",
+            "gmail",
+            "read_emails",
             {"query": query, "limit": limit},
         )
         if not emails.get("success"):
             return emails
         return await self.execute_tool_capability(
-            "gmail", "summarize",
+            "gmail",
+            "summarize",
             {"message_ids": emails.get("output", "")},
         )
 
@@ -372,7 +394,11 @@ class OpenClawService:
             return {"success": False, "error": "Invalid command: must be non-empty"}
 
         if not self.enabled:
-            return {"success": True, "stub": True, "output": f"Mock output for: {command}"}
+            return {
+                "success": True,
+                "stub": True,
+                "output": f"Mock output for: {command}",
+            }
 
         result = await self._dispatch(
             f"Run the following terminal command and return its exact output:\n\n{command}",
@@ -387,10 +413,15 @@ class OpenClawService:
         Legacy method: Use browser plugin to evaluate a live UI.
         """
         if not self.enabled:
-            return {"success": True, "stub": True, "message": f"Mock UI review for {target_url}"}
+            return {
+                "success": True,
+                "stub": True,
+                "message": f"Mock UI review for {target_url}",
+            }
 
         return await self.execute_tool_capability(
-            "browser", "run_ui_test",
+            "browser",
+            "run_ui_test",
             {"url": target_url, "instructions": ui_instructions},
         )
 
@@ -399,7 +430,11 @@ class OpenClawService:
         Legacy method: Use device-pair and phone-control plugins for mobile testing.
         """
         if not self.enabled:
-            return {"success": True, "stub": True, "message": f"Mock mobile test for {ngrok_url}"}
+            return {
+                "success": True,
+                "stub": True,
+                "message": f"Mock mobile test for {ngrok_url}",
+            }
 
         prompt = (
             f"Use your 'device-pair' plugin to connect to the ADB server at {ngrok_url}. "
@@ -412,7 +447,11 @@ class OpenClawService:
         Legacy method: Initialize a WebRTC/WebSocket voice stream.
         """
         if not self.enabled:
-            return {"success": True, "stub": True, "stream_url": "wss://mock-stream.openclaw.ai"}
+            return {
+                "success": True,
+                "stub": True,
+                "stream_url": "wss://mock-stream.openclaw.ai",
+            }
 
         async with httpx.AsyncClient() as client:
             try:
@@ -429,7 +468,10 @@ class OpenClawService:
                     timeout=10.0,
                 )
                 if response.status_code == 200:
-                    return {"success": True, "stream_url": response.json().get("stream_url")}
+                    return {
+                        "success": True,
+                        "stream_url": response.json().get("stream_url"),
+                    }
                 return {"success": False, "error": response.text}
             except Exception as e:
                 return {"success": False, "error": str(e)}
