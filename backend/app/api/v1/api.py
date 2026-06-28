@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     intelligence,
     mentor,
     notifications,
+    openclaw,
     recommendations,
     repositories,
     roadmap,
@@ -41,4 +42,8 @@ api_router.include_router(timeline.router, prefix="/timeline", tags=["timeline"]
 api_router.include_router(reviewer.router, prefix="/reviewer", tags=["reviewer"])
 api_router.include_router(
     intelligence.router, prefix="/intelligence", tags=["intelligence"]
+)
+# ── OpenClaw Universal Automation Runtime ──────────────────────────────────
+api_router.include_router(
+    openclaw.router, prefix="/openclaw", tags=["openclaw"]
 )
