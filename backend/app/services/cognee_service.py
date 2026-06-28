@@ -115,11 +115,11 @@ class CogneeService:
                 )
                 if response.status_code == 200:
                     return {"results": response.json()}
-                logger.error(f"Failed to recall developer profile: {response.text}")
-                return {"error": response.text}
+                logger.error(f"Failed to recall developer profile (status {response.status_code})")
+                return {"results": [], "success": False}
             except Exception as e:
-                logger.exception(f"Failed to query Cognee Cloud profile: {e}")
-                return {"error": str(e)}
+                logger.exception("Failed to query Cognee Cloud profile")
+                return {"results": [], "success": False}
 
     async def index_repository(
         self, user_id: str, repo_name: str, codebase_files: list[dict]
@@ -345,7 +345,7 @@ class CogneeService:
                 return "No results found for your question."
             except Exception as e:
                 logger.warning(f"Codebase Q&A failed: {e}")
-                return f"Search failed: {e}"
+                return "Search failed due to an internal error."
 
     async def get_skill_badges(self, user_id: str) -> dict:
         """

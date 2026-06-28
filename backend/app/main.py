@@ -85,6 +85,7 @@ async def periodic_huggingface_ping():
 
 @app.on_event("startup")
 def startup_event():
+    import app.models  # Ensure all models are registered in Base.metadata
     Base.metadata.create_all(bind=engine)
 
     # Custom self-healing migrations for users columns using schema inspection (PostgreSQL safe)

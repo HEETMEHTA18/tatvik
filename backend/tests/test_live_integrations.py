@@ -53,14 +53,12 @@ class TestGitHubLive:
         """Token authenticates and returns user info."""
         skip_if_missing("GITHUB_TOKEN")
         r = httpx.get(f"{self.BASE}/user", headers=self.HEADERS)
-        assert r.status_code == 200, f"Auth failed: {r.text}"
+        assert r.status_code == 200, "Auth failed"
         data = r.json()
         assert "login" in data
-        print(
-            f"\n  ✅ Authenticated as: @{data['login']} ({data.get('name', 'no name')})"
-        )
-        print(f"     Public repos: {data['public_repos']}")
-        print(f"     Followers: {data['followers']}")
+        print("\n  ✅ Authenticated as user")
+        print("     Public repos retrieved")
+        print("     Followers retrieved")
 
     def test_github_rate_limit(self):
         """Check remaining rate limit."""
@@ -134,8 +132,7 @@ class TestGitHubLive:
         skip_if_missing("GITHUB_TOKEN")
         r = httpx.get(f"{self.BASE}/notifications", headers=self.HEADERS)
         assert r.status_code == 200
-        notifs = r.json()
-        print(f"\n  ✅ Unread notifications: {len(notifs)}")
+        print("\n  ✅ Checked unread notifications")
 
     def test_github_token_scopes(self):
         """Check what scopes the token has."""
@@ -163,20 +160,18 @@ class TestNotionLive:
         """Token authenticates and returns bot user info."""
         skip_if_missing("NOTION_API_KEY")
         r = httpx.get(f"{self.BASE}/users/me", headers=self.HEADERS)
-        assert r.status_code == 200, f"Auth failed: {r.text}"
+        assert r.status_code == 200, "Auth failed"
         data = r.json()
-        print(f"\n  ✅ Notion bot: {data.get('name')} (type={data.get('type')})")
-        bot = data.get("bot", {})
-        workspace = bot.get("workspace_name", "unknown")
-        print(f"     Workspace: {workspace}")
+        print("\n  ✅ Notion bot checked")
+        print("     Workspace checked")
 
     def test_notion_list_users(self):
         """List all users in the workspace the integration has access to."""
         skip_if_missing("NOTION_API_KEY")
         r = httpx.get(f"{self.BASE}/users", headers=self.HEADERS)
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         users = r.json().get("results", [])
-        print(f"\n  ✅ Workspace users ({len(users)} total):")
+        print("\n  ✅ Workspace users checked")
         for u in users:
             name = u.get("name", "unnamed")
             utype = u.get("type", "?")
@@ -190,9 +185,9 @@ class TestNotionLive:
             headers=self.HEADERS,
             json={"page_size": 10},
         )
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         results = r.json().get("results", [])
-        print(f"\n  ✅ Accessible Notion objects: {len(results)}")
+        print("\n  ✅ Accessible Notion objects checked")
         for obj in results:
             obj_type = obj.get("object")
             title_arr = obj.get("properties", {}).get("title", {}).get(
@@ -259,10 +254,10 @@ class TestNotionLive:
                 ],
             },
         )
-        assert create_r.status_code == 200, f"Create failed: {create_r.text}"
+        assert create_r.status_code == 200, "Create failed"
         page = create_r.json()
         page_id = page["id"]
-        print(f"\n  ✅ Created Notion page: {page_id}")
+        print("\n  ✅ Created Notion page")
 
         # Archive (soft-delete) it
         archive_r = httpx.patch(
@@ -271,7 +266,7 @@ class TestNotionLive:
             json={"archived": True},
         )
         assert archive_r.status_code == 200
-        print(f"  ✅ Archived Notion page: {page_id}")
+        print("  ✅ Archived Notion page")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -287,20 +282,19 @@ class TestVercelLive:
         """Token authenticates and returns user info."""
         skip_if_missing("VERCEL_TOKEN")
         r = httpx.get(f"{self.BASE}/v2/user", headers=self.HEADERS)
-        assert r.status_code == 200, f"Auth failed: {r.text}"
+        assert r.status_code == 200, "Auth failed"
         user = r.json()["user"]
-        print(f"\n  ✅ Vercel user: {user.get('name')} ({user.get('email')})")
-        print(f"     Username: {user.get('username')}")
-        plan = user.get("billing", {}).get("plan", "unknown")
-        print(f"     Plan: {plan}")
+        print("\n  ✅ Vercel user checked")
+        print("     Username checked")
+        print("     Plan checked")
 
     def test_vercel_list_projects(self):
         """List all Vercel projects."""
         skip_if_missing("VERCEL_TOKEN")
         r = httpx.get(f"{self.BASE}/v9/projects", headers=self.HEADERS)
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         projects = r.json().get("projects", [])
-        print(f"\n  ✅ Vercel projects ({len(projects)} total):")
+        print("\n  ✅ Vercel projects checked")
         for p in projects[:10]:
             framework = p.get("framework", "static")
             latest = p.get("latestDeployments", [{}])
@@ -317,9 +311,9 @@ class TestVercelLive:
             headers=self.HEADERS,
             params={"limit": 5},
         )
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         deployments = r.json().get("deployments", [])
-        print(f"\n  ✅ Recent deployments ({len(deployments)}):")
+        print("\n  ✅ Recent deployments checked")
         for d in deployments:
             print(f"     - {d.get('name')} [{d.get('state')}] {d.get('url', '')}")
 
@@ -327,9 +321,9 @@ class TestVercelLive:
         """List domains on the Vercel account."""
         skip_if_missing("VERCEL_TOKEN")
         r = httpx.get(f"{self.BASE}/v5/domains", headers=self.HEADERS)
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         domains = r.json().get("domains", [])
-        print(f"\n  ✅ Vercel domains ({len(domains)}):")
+        print("\n  ✅ Vercel domains checked")
         for d in domains[:5]:
             print(f"     - {d.get('name')}  verified={d.get('verified')}")
 
@@ -343,9 +337,9 @@ class TestVercelLive:
                 f"\n  ⚠️  Token list requires full account token — current token may be project-scoped"
             )
             return
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         tokens = r.json().get("tokens", [])
-        print(f"\n  ✅ Account tokens: {len(tokens)}")
+        print("\n  ✅ Account tokens checked")
 
     def test_vercel_env_vars_readable(self):
         """Check if we can read env vars on any project."""
@@ -400,10 +394,10 @@ class TestJiraLive:
         creds = base64.b64encode(f"{email}:{JIRA_TOKEN}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}", "Accept": "application/json"}
         r = httpx.get(f"{JIRA_URL}/rest/api/3/myself", headers=headers)
-        assert r.status_code == 200, f"Auth failed: {r.text}"
+        assert r.status_code == 200, "Auth failed"
         me = r.json()
-        print(f"\n  ✅ Jira user: {me.get('displayName')} ({me.get('emailAddress')})")
-        print(f"     Account ID: {me.get('accountId')}")
+        print("\n  ✅ Jira user checked")
+        print("     Account ID checked")
 
     def test_jira_list_projects(self):
         """List all Jira projects accessible to this token."""
@@ -416,9 +410,9 @@ class TestJiraLive:
         creds = base64.b64encode(f"{email}:{JIRA_TOKEN}".encode()).decode()
         headers = {"Authorization": f"Basic {creds}", "Accept": "application/json"}
         r = httpx.get(f"{JIRA_URL}/rest/api/3/project", headers=headers)
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         projects = r.json()
-        print(f"\n  ✅ Jira projects ({len(projects)} total):")
+        print("\n  ✅ Jira projects checked")
         for p in projects[:10]:
             print(f"     - [{p['key']}] {p['name']}")
 
@@ -437,10 +431,10 @@ class TestLinearLive:
         skip_if_missing("LINEAR_API_KEY")
         query = {"query": "{ viewer { id name email } }"}
         r = httpx.post(self.BASE, headers=self.HEADERS, json=query)
-        assert r.status_code == 200, f"Auth failed: {r.text}"
+        assert r.status_code == 200, "Auth failed"
         data = r.json()
         viewer = data.get("data", {}).get("viewer", {})
-        print(f"\n  ✅ Linear user: {viewer.get('name')} ({viewer.get('email')})")
+        print("\n  ✅ Linear user checked")
         assert viewer.get("id") is not None
 
     def test_linear_list_teams(self):
@@ -448,10 +442,10 @@ class TestLinearLive:
         skip_if_missing("LINEAR_API_KEY")
         query = {"query": "{ teams { nodes { id name key } } }"}
         r = httpx.post(self.BASE, headers=self.HEADERS, json=query)
-        assert r.status_code == 200, f"Failed: {r.text}"
+        assert r.status_code == 200, "Failed"
         data = r.json()
         teams = data.get("data", {}).get("teams", {}).get("nodes", [])
-        print(f"\n  ✅ Linear teams ({len(teams)} total):")
+        print("\n  ✅ Linear teams checked")
         for t in teams:
             print(f"     - [{t['key']}] {t['name']}")
 
@@ -535,4 +529,4 @@ class TestAppleCalDAV:
             print(f"\n  ✅ Apple CalDAV server connected successfully")
             print(f"     User: {user}")
         else:
-            print(f"\n  ⚠️  Unexpected status {r.status_code}: {r.text[:200]}")
+            print(f"\n  ⚠️  Unexpected status {r.status_code}")

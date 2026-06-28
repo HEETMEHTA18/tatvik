@@ -17,6 +17,7 @@ from app.models.entities import (
     ResearchSession,
     ResearchResult,
     WeeklyDigest,
+    PulseItem,
 )
 
 __all__ = [
@@ -38,4 +39,5 @@ __all__ = [
     "ResearchSession",
     "ResearchResult",
     "WeeklyDigest",
+    "PulseItem",
 ]

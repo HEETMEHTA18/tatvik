@@ -96,10 +96,10 @@ class OpenClawService:
                 logger.error(
                     f"OpenClaw returned {response.status_code}: {response.text}"
                 )
-                return {"success": False, "error": response.text}
+                return {"success": False, "error": "An error occurred during tool execution."}
             except Exception as e:
                 logger.exception("OpenClaw dispatch failed")
-                return {"success": False, "error": str(e)}
+                return {"success": False, "error": "An error occurred during tool execution."}
 
     def _stub(self, tool_id: str, capability: str, params: dict) -> dict:
         """Returns a stub response for dry-run mode."""
@@ -472,6 +472,7 @@ class OpenClawService:
                         "success": True,
                         "stream_url": response.json().get("stream_url"),
                     }
-                return {"success": False, "error": response.text}
+                return {"success": False, "error": "Failed to initialize voice stream."}
             except Exception as e:
-                return {"success": False, "error": str(e)}
+                logger.exception("Failed to initialize voice stream")
+                return {"success": False, "error": "Failed to initialize voice stream."}

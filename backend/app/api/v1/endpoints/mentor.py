@@ -264,8 +264,8 @@ async def mentor_chat(
             if github_url_match:
                 owner_part = github_url_match.group(1)
                 repo_part = github_url_match.group(2)
-                # Clean trailing chars like punctuation or slash
-                repo_part = re.sub(r"[.,;/?)].*$", "", repo_part)
+                # Clean trailing chars like punctuation or slash without polynomial backtracking
+                repo_part = re.split(r"[.,;/?)]", repo_part, maxsplit=1)[0]
                 target_repo = f"{owner_part}/{repo_part}"
             else:
                 # Match owner/repo pattern: e.g. HEETMEHTA18/tatvik
