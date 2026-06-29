@@ -668,7 +668,7 @@ async def github_file_content(
             return {
                 "content": "",
                 "status": "not_found",
-                "error": "File not found on GitHub."
+                "error": "File not found on GitHub.",
             }
         except HTTPException as he:
             raise he
