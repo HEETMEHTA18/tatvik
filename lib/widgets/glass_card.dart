@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:oc_liquid_glass/oc_liquid_glass.dart';
@@ -37,54 +38,56 @@ class GlassCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.10 : 0.02),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
+            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: SafeOCLiquidGlassGroup(
-          settings: OCLiquidGlassSettings(
-            refractStrength: -0.05,
-            blurRadiusPx: activeBlur > 0 ? activeBlur : 2.0,
-            specStrength: 25.0,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: activeBlur,
+            sigmaY: activeBlur,
           ),
-          child: Stack(
-            children: [
-              // Liquid glass shader layer - decorative, doesn't intercept taps
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: SafeOCLiquidGlass(
-                    borderRadius: borderRadius,
-                    color: glassColor,
-                    child: const SizedBox.expand(),
+          child: SafeOCLiquidGlassGroup(
+            settings: OCLiquidGlassSettings(
+              refractStrength: -0.05,
+              blurRadiusPx: activeBlur > 0 ? activeBlur : 2.0,
+              specStrength: 25.0,
+            ),
+            child: Stack(
+              children: [
+                // Liquid glass shader layer - decorative, doesn't intercept taps
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: SafeOCLiquidGlass(
+                      borderRadius: borderRadius,
+                      color: glassColor,
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: padding,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  border: Border.all(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.45),
-                    width: 0.8,
+                Container(
+                  padding: padding,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(borderRadius),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.12)
+                          : Colors.white.withValues(alpha: 0.35),
+                      width: 0.8,
+                    ),
                   ),
+                  child: child,
                 ),
-                child: child,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

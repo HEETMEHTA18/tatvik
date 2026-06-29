@@ -434,46 +434,60 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // Stats Pills Container
+            // Stats Pill (unified GlassCard)
             SizedBox(
               width: isMobile
                   ? constraints.maxWidth
                   : (constraints.maxWidth - spacing) * 0.55,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildBentoStat(
-                      context,
-                      '${state.repos}',
-                      'Repos',
-                      Icons.folder_open,
-                      AppTheme.neonPurple,
-                      isMobile,
+              child: GlassCard(
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 18 : 24,
+                  horizontal: 12,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildBentoStat(
+                        context,
+                        '${state.repos}',
+                        'Repos',
+                        Icons.folder_open,
+                        AppTheme.neonPurple,
+                        isMobile,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: isMobile ? 8 : 16),
-                  Expanded(
-                    child: _buildBentoStat(
-                      context,
-                      '${state.commits}',
-                      'Commits',
-                      Icons.history,
-                      AppTheme.neonGreen,
-                      isMobile,
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: AppTheme.border,
                     ),
-                  ),
-                  SizedBox(width: isMobile ? 8 : 16),
-                  Expanded(
-                    child: _buildBentoStat(
-                      context,
-                      '${state.stars}',
-                      'Stars',
-                      Icons.star_border,
-                      AppTheme.neonOrange,
-                      isMobile,
+                    Expanded(
+                      child: _buildBentoStat(
+                        context,
+                        '${state.commits}',
+                        'Commits',
+                        Icons.history,
+                        AppTheme.neonGreen,
+                        isMobile,
+                      ),
                     ),
-                  ),
-                ],
+                    Container(
+                      height: 40,
+                      width: 1,
+                      color: AppTheme.border,
+                    ),
+                    Expanded(
+                      child: _buildBentoStat(
+                        context,
+                        '${state.stars}',
+                        'Stars',
+                        Icons.star_border,
+                        AppTheme.neonOrange,
+                        isMobile,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -490,40 +504,34 @@ class HomeScreen extends StatelessWidget {
     Color color,
     bool isMobile,
   ) {
-    return GlassCard(
-      padding: EdgeInsets.symmetric(
-        vertical: isMobile ? 16 : 20,
-        horizontal: isMobile ? 8 : 12,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: isMobile ? 20 : 24, color: color),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: isMobile ? 20 : 24,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textMain,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: isMobile ? 20 : 24, color: color),
+        const SizedBox(height: 12),
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: isMobile ? 18 : 22,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.textMain,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: GoogleFonts.spaceMono(
-              fontSize: isMobile ? 9 : 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-              color: AppTheme.textSecondary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.spaceMono(
+            fontSize: isMobile ? 9 : 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+            color: AppTheme.textSecondary,
           ),
-        ],
-      ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 
@@ -947,13 +955,17 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      state.username,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 32,
-                        letterSpacing: -1.0,
-                        color: AppTheme.textMain,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        state.username,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 32,
+                          letterSpacing: -1.0,
+                          color: AppTheme.textMain,
+                        ),
                       ),
                     ),
                   ],
