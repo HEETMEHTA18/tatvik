@@ -13,6 +13,56 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+SAFE_RESULT_KEYS = {
+    "success",
+    "output",
+    "message",
+    "pull_request_url",
+    "task_id",
+    "status",
+    "tool_id",
+    "capability",
+    "steps_executed",
+}
+
+
+def _sanitize_result(result: Any) -> dict:
+    if not isinstance(result, dict):
+        return {"success": False, "message": "Operation completed"}
+    safe = {}
+    for k, v in result.items():
+        if k not in SAFE_RESULT_KEYS:
+            continue
+        if isinstance(v, Exception):
+            continue
+        if isinstance(v, str) and len(v) > 2000:
+            safe[k] = v[:2000] + "..."
+            continue
+        safe[k] = v
+    if "success" not in safe:
+        safe["success"] = False
+    return safe
+
+
+def _sanitize_steps(steps: list[dict]) -> list[dict]:
+    sanitized = []
+    for step in steps:
+        safe_step = {}
+        for k, v in step.items():
+            if k == "error":
+                safe_step[k] = "step failed"
+            elif k == "result":
+                safe_step[k] = (
+                    _sanitize_result(v)
+                    if isinstance(v, dict)
+                    else {"message": "completed"}
+                )
+            else:
+                safe_step[k] = v
+        sanitized.append(safe_step)
+    return sanitized
+
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -240,7 +290,7 @@ async def execute_tool_capability(
             "success": result.get("success", False),
             "tool_id": body.tool_id,
             "capability": body.capability,
-            "result": result,
+            "result": _sanitize_result(result),
         }
     except Exception:
         logger.exception("Tool execution failed")
@@ -321,7 +371,7 @@ async def ship_release(
     return {
         "success": True,
         "workflow": planner.workflow_to_dict(workflow),
-        "steps_executed": steps_executed,
+        "steps_executed": _sanitize_steps(steps_executed),
     }
 
 
@@ -358,7 +408,7 @@ async def process_meeting(
             logger.warning("Slack step failed: %s", e)
             steps.append({"step": "Slack Notification", "error": "step failed"})
 
-    return {"success": True, "steps_executed": steps}
+    return {"success": True, "steps_executed": _sanitize_steps(steps)}
 
 
 # ── Legacy Endpoints (backward compatible) ────────────────────────────────────
@@ -376,7 +426,7 @@ async def execute_legacy_task(
             task_description=body.task_description,
             branch_name=body.branch_name,
         )
-        return result
+        return _sanitize_result(result)
     except Exception:
         logger.exception("Task execution failed")
         raise HTTPException(status_code=500, detail="Task execution failed")
@@ -390,7 +440,7 @@ async def run_terminal_command(
     openclaw = OpenClawService()
     try:
         result = await openclaw.run_terminal_command(command=body.command)
-        return result
+        return _sanitize_result(result)
     except Exception:
         logger.exception("Command execution failed")
         raise HTTPException(status_code=500, detail="Command execution failed")

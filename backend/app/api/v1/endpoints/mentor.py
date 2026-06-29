@@ -542,20 +542,22 @@ async def mentor_chat(
                         ),
                     }
                     if openclaw_result:
-                        safe_fields = {
-                            k: v
-                            for k, v in openclaw_result.items()
-                            if k
-                            in (
+                        safe_fields = {}
+                        for k, v in openclaw_result.items():
+                            if k not in (
                                 "pull_request_url",
                                 "output",
                                 "message",
                                 "success",
                                 "task_id",
                                 "status",
-                            )
-                            and not isinstance(v, (Exception, type(None)))
-                        }
+                            ):
+                                continue
+                            if isinstance(v, (Exception, type(None))):
+                                continue
+                            if isinstance(v, str):
+                                v = v[:2000]
+                            safe_fields[k] = v
                         if safe_fields:
                             response_data["openclaw_task"] = safe_fields
                     return response_data
@@ -623,7 +625,22 @@ async def mentor_chat(
                                 "assistant_message": clean_response(reply),
                             }
                             if openclaw_result:
-                                response_data["openclaw_task"] = openclaw_result
+                                safe_fields = {
+                                    k: (v[:2000] if isinstance(v, str) else v)
+                                    for k, v in openclaw_result.items()
+                                    if k
+                                    in (
+                                        "pull_request_url",
+                                        "output",
+                                        "message",
+                                        "success",
+                                        "task_id",
+                                        "status",
+                                    )
+                                    and not isinstance(v, (Exception, type(None)))
+                                }
+                                if safe_fields:
+                                    response_data["openclaw_task"] = safe_fields
                             return response_data
                         except (KeyError, IndexError):
                             import logging
