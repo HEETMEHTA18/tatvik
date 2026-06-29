@@ -534,9 +534,9 @@ This is simulated offline prompts.md content.
     }
     if (token == null) return;
     fetchActivityData();
-    fetchDeveloperDna();
-    fetchProfileRoast();
-    fetchWeeklyReport();
+    // NOTE: fetchDeveloperDna, fetchProfileRoast, and fetchWeeklyReport
+    // are intentionally NOT auto-triggered here to save API tokens.
+    // They fire on-demand when the user taps "Roast Me", pulls to refresh, etc.
     fetchLearningPaths();
     fetchOpportunities();
     fetchPromptHistory();
@@ -1716,9 +1716,6 @@ This is simulated offline prompts.md content.
 
           await fetchActivityData();
           await fetchFollowingActivity();
-          await fetchDeveloperDna();
-          await fetchProfileRoast();
-          await fetchWeeklyReport();
           await fetchLearningPaths();
           await fetchOpportunities();
           await fetchPromptHistory();
@@ -1808,9 +1805,6 @@ This is simulated offline prompts.md content.
 
     fetchActivityData();
     fetchFollowingActivity();
-    fetchDeveloperDna();
-    fetchProfileRoast();
-    fetchWeeklyReport();
     fetchLearningPaths();
     fetchOpportunities();
     fetchPromptHistory();
@@ -1903,9 +1897,6 @@ This is simulated offline prompts.md content.
 
           fetchActivityData();
           fetchFollowingActivity();
-          fetchDeveloperDna();
-          fetchProfileRoast();
-          fetchWeeklyReport();
           fetchLearningPaths();
           fetchOpportunities();
           fetchPromptHistory();
@@ -3696,5 +3687,40 @@ This is simulated offline prompts.md content.
       isLoadingAwesomeLists = false;
       notifyListeners();
     }
+  }
+  Future<void> generateContextMd(String repoOwner, String repoName) async {
+    // Generates a compact .autodevs/prompt.md context file to drastically save tokens
+    try {
+      final String endpoint = '${AppConfig.apiBaseUrl}/api/context/generate';
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'repo_owner': repoOwner,
+          'repo_name': repoName,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final contextMd = data['context_md'] as String?;
+        if (contextMd != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('context_${repoOwner}_$repoName', contextMd);
+        }
+      } else {
+        debugPrint('Failed to generate context md: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error generating context md: $e');
+    }
+  }
+
+  Future<String?> getContextMd(String repoOwner, String repoName) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('context_${repoOwner}_$repoName');
   }
 }

@@ -21,6 +21,12 @@ class AppTheme {
   static Color get border =>
       isDark ? const Color(0x33FFFFFF) : const Color(0x66FFFFFF);
 
+  static Color get neonGreen => const Color(0xFF22D3EE);
+  static Color get neonPurple => const Color(0xFFA78BFA);
+  static Color get neonOrange => const Color(0xFFFB923C);
+  static Color get surfaceElevated =>
+      isDark ? const Color(0xFF1E1E2E) : const Color(0xFFF8FAFC);
+
   static const Color peach = Color(0xFFF4C7AB);
   static const Color blue = Color(0xFFB8C9E8);
   static const Color teal = Color(0xFFA8C8C6);

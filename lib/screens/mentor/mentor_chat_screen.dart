@@ -1,18 +1,14 @@
-import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../core/theme/app_theme.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
-import '../../widgets/liquid_glass_background.dart';
 import '../../widgets/animated_copy_button.dart';
 import '../../utils/speech_helper.dart';
 import '../../widgets/liquid_glass_button.dart';
@@ -33,6 +29,124 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   String _previousText = '';
   int _lastMessageCount = 0;
   bool _lastTypingState = false;
+  String _selectedModel = 'Tatvik AI OS';
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKeyPress);
+    _controller.addListener(_onTextChanged);
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final appState = Provider.of<AppState>(context, listen: false);
+      appState.addListener(_onAppStateChanged);
+      _lastMessageCount = appState.chatMessages.length;
+      _lastTypingState = appState.isMentorTyping;
+      // Load saved sessions when entering chat
+      appState.loadChatHistory();
+    });
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKeyPress);
+    _controller.removeListener(_onTextChanged);
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      appState.removeListener(_onAppStateChanged);
+    } catch (_) {}
+    _focusNode.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final currentText = _controller.text;
+    final textNotEmpty = currentText.trim().isNotEmpty;
+    if (textNotEmpty != _hasText) {
+      setState(() {
+        _hasText = textNotEmpty;
+      });
+    }
+
+    final diff = currentText.length - _previousText.length;
+    if (diff > 8) {
+      final addedText = currentText.substring(currentText.length - diff);
+      final isPaste = diff > 20 || 
+                      addedText.contains(' ') || 
+                      addedText.contains('\n') || 
+                      addedText.contains('{') || 
+                      addedText.contains('/') ||
+                      addedText.contains('.');
+      if (isPaste) {
+        _previousText = currentText;
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (!mounted) return;
+          final textToSend = _controller.text.trim();
+          if (textToSend.isNotEmpty) {
+            final appState = Provider.of<AppState>(context, listen: false);
+            appState.sendMessage(textToSend);
+            _controller.clear();
+            _previousText = '';
+            _scrollToBottom();
+            _focusNode.requestFocus();
+          }
+        });
+        return;
+      }
+    }
+    _previousText = currentText;
+  }
+
+  void _onAppStateChanged() {
+    if (!mounted) return;
+    final appState = Provider.of<AppState>(context, listen: false);
+    if (appState.chatMessages.length != _lastMessageCount ||
+        appState.isMentorTyping != _lastTypingState) {
+      _lastMessageCount = appState.chatMessages.length;
+      _lastTypingState = appState.isMentorTyping;
+      _scrollToBottom();
+    }
+  }
+
+  bool _handleKeyPress(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      final key = event.logicalKey;
+      if (key == LogicalKeyboardKey.escape) {
+        if (_focusNode.hasFocus) {
+          _focusNode.unfocus();
+          return true;
+        }
+      }
+      if (!_focusNode.hasFocus) {
+        final character = event.character;
+        if (character != null && character.isNotEmpty) {
+          _focusNode.requestFocus();
+          final text = _controller.text + character;
+          _controller.value = TextEditingValue(
+            text: text,
+            selection: TextSelection.collapsed(offset: text.length),
+          );
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   void _toggleListening(AppState state) {
     if (_isListening) {
@@ -79,10 +193,10 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: AppTheme.border),
+          decoration: const BoxDecoration(
+            color: Color(0xFF171717),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: Colors.white10)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -97,7 +211,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textMain,
+                      color: const Color(0xFFECECF1),
                     ),
                   ),
                 ],
@@ -107,7 +221,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 'AI parsed your voice instructions as:',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: AppTheme.textSecondary,
+                  color: const Color(0xFFC5C5D2),
                 ),
               ),
               const SizedBox(height: 8),
@@ -115,16 +229,16 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black26,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.border),
+                  border: Border.all(color: Colors.white10),
                 ),
                 child: Text(
                   '"$transcript"',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontStyle: FontStyle.italic,
-                    color: AppTheme.textMain,
+                    color: const Color(0xFFECECF1),
                   ),
                 ),
               ),
@@ -133,7 +247,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 'This will generate .autodev/prompt.md specifications in your repository and start the autonomous agentic implementation loop.',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: AppTheme.textSecondary,
+                  color: const Color(0xFFC5C5D2),
                 ),
               ),
               const SizedBox(height: 24),
@@ -150,7 +264,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   const SizedBox(width: 12),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accent,
+                      backgroundColor: const Color(0xFF10A37F),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -173,321 +287,6 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     );
   }
 
-  @override
-  void initState() {
-    super.initState();
-    HardwareKeyboard.instance.addHandler(_handleKeyPress);
-    _controller.addListener(_onTextChanged);
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.addListener(_onAppStateChanged);
-      _lastMessageCount = appState.chatMessages.length;
-      _lastTypingState = appState.isMentorTyping;
-    });
-  }
-
-  @override
-  void dispose() {
-    HardwareKeyboard.instance.removeHandler(_handleKeyPress);
-    _controller.removeListener(_onTextChanged);
-    try {
-      final appState = Provider.of<AppState>(context, listen: false);
-      appState.removeListener(_onAppStateChanged);
-    } catch (_) {}
-    _focusNode.dispose();
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onTextChanged() {
-    final currentText = _controller.text;
-    
-    // Update button active state dynamically like ChatGPT
-    final textNotEmpty = currentText.trim().isNotEmpty;
-    if (textNotEmpty != _hasText) {
-      setState(() {
-        _hasText = textNotEmpty;
-      });
-    }
-
-    final diff = currentText.length - _previousText.length;
-    if (diff > 8) {
-      final addedText = currentText.substring(currentText.length - diff);
-      // Heuristic to detect a paste operation (size change + whitespace/newline/special chars)
-      final isPaste = diff > 20 || 
-                      addedText.contains(' ') || 
-                      addedText.contains('\n') || 
-                      addedText.contains('{') || 
-                      addedText.contains('/') ||
-                      addedText.contains('.');
-      if (isPaste) {
-        _previousText = currentText;
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (!mounted) return;
-          final textToSend = _controller.text.trim();
-          if (textToSend.isNotEmpty) {
-            final appState = Provider.of<AppState>(context, listen: false);
-            appState.sendMessage(textToSend);
-            _controller.clear();
-            _previousText = '';
-            _scrollToBottom();
-            _focusNode.requestFocus();
-          }
-        });
-        return;
-      }
-    }
-    _previousText = currentText;
-  }
-
-  void _onAppStateChanged() {
-    if (!mounted) return;
-    final appState = Provider.of<AppState>(context, listen: false);
-    if (appState.chatMessages.length != _lastMessageCount ||
-        appState.isMentorTyping != _lastTypingState) {
-      _lastMessageCount = appState.chatMessages.length;
-      _lastTypingState = appState.isMentorTyping;
-      _scrollToBottom();
-    }
-  }
-
-  bool _handleKeyPress(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      final key = event.logicalKey;
-
-      if (key == LogicalKeyboardKey.escape) {
-        if (_focusNode.hasFocus) {
-          _focusNode.unfocus();
-          return true;
-        }
-      }
-
-      if (!_focusNode.hasFocus) {
-        final character = event.character;
-        if (character != null && character.isNotEmpty) {
-          _focusNode.requestFocus();
-          final text = _controller.text + character;
-          _controller.value = TextEditingValue(
-            text: text,
-            selection: TextSelection.collapsed(offset: text.length),
-          );
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appState = Provider.of<AppState>(context);
-    final messages = appState.chatMessages;
-
-    return LiquidGlassBackground(
-      child: GestureDetector(
-        onTap: () {
-          if (_focusNode.hasFocus) {
-            _focusNode.unfocus();
-          }
-        },
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppTheme.textMain,
-              ),
-              onPressed: () => context.pop(),
-            ),
-            title: Column(
-              children: [
-                Text(
-                  'AI Mentor',
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textMain,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildOsStatusPill('🧠 Cognee', const Color(0xFF6C63FF)),
-                    const SizedBox(width: 6),
-                    _buildOsStatusPill('🤖 OpenClaw', const Color(0xFF00BFA5)),
-                  ],
-                ),
-              ],
-            ),
-            centerTitle: true,
-          ),
-          body: Column(
-            children: [
-              if (appState.lastUploadedResumeText != null &&
-                  appState.lastUploadedResumeText!.isNotEmpty)
-                _buildResumeStatusBar(appState),
-              Expanded(
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (ScrollNotification notification) {
-                    if (notification is ScrollStartNotification) {
-                      if (_focusNode.hasFocus) {
-                        _focusNode.unfocus();
-                      }
-                    }
-                    return false;
-                  },
-                  child: messages.isEmpty
-                      ? _buildEmptyState(appState)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          keyboardDismissBehavior:
-                              ScrollViewKeyboardDismissBehavior.onDrag,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final msg = messages[index];
-                            return Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 800,
-                                ),
-                                child: _buildMessageRow(msg, appState),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ),
-              if (appState.isMentorTyping)
-                Padding(
-                  padding: const EdgeInsets.only(left: 20, top: 4, bottom: 4),
-                  child: Row(
-                    children: [
-                      const BouncingDotsIndicator(),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Tatvik is thinking...',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              _buildInputArea(appState),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResumeStatusBar(AppState state) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: state.isGoogleDriveConnected
-            ? AppTheme.accent.withValues(alpha: 0.08)
-            : Colors.amber.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: state.isGoogleDriveConnected
-              ? AppTheme.accent.withValues(alpha: 0.2)
-              : Colors.amber.withValues(alpha: 0.3),
-          width: 1.0,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.description_rounded,
-                color: state.isGoogleDriveConnected
-                    ? AppTheme.accent
-                    : Colors.amber,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      state.lastUploadedResumeFileName ?? 'Active Resume PDF',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textMain,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      state.isGoogleDriveConnected
-                          ? 'Connected to Google Drive (${state.googleDriveEmail ?? ''})'
-                          : 'Google Drive disconnected (saves locally)',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: LiquidGlassButton.icon(
-              onPressed: () => _showTailorBottomSheet(state),
-              icon: const Icon(Icons.auto_awesome_rounded, size: 14),
-              label: Text(
-                'Tailor & Sync',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              color: AppTheme.accent,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              borderRadius: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showTailorBottomSheet(AppState state) {
     final titleController = TextEditingController();
     final descController = TextEditingController();
@@ -496,7 +295,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0D0E15),
+      backgroundColor: const Color(0xFF171717),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         side: BorderSide(color: Colors.white10, width: 0.5),
@@ -517,40 +316,40 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: [
-                      Icon(Icons.auto_awesome_rounded, color: AppTheme.accent),
-                      const SizedBox(width: 12),
+                    children: const [
+                      Icon(Icons.auto_awesome_rounded, color: Color(0xFF10A37F)),
+                      SizedBox(width: 12),
                       Text(
                         'Tailor Resume',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
-                          color: AppTheme.textMain,
+                          color: Color(0xFFECECF1),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  const Text(
                     'Provide the target job details to automatically tailor your resume and sync the output to Google Drive.',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppTheme.textSecondary,
+                      color: Color(0xFFC5C5D2),
                     ),
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
                     controller: titleController,
-                    style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                    style: const TextStyle(color: Color(0xFFECECF1), fontSize: 14),
                     decoration: InputDecoration(
                       labelText: 'Job Title',
-                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                      labelStyle: const TextStyle(color: Color(0xFFC5C5D2)),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppTheme.border),
+                        borderSide: const BorderSide(color: Colors.white10),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppTheme.accent),
+                        borderSide: const BorderSide(color: Color(0xFF10A37F)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
@@ -561,18 +360,18 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: descController,
-                    style: TextStyle(color: AppTheme.textMain, fontSize: 14),
+                    style: const TextStyle(color: Color(0xFFECECF1), fontSize: 14),
                     maxLines: 5,
                     decoration: InputDecoration(
                       labelText: 'Job Description',
-                      labelStyle: TextStyle(color: AppTheme.textSecondary),
+                      labelStyle: const TextStyle(color: Color(0xFFC5C5D2)),
                       alignLabelWithHint: true,
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppTheme.border),
+                        borderSide: const BorderSide(color: Colors.white10),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: AppTheme.accent),
+                        borderSide: const BorderSide(color: Color(0xFF10A37F)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
@@ -586,13 +385,19 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text(
+                        child: const Text(
                           'Cancel',
-                          style: TextStyle(color: AppTheme.textSecondary),
+                          style: TextStyle(color: Color(0xFFC5C5D2)),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      LiquidGlassButton(
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10A37F),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: () {
                           if (formKey.currentState!.validate()) {
                             Navigator.pop(context);
@@ -603,13 +408,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                             _scrollToBottom();
                           }
                         },
-                        color: AppTheme.accent,
-                        borderRadius: 16,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        child: const Text('Tailor & Sync'),
+                        child: const Text('Tailor & Sync', style: TextStyle(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -626,11 +425,12 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   void _showAttachmentOptions(AppState state) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xEE0D0E15),
+      backgroundColor: const Color(0xFF171717),
       elevation: 10,
       barrierColor: Colors.black54,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: Colors.white10, width: 0.5),
       ),
       builder: (context) {
         return SafeArea(
@@ -653,29 +453,29 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
-                    color: AppTheme.textMain,
+                    color: const Color(0xFFECECF1),
                   ),
                 ),
                 const SizedBox(height: 24),
                 ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0x2010A37F),
                     child: Icon(
                       Icons.picture_as_pdf_rounded,
-                      color: AppTheme.accent,
+                      color: Color(0xFF10A37F),
                     ),
                   ),
-                  title: Text(
+                  title: const Text(
                     'Upload PDF Resume',
                     style: TextStyle(
-                      color: AppTheme.textMain,
+                      color: Color(0xFFECECF1),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: Text(
+                  subtitle: const Text(
                     'Upload a new resume to guide the mentoring sessions',
                     style: TextStyle(
-                      color: AppTheme.textSecondary,
+                      color: Color(0xFFC5C5D2),
                       fontSize: 12,
                     ),
                   ),
@@ -695,12 +495,12 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     }
                   },
                 ),
-                const Divider(color: Colors.white12, height: 24),
+                const Divider(color: Colors.white10, height: 24),
                 ListTile(
                   leading: CircleAvatar(
                     backgroundColor: state.isGoogleDriveConnected
-                        ? Colors.green.withValues(alpha: 0.15)
-                        : Colors.amber.withValues(alpha: 0.15),
+                        ? const Color(0x2010B981)
+                        : const Color(0x20F59E0B),
                     child: Icon(
                       state.isGoogleDriveConnected
                           ? Icons.cloud_done_rounded
@@ -714,8 +514,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     state.isGoogleDriveConnected
                         ? 'Google Drive Connected'
                         : 'Connect Google Drive',
-                    style: TextStyle(
-                      color: AppTheme.textMain,
+                    style: const TextStyle(
+                      color: Color(0xFFECECF1),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -723,16 +523,16 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     state.isGoogleDriveConnected
                         ? 'Email: ${state.googleDriveEmail ?? ''}'
                         : 'Connect Google Drive to auto-sync tailored resumes',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
+                    style: const TextStyle(
+                      color: Color(0xFFC5C5D2),
                       fontSize: 12,
                     ),
                   ),
                   trailing: state.isGoogleDriveConnected
                       ? null
-                      : Icon(
+                      : const Icon(
                           Icons.chevron_right_rounded,
-                          color: AppTheme.textSecondary,
+                          color: Color(0xFFC5C5D2),
                         ),
                   onTap: () async {
                     Navigator.pop(context);
@@ -756,6 +556,248 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final isDesktop = MediaQuery.of(context).size.width > 800;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF212121),
+      appBar: _buildAppBar(context, appState, isDesktop),
+      body: Column(
+        children: [
+          if (appState.lastUploadedResumeText != null &&
+              appState.lastUploadedResumeText!.isNotEmpty)
+            _buildResumeStatusBar(appState),
+          Expanded(
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification notification) {
+                if (notification is ScrollStartNotification) {
+                  if (_focusNode.hasFocus) {
+                    _focusNode.unfocus();
+                  }
+                }
+                return false;
+              },
+              child: appState.chatMessages.isEmpty
+                  ? _buildEmptyState(appState)
+                  : ListView.builder(
+                      controller: _scrollController,
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: appState.chatMessages.length,
+                      itemBuilder: (context, index) {
+                        final msg = appState.chatMessages[index];
+                        return Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 800),
+                            child: _buildMessageRow(msg, appState),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+          if (appState.isMentorTyping)
+            Padding(
+              padding: const EdgeInsets.only(left: 20, top: 4, bottom: 4),
+              child: Row(
+                children: [
+                  const BouncingDotsIndicator(),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Tatvik is thinking...',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFFC5C5D2),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _buildInputArea(appState),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, AppState appState, bool isDesktop) {
+    return AppBar(
+      backgroundColor: const Color(0xFF212121),
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Color(0xFFECECF1)),
+      leading: isDesktop
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFECECF1)),
+              onPressed: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+      title: _buildModelSelector(),
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_square, color: Color(0xFFECECF1), size: 20),
+          tooltip: 'New Chat',
+          onPressed: () {
+            appState.startNewChat();
+          },
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: Color(0xFFECECF1)),
+          color: const Color(0xFF171717),
+          onSelected: (val) {
+            if (val == 'clear') {
+              appState.clearAllChatHistory();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'clear',
+              child: Text('Clear conversation', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModelSelector() {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 40),
+      color: const Color(0xFF171717),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Colors.white10),
+      ),
+      onSelected: (String value) {
+        setState(() {
+          _selectedModel = value;
+        });
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _selectedModel,
+            style: GoogleFonts.inter(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: const Color(0xFFECECF1),
+            ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFECECF1), size: 18),
+        ],
+      ),
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'Tatvik AI OS',
+          child: Row(
+            children: const [
+              Icon(Icons.psychology_rounded, color: Colors.blueAccent, size: 18),
+              SizedBox(width: 8),
+              Text('Tatvik AI OS (Standard)', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'OpenClaw Agent',
+          child: Row(
+            children: const [
+              Icon(Icons.smart_toy_rounded, color: Color(0xFF00BFA5), size: 18),
+              SizedBox(width: 8),
+              Text('OpenClaw Agent (Coding)', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'Cognee Graph',
+          child: Row(
+            children: const [
+              Icon(Icons.hub_rounded, color: Colors.purpleAccent, size: 18),
+              SizedBox(width: 8),
+              Text('Cognee Graph (Memory)', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResumeStatusBar(AppState state) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.description_rounded, color: Color(0xFF10A37F), size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      state.lastUploadedResumeFileName ?? 'Active Resume PDF',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFECECF1),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      state.isGoogleDriveConnected
+                          ? 'Connected to Google Drive (${state.googleDriveEmail ?? ''})'
+                          : 'Google Drive disconnected (saves locally)',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFC5C5D2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: LiquidGlassButton.icon(
+              onPressed: () => _showTailorBottomSheet(state),
+              icon: const Icon(Icons.auto_awesome_rounded, size: 14),
+              label: Text(
+                'Tailor & Sync',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              color: const Color(0xFF10A37F),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              borderRadius: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(AppState state) {
     return Center(
       child: SingleChildScrollView(
@@ -770,8 +812,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.accent, AppTheme.secondaryAccent],
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
                   ),
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -783,10 +825,11 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: AppTheme.textMain,
+                  color: const Color(0xFFECECF1),
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 24),
               _buildSuggestionGrid(state),
             ],
           ),
@@ -846,14 +889,8 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
           constraints: const BoxConstraints(maxWidth: 280),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withValues(alpha: 0.04)
-                : Colors.black.withValues(alpha: 0.03),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.08),
-            ),
+            color: Colors.white.withValues(alpha: 0.03),
+            border: Border.all(color: Colors.white10),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
@@ -867,7 +904,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: AppTheme.textMain,
+                    color: const Color(0xFFECECF1),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -882,42 +919,35 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildMessageRow(MentorMessage msg, AppState state) {
     final isUser = msg.role == MessageRole.user;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final userBubbleColor = isDark ? const Color(0xFF2A2A32) : const Color(0xFFF0F0F0);
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           if (!isUser)
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
+              padding: const EdgeInsets.only(left: 4, bottom: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 22,
-                    height: 22,
+                    width: 24,
+                    height: 24,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppTheme.accent,
-                          AppTheme.accent.withValues(alpha: 0.7),
-                        ],
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
                       ),
                     ),
                     child: const Icon(Icons.auto_awesome_rounded, size: 12, color: Colors.white),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
-                    'Tatvik',
+                    'Tatvik AI',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary,
+                      color: const Color(0xFFC5C5D2),
                     ),
                   ),
                 ],
@@ -925,24 +955,18 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             ),
           ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.82,
+              maxWidth: MediaQuery.of(context).size.width * 0.85,
             ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? AppTheme.accent.withValues(alpha: isDark ? 0.85 : 1.0)
-                    : userBubbleColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isUser ? 20 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 20),
-                ),
-                border: isUser
-                    ? null
-                    : Border.all(color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06)),
-              ),
+              padding: isUser 
+                  ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
+                  : const EdgeInsets.only(left: 32, right: 16, top: 2, bottom: 8),
+              decoration: isUser
+                  ? BoxDecoration(
+                      color: const Color(0xFF2F2F2F),
+                      borderRadius: BorderRadius.circular(20),
+                    )
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -957,92 +981,51 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       }
                     },
                     styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                      p: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
+                      p: const TextStyle(
+                        color: Color(0xFFECECF1),
                         fontSize: 15,
                         height: 1.5,
                       ),
-                      a: TextStyle(
-                        color: isUser ? Colors.white.withValues(alpha: 0.9) : AppTheme.accent,
+                      a: const TextStyle(
+                        color: Color(0xFF10A37F),
                         decoration: TextDecoration.underline,
                         fontWeight: FontWeight.bold,
                       ),
                       code: TextStyle(
-                        backgroundColor: isUser
-                            ? Colors.white.withValues(alpha: 0.15)
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.05)),
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
                         fontFamily: 'monospace',
                         fontSize: 13,
-                        color: isUser ? Colors.white : AppTheme.textMain,
+                        color: const Color(0xFFECECF1),
                       ),
                       codeblockDecoration: BoxDecoration(
-                        color: isUser
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : (isDark
-                                ? Colors.white.withValues(alpha: 0.03)
-                                : Colors.black.withValues(alpha: 0.02)),
+                        color: Colors.white.withValues(alpha: 0.02),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isUser
-                              ? Colors.white.withValues(alpha: 0.1)
-                              : AppTheme.border,
-                        ),
+                        border: Border.all(color: Colors.white10),
                       ),
-                      h4: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      h3: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      h2: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      h1: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      blockquote: TextStyle(
-                        color: isUser
-                            ? Colors.white.withValues(alpha: 0.8)
-                            : AppTheme.textSecondary,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      listBullet: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                      ),
-                      strong: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      em: TextStyle(
-                        color: isUser ? Colors.white : AppTheme.textMain,
-                        fontStyle: FontStyle.italic,
-                      ),
+                      h4: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, fontWeight: FontWeight.bold),
+                      h3: const TextStyle(color: Color(0xFFECECF1), fontSize: 16, fontWeight: FontWeight.bold),
+                      h2: const TextStyle(color: Color(0xFFECECF1), fontSize: 17, fontWeight: FontWeight.bold),
+                      h1: const TextStyle(color: Color(0xFFECECF1), fontSize: 18, fontWeight: FontWeight.bold),
+                      blockquote: const TextStyle(color: Color(0xFFC5C5D2), fontStyle: FontStyle.italic),
+                      listBullet: const TextStyle(color: Color(0xFFECECF1)),
+                      strong: const TextStyle(color: Color(0xFFECECF1), fontWeight: FontWeight.bold),
+                      em: const TextStyle(color: Color(0xFFECECF1), fontStyle: FontStyle.italic),
                     ),
                   ),
                   if (!isUser) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     Row(
                       children: [
                         AnimatedCopyButton(
                           text: msg.content,
                           size: 14,
-                          color: AppTheme.textSecondary,
+                          color: const Color(0xFFC5C5D2),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 8),
                         IconButton(
                           visualDensity: VisualDensity.compact,
                           icon: const Icon(Icons.volume_up_rounded, size: 14),
-                          color: AppTheme.textSecondary,
+                          color: const Color(0xFFC5C5D2),
                           tooltip: 'Read Aloud',
                           onPressed: () => SpeechHelper.speak(msg.content),
                           padding: EdgeInsets.zero,
@@ -1065,76 +1048,49 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   }
 
   Widget _buildInputArea(AppState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser =
-        kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.android);
-
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: isMobileBrowser ? 0.0 : 20.0,
-              sigmaY: isMobileBrowser ? 0.0 : 20.0,
-            ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0x330D0E15)
-                    : const Color(0x40FFFFFF),
+                color: const Color(0xFF2F2F2F),
                 borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: AppTheme.border, width: 1.0),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.attach_file_rounded,
-                      color: AppTheme.textSecondary,
-                      size: 20,
-                    ),
-                    tooltip: 'Attachment Options',
-                    onPressed: () => _showAttachmentOptions(state),
+                  // Attachment + Button
+                  PlusAttachmentButton(
+                    onTap: () => _showAttachmentOptions(state),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: _isListening ? Colors.redAccent : AppTheme.textSecondary,
-                      size: 20,
-                    ),
-                    tooltip: 'Voice Project Creator',
-                    onPressed: () => _toggleListening(state),
-                  ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      style: TextStyle(color: AppTheme.textMain, fontSize: 15),
+                      style: const TextStyle(color: Color(0xFFECECF1), fontSize: 15),
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
-                      decoration: InputDecoration(
-                        hintText:
-                            'Message AI Mentor or say "execute a task"...',
+                      decoration: const InputDecoration(
+                        hintText: 'Ask anything...',
                         hintStyle: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Color(0xFFC5C5D2),
                           fontSize: 14,
                         ),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 8,
                           vertical: 10,
                         ),
                       ),
@@ -1148,8 +1104,26 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                   GestureDetector(
+                  // Templates/Wand, Microphone, Soundwave Button
+                  IconButton(
+                    icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFC5C5D2), size: 20),
+                    tooltip: 'AI Prompt Hub',
+                    onPressed: () {
+                      context.push('/?tab=prompts');
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _isListening ? Colors.redAccent : const Color(0xFFC5C5D2),
+                      size: 20,
+                    ),
+                    tooltip: 'Voice Search',
+                    onPressed: () => _toggleListening(state),
+                  ),
+                  const SizedBox(width: 4),
+                  WaveformButton(
+                    isActive: _isListening || state.isMentorTyping,
                     onTap: () {
                       final text = _controller.text.trim();
                       if (text.isNotEmpty) {
@@ -1157,63 +1131,23 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                         _controller.clear();
                         _scrollToBottom();
                         _focusNode.requestFocus();
+                      } else {
+                        _toggleListening(state);
                       }
                     },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _hasText ? AppTheme.accent : Colors.white10,
-                        shape: BoxShape.circle,
-                        boxShadow: _hasText
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.accent.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Icon(
-                        Icons.arrow_upward_rounded,
-                        color: _hasText ? Colors.white : Colors.white38,
-                        size: 18,
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOsStatusPill(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              color: color,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'Tatvik can make mistakes. Verify important info.',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: const Color(0xFFC5C5D2).withValues(alpha: 0.6),
+              ),
             ),
           ),
         ],
@@ -1227,11 +1161,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     final String? prUrl = task['pull_request_url'];
     final String? output = task['output'];
     final String? error = task['error'];
-    final Color cardColor = isStub
-        ? const Color(0xFF00BFA5)
-        : success
-        ? const Color(0xFF00BFA5)
-        : Colors.redAccent;
+    final Color cardColor = isStub || success ? const Color(0xFF00BFA5) : Colors.redAccent;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -1266,8 +1196,9 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             InkWell(
               onTap: () async {
                 final uri = Uri.parse(prUrl);
-                if (await canLaunchUrl(uri))
+                if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
               },
               child: Text(
                 '📎 View Pull Request: $prUrl',
@@ -1285,7 +1216,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
               'Output: $output',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: AppTheme.textSecondary,
+                color: const Color(0xFFC5C5D2),
               ),
             ),
           ],
@@ -1301,6 +1232,128 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     );
   }
 }
+
+// Custom attachment + sign circular button
+class PlusAttachmentButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const PlusAttachmentButton({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.add,
+            color: Color(0xFFECECF1),
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Waveform soundwave button on bottom right of input
+class WaveformButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isActive;
+
+  const WaveformButton({
+    super.key,
+    required this.onTap,
+    required this.isActive,
+  });
+
+  @override
+  State<WaveformButton> createState() => _WaveformButtonState();
+}
+
+class _WaveformButtonState extends State<WaveformButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    if (widget.isActive) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant WaveformButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive) {
+      _controller.repeat(reverse: true);
+    } else {
+      _controller.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          color: Color(0xFF3F8CFF), // Beautiful deep blue waveform circle
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  final heights = [10.0, 16.0, 12.0, 8.0];
+                  double height = heights[index];
+                  if (widget.isActive) {
+                    final factor = sin((_controller.value * 2 * pi) + (index * 0.5));
+                    height = 8.0 + (factor.abs() * 12.0);
+                  }
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    width: 2.0,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 
 class BouncingDotsIndicator extends StatefulWidget {
   const BouncingDotsIndicator({super.key});
@@ -1343,7 +1396,7 @@ class _BouncingDotsIndicatorState extends State<BouncingDotsIndicator>
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: 0.3 + 0.7 * value),
+                color: const Color(0xFF10A37F).withValues(alpha: 0.3 + 0.7 * value),
                 shape: BoxShape.circle,
               ),
             );
@@ -1353,3 +1406,4 @@ class _BouncingDotsIndicatorState extends State<BouncingDotsIndicator>
     );
   }
 }
+

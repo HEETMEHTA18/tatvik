@@ -1,5 +1,4 @@
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
@@ -14,7 +13,6 @@ import 'package:provider/provider.dart';
 import '../../providers/app_state.dart';
 import '../mentor/mentor_chat_screen.dart';
 import '../../widgets/liquid_glass_button.dart';
-import '../world/world_monitor_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -38,18 +36,11 @@ class HomeScreen extends StatelessWidget {
       body: RefreshIndicator(
         onRefresh: () async {
           await appState.fetchGithubData(appState.githubUsername, force: true);
-          await appState.fetchProfileRoast(force: true);
           await appState.fetchActivityData(force: true);
           await appState.fetchFollowingActivity(force: true);
-          await appState.fetchDeveloperDna(force: true);
-          await appState.fetchWeeklyReport(force: true);
-          await appState.fetchLearningPaths(force: true);
-          await appState.fetchOpportunities(force: true);
-          await appState.fetchPromptHistory(force: true);
-          await appState.fetchPromptAnalytics(force: true);
-          await appState.fetchPromptRecommendations(force: true);
-          await appState.fetchRoadmap(force: true);
-          await appState.fetchWhatsNewDigest(force: true);
+          // AI-heavy calls (roast, DNA, weekly report, prompt analytics, digest)
+          // are NOT refreshed here to save API tokens.
+          // Use their dedicated buttons to refresh individually.
         },
         color: AppTheme.accent,
         backgroundColor: AppTheme.surface,
@@ -162,91 +153,89 @@ class HomeScreen extends StatelessWidget {
                     ],
                   );
 
-                  if (isDesktop) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        header,
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 7,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildScoreSection(context, appState),
-                                  const SizedBox(height: 24),
-                                  _buildActivityHeatmap(context, appState),
-                                  const SizedBox(height: 24),
-                                  _buildAgentDigestSection(context, appState),
-                                  const SizedBox(height: 24),
-                                  _buildWeeklyReportSection(context, appState),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 32),
-                            Expanded(
-                              flex: 4,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildDnaSection(context, appState),
-                                  const SizedBox(height: 24),
-                                  _buildRoastSection(context, appState),
-                                  const SizedBox(height: 32),
-                                  _buildSectionHeader(context, 'Top Languages'),
-                                  const SizedBox(height: 16),
-                                  _buildLanguageBar(
-                                    context,
-                                    'TypeScript',
-                                    0.65,
-                                    AppTheme.accent,
-                                  ),
-                                  _buildLanguageBar(
-                                    context,
-                                    'Rust',
-                                    0.20,
-                                    AppTheme.peach,
-                                  ),
-                                  _buildLanguageBar(
-                                    context,
-                                    'Python',
-                                    0.15,
-                                    AppTheme.blue,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 100),
-                      ],
-                    );
-                  }
+                  final spacing = 24.0;
+                  // Calculate widths for bento boxes
+                  // We'll use fractions of the width to make them snap nicely
+                  final double w = constraints.maxWidth;
+                  final bool isTablet = w > 600 && w <= 900;
+
+                  double scoreWidth = isDesktop ? w * 0.55 - spacing : w;
+                  double dnaWidth = isDesktop ? w * 0.45 - spacing : (isTablet ? w * 0.5 - spacing : w);
+                  double roastWidth = isDesktop ? w * 0.45 - spacing : (isTablet ? w * 0.5 - spacing : w);
+                  double activityWidth = isDesktop ? w * 0.55 - spacing : w;
+                  double weeklyWidth = isDesktop ? w * 0.4 - spacing : w;
+                  double digestWidth = isDesktop ? w * 0.6 - spacing : w;
+                  double langWidth = isDesktop ? w : w;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       header,
-                      _buildScoreSection(context, appState),
-                      const SizedBox(height: 32),
-                      _buildActivityHeatmap(context, appState),
-                      _buildDnaSection(context, appState),
-                      _buildWeeklyReportSection(context, appState),
-                      _buildRoastSection(context, appState),
-                      _buildAgentDigestSection(context, appState),
-                      const SizedBox(height: 32),
-                      _buildSectionHeader(context, 'Top Languages'),
-                      const SizedBox(height: 16),
-                      _buildLanguageBar(
-                        context,
-                        'TypeScript',
-                        0.65,
-                        AppTheme.accent,
+                      const SizedBox(height: 24),
+                      Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: [
+                          SizedBox(
+                            width: scoreWidth,
+                            child: _buildScoreSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: dnaWidth,
+                            child: _buildDnaSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: roastWidth,
+                            child: _buildRoastSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: activityWidth,
+                            child: _buildActivityHeatmap(context, appState),
+                          ),
+                          SizedBox(
+                            width: weeklyWidth,
+                            child: _buildWeeklyReportSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: digestWidth,
+                            child: _buildAgentDigestSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: langWidth,
+                            child: GlassCard(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.code_rounded, color: AppTheme.accent),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'TOP LANGUAGES',
+                                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildLanguageBar(context, 'TypeScript', 0.65, AppTheme.accent)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach)),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      _buildLanguageBar(context, 'Rust', 0.20, AppTheme.peach),
-                      _buildLanguageBar(context, 'Python', 0.15, AppTheme.blue),
                       const SizedBox(height: 100), // FAB space
                     ],
                   );
@@ -330,198 +319,136 @@ class HomeScreen extends StatelessWidget {
 
     Color scoreColor = Colors.redAccent;
     if (state.developerScore >= 8.0) {
-      scoreColor = AppTheme.accent;
+      scoreColor = AppTheme.neonGreen;
     } else if (state.developerScore >= 6.0) {
-      scoreColor = Colors.orangeAccent;
+      scoreColor = AppTheme.neonOrange;
     }
 
-    return GlassCard(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'DEVELOPER SCORE',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-              Icon(
-                Icons.query_stats,
-                color: AppTheme.accent.withValues(alpha: 0.8),
-                size: 24,
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: 110,
-                    height: 110,
-                    child: CircularProgressIndicator(
-                      value: scoreProgress,
-                      strokeWidth: 10,
-                      backgroundColor: Colors.white10,
-                      valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final double spacing = 16.0;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            // Score Pill
+            SizedBox(
+              width: isMobile ? constraints.maxWidth : (constraints.maxWidth - spacing) * 0.45,
+              child: GlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            value: scoreProgress,
+                            strokeWidth: 6,
+                            backgroundColor: AppTheme.border,
+                            valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+                          ),
+                        ),
+                        Text(
+                          '${state.developerScore}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textMain,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          scoreColor.withValues(alpha: 0.4),
-                          Colors.transparent,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
+                    const SizedBox(width: 20),
+                    Expanded(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${state.developerScore}',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 32,
+                            'DEV SCORE',
+                            style: GoogleFonts.spaceMono(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            state.developerScore >= 8.0
+                                ? 'Elite'
+                                : state.developerScore >= 6.0
+                                ? 'Pro'
+                                : 'Rising',
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                               color: AppTheme.textMain,
                             ),
                           ),
-                          Text(
-                            '/10',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
                         ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 32),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      state.developerScore >= 8.0
-                          ? 'Elite Developer Profile'
-                          : state.developerScore >= 6.0
-                          ? 'Pro Developer Profile'
-                          : 'Rising Developer Profile',
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textMain,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Score is dynamically calculated based on repository stars, active commits, and repo contribution depth.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppTheme.textSecondary,
-                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 40),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white10),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(
-                  context,
-                  '${state.stars}',
-                  'STARS',
-                  Icons.star_border,
-                ),
-                Container(width: 1, height: 40, color: Colors.white12),
-                _buildStatItem(
-                  context,
-                  '${state.commits}',
-                  'COMMITS',
-                  Icons.history,
-                ),
-                Container(width: 1, height: 40, color: Colors.white12),
-                _buildStatItem(
-                  context,
-                  '${state.repos}',
-                  'REPOS',
-                  Icons.folder_open,
-                ),
-              ],
+            // Stats Pills Container
+            SizedBox(
+              width: isMobile ? constraints.maxWidth : (constraints.maxWidth - spacing) * 0.55,
+              child: Row(
+                children: [
+                  Expanded(child: _buildBentoStat(context, '${state.repos}', 'Repos', Icons.folder_open, AppTheme.neonPurple)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildBentoStat(context, '${state.commits}', 'Commits', Icons.history, AppTheme.neonGreen)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildBentoStat(context, '${state.stars}', 'Stars', Icons.star_border, AppTheme.neonOrange)),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }
     );
   }
 
-  Widget _buildStatItem(
+  Widget _buildBentoStat(
     BuildContext context,
     String value,
     String label,
     IconData icon,
+    Color color,
   ) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppTheme.accent),
-            const SizedBox(width: 6),
-            Text(
-              value,
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textMain,
-              ),
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 24, color: color),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textMain,
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: AppTheme.textSecondary,
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.spaceMono(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -906,75 +833,103 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildWelcomeHeader(BuildContext context, AppState state) {
-    return Row(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.accent,
-            border: Border.all(
-              color: AppTheme.accent.withValues(alpha: 0.5),
-              width: 2.0,
-            ),
-            image: state.avatarUrl != null
-                ? DecorationImage(
-                    image: NetworkImage(state.avatarUrl!),
-                    fit: BoxFit.cover,
-                  )
-                : null,
-          ),
-          child: state.avatarUrl == null
-              ? const Icon(Icons.person, color: Colors.white, size: 28)
-              : null,
-        ),
-        const SizedBox(width: 20),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back,',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                letterSpacing: 0.5,
+    return GlassCard(
+      padding: const EdgeInsets.all(32),
+      child: Stack(
+        children: [
+          // Background Gradient effect for Hero
+          Positioned(
+            right: -50,
+            bottom: -50,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppTheme.neonPurple.withValues(alpha: 0.2),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              state.username,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 24,
-                letterSpacing: -0.5,
-                color: AppTheme.textMain,
+          ),
+          Row(
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.accent,
+                  border: Border.all(
+                    color: AppTheme.neonPurple.withValues(alpha: 0.5),
+                    width: 2.0,
+                  ),
+                  image: state.avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(state.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: state.avatarUrl == null
+                    ? const Icon(Icons.person, color: Colors.white, size: 36)
+                    : null,
               ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.isDark
-                ? Colors.white.withValues(alpha: 0.05)
-                : Colors.black.withValues(alpha: 0.05),
-            shape: BoxShape.circle,
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back,',
+                      style: GoogleFonts.spaceMono(
+                        fontSize: 14,
+                        color: AppTheme.neonGreen,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.username,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 32,
+                        letterSpacing: -1.0,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceElevated,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppTheme.border,
+                  ),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    state.isDarkTheme
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
+                    color: AppTheme.textMain,
+                    size: 24,
+                  ),
+                  onPressed: () {
+                    state.toggleTheme();
+                  },
+                ),
+              ),
+            ],
           ),
-          child: IconButton(
-            icon: Icon(
-              state.isDarkTheme
-                  ? Icons.light_mode_rounded
-                  : Icons.dark_mode_rounded,
-              color: AppTheme.textSecondary,
-              size: 22,
-            ),
-            onPressed: () {
-              state.toggleTheme();
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
