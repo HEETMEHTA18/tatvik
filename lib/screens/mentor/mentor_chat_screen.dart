@@ -9,7 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
-import '../../theme/app_theme.dart';
+import '../../core/theme/app_theme.dart';
 import '../../widgets/animated_copy_button.dart';
 import '../../utils/speech_helper.dart';
 import '../../widgets/liquid_glass_button.dart';
