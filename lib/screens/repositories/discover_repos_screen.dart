@@ -207,9 +207,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                     final double third = isDesktop ? (w - spacing * 2) / 3 : w;
                     final double full = w;
 
-                    return Wrap(
-                      spacing: spacing,
-                      runSpacing: spacing,
+                    return Column(
                       children: [
                         // Large Hero App Store Card
                         SizedBox(
@@ -217,91 +215,103 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                           height: 200,
                           child: GestureDetector(
                             onTap: () => setState(() => _activeTab = 6),
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(24),
-                              child: Stack(
-                                children: [
-                                  Positioned(
-                                    right: -20,
-                                    bottom: -20,
-                                    child: Icon(Icons.code_rounded, size: 120, color: AppTheme.neonPurple.withValues(alpha: 0.2)),
-                                  ),
-                                  Column(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(32),
+                              child: GlassCard(
+                                padding: const EdgeInsets.all(24),
+                                child: Stack(
+                                  children: [
+                                    Positioned(
+                                      right: -30,
+                                      bottom: -30,
+                                      child: Icon(Icons.code_rounded, size: 140, color: AppTheme.neonPurple.withValues(alpha: 0.15)),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.neonPurple.withValues(alpha: 0.2),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text('FEATURED AI AGENT', style: GoogleFonts.spaceMono(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.neonPurple)),
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text('Continuous Code Reviewer', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            const SizedBox(height: 8),
+                                            Text('Automated PR analysis & security audits in real-time.', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: spacing),
+                        // Half Cards
+                        // Half Cards
+                        Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          children: [
+                            SizedBox(
+                              width: half,
+                              height: 160,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _activeTab = 1),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.neonPurple.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(20),
-                                        ),
-                                        child: Text('FEATURED AI AGENT', style: GoogleFonts.spaceMono(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.neonPurple)),
-                                      ),
+                                      Icon(Icons.trending_up_rounded, size: 32, color: AppTheme.neonGreen),
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text('Continuous Code Reviewer', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                                          const SizedBox(height: 8),
-                                          Text('Automated PR analysis & security audits in real-time.', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
+                                          Text('Trending', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                          Text('Repositories', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
                                         ],
                                       ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                        // Half Cards
-                        SizedBox(
-                          width: half,
-                          height: 160,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _activeTab = 1),
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Icon(Icons.trending_up_rounded, size: 32, color: AppTheme.neonGreen),
-                                  Column(
+                            SizedBox(
+                              width: half,
+                              height: 160,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _activeTab = 4),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text('Trending', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                      Text('Repositories', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                                      Icon(Icons.star_rounded, size: 32, color: AppTheme.neonOrange),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Awesome', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                          Text('Curated Lists', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        SizedBox(
-                          width: half,
-                          height: 160,
-                          child: GestureDetector(
-                            onTap: () => setState(() => _activeTab = 4),
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Icon(Icons.star_rounded, size: 32, color: AppTheme.neonOrange),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Awesome', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                      Text('Curated Lists', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                        SizedBox(height: spacing),
                         // Thirds for desktop, full for mobile
                         SizedBox(
                           width: third,

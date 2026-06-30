@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/animated_copy_button.dart';
 import '../../utils/speech_helper.dart';
 import '../../widgets/liquid_glass_button.dart';
@@ -970,12 +971,15 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
             ),
             child: Container(
               padding: isUser 
-                  ? const EdgeInsets.symmetric(horizontal: 16, vertical: 10)
+                  ? const EdgeInsets.symmetric(horizontal: 18, vertical: 12)
                   : const EdgeInsets.only(left: 32, right: 16, top: 2, bottom: 8),
               decoration: isUser
                   ? BoxDecoration(
-                      color: const Color(0xFF2F2F2F),
+                      color: AppTheme.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppTheme.accent.withValues(alpha: 0.3),
+                      ),
                     )
                   : null,
               child: Column(
@@ -993,7 +997,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     },
                     styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
                       p: const TextStyle(
-                        color: Color(0xFFECECF1),
+                        color: Colors.white,
                         fontSize: 15,
                         height: 1.5,
                       ),

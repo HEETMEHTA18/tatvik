@@ -184,16 +184,18 @@ class HomeScreen extends StatelessWidget {
                         runSpacing: spacing,
                         children: [
                           SizedBox(
+                            width: digestWidth, // or full width if preferred, but keeping digestWidth for now
+                            child: Column(
+                              children: [
+                                _buildAgentDigestSection(context, appState),
+                                const SizedBox(height: 24),
+                                _buildOpenPullRequestsSection(context, appState),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
                             width: scoreWidth,
                             child: _buildScoreSection(context, appState),
-                          ),
-                          SizedBox(
-                            width: dnaWidth,
-                            child: _buildDnaSection(context, appState),
-                          ),
-                          SizedBox(
-                            width: roastWidth,
-                            child: _buildRoastSection(context, appState),
                           ),
                           SizedBox(
                             width: activityWidth,
@@ -204,8 +206,12 @@ class HomeScreen extends StatelessWidget {
                             child: _buildWeeklyReportSection(context, appState),
                           ),
                           SizedBox(
-                            width: digestWidth,
-                            child: _buildAgentDigestSection(context, appState),
+                            width: dnaWidth,
+                            child: _buildDnaSection(context, appState),
+                          ),
+                          SizedBox(
+                            width: roastWidth,
+                            child: _buildRoastSection(context, appState),
                           ),
                           SizedBox(
                             width: langWidth,
@@ -1831,9 +1837,138 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ─────────────────────────────────────────────────
+  Widget _buildLockedAiFeature(BuildContext context, String title, IconData icon) {
+    return GlassCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppTheme.textSecondary, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'This AI feature is currently locked to conserve API usage.',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.lock_rounded, size: 16, color: AppTheme.accent),
+              const SizedBox(width: 8),
+              Text(
+                'Enable AI Insights in Settings to unlock',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.accent,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Open Pull Requests Section
+  // ─────────────────────────────────────────────────
+  Widget _buildOpenPullRequestsSection(BuildContext context, AppState state) {
+    if (!state.aiInsights) {
+      return _buildLockedAiFeature(context, 'Open Pull Requests', Icons.merge_type_rounded);
+    }
+    
+    // Using mock data for now, as fetching PRs from other open source repos might require a specific API call
+    final prs = [
+      {'repo': 'flutter/flutter', 'title': 'Fix scrolling issues on iOS', 'number': 142055, 'status': 'Open'},
+      {'repo': 'HEETMEHTA18/devmentor', 'title': 'Add GitHub Events Service', 'number': 12, 'status': 'Review Required'},
+    ];
+
+    return GlassCard(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.call_split_rounded, color: AppTheme.accent, size: 24),
+              const SizedBox(width: 12),
+              Text(
+                'OPEN PULL REQUESTS',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...prs.map((pr) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.call_merge_rounded, size: 18, color: AppTheme.success),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pr['repo'].toString(),
+                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                          ),
+                          Text(
+                            pr['title'].toString(),
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '#${pr['number']}',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
   // 24/7 AI Research Agent — Digest Section
   // ─────────────────────────────────────────────────
   Widget _buildAgentDigestSection(BuildContext context, AppState state) {
+    if (!state.aiInsights) {
+      return _buildLockedAiFeature(context, '24/7 AI Research Agent', Icons.radar_rounded);
+    }
+    
     final digest = state.whatsNewDigest;
     final isDark = AppTheme.isDark;
 

@@ -58,7 +58,7 @@ class AppState extends ChangeNotifier {
       }
 
       pushNotifications = prefs.getBool('pref_notifications') ?? true;
-      aiInsights = prefs.getBool('pref_ai') ?? true;
+      aiInsights = prefs.getBool('pref_ai') ?? false;
       weeklyReport = prefs.getBool('pref_report') ?? false;
       shareAnalytics = prefs.getBool('pref_analytics') ?? true;
       twoFactorAuth = prefs.getBool('pref_2fa') ?? false;
@@ -1377,7 +1377,7 @@ This is simulated offline prompts.md content.
 
   String githubUsername = 'alexjohnson';
   bool pushNotifications = true;
-  bool aiInsights = true;
+  bool aiInsights = false;
   bool weeklyReport = false;
   bool shareAnalytics = true;
   bool twoFactorAuth = false;
