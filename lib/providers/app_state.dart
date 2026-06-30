@@ -2146,7 +2146,6 @@ This is simulated offline prompts.md content.
       // Fetch user's own events
       final events = await GitHubEventsService.fetchUserEvents(
         githubUsername,
-        token: token,
         perPage: 30,
       );
 
@@ -2218,7 +2217,6 @@ This is simulated offline prompts.md content.
         Uri.parse('https://api.github.com/search/issues?q=is:pr+is:open+author:$githubUsername&sort=updated&order=desc'),
         headers: {
           'Accept': 'application/vnd.github.v3+json',
-          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
 
