@@ -45,14 +45,18 @@ class AppState extends ChangeNotifier {
           // Re-sync back to SharedPreferences
           try {
             await prefs.setString('auth_token', storedToken);
-            if (storedUsername != null)
+            if (storedUsername != null) {
               await prefs.setString('github_username', storedUsername);
-            if (storedDisplayName != null)
+            }
+            if (storedDisplayName != null) {
               await prefs.setString('profile_display_name', storedDisplayName);
-            if (storedAvatarUrl != null)
+            }
+            if (storedAvatarUrl != null) {
               await prefs.setString('github_avatar_url', storedAvatarUrl);
-            if (storedLoginTimestamp != null)
+            }
+            if (storedLoginTimestamp != null) {
               await prefs.setString('login_timestamp', storedLoginTimestamp);
+            }
           } catch (_) {}
         }
       }
@@ -3137,11 +3141,15 @@ This is simulated offline prompts.md content.
 
       String url = '${AppConfig.apiBaseUrl}/prompts/history';
       List<String> params = [];
-      if (query != null && query.isNotEmpty)
+      if (query != null && query.isNotEmpty) {
         params.add('q=${Uri.encodeComponent(query)}');
-      if (workflow != null && workflow.isNotEmpty)
+      }
+      if (workflow != null && workflow.isNotEmpty) {
         params.add('workflow=${Uri.encodeComponent(workflow)}');
-      if (params.isNotEmpty) url += '?${params.join('&')}';
+      }
+      if (params.isNotEmpty) {
+        url += '?${params.join('&')}';
+      }
 
       final response = await http.get(
         Uri.parse(url),

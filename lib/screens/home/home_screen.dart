@@ -172,11 +172,11 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             SizedBox(
                               width: w,
-                              child: _buildActivityHeatmap(context, appState),
+                              child: _buildScoreSection(context, appState),
                             ),
                             SizedBox(
                               width: w,
-                              child: _buildScoreSection(context, appState),
+                              child: _buildActivityHeatmap(context, appState),
                             ),
                             SizedBox(
                               width: w,
@@ -2187,84 +2187,111 @@ class HomeScreen extends StatelessWidget {
                   if ((digest['github'] as List?)?.isNotEmpty == true) ...[
                     Row(
                       children: [
-                        Icon(
-                          Icons.code_rounded,
-                          size: 14,
-                          color: AppTheme.textSecondary,
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.trending_up_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 12),
                         Text(
                           'TRENDING ON GITHUB',
                           style: GoogleFonts.outfit(
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textSecondary,
-                            letterSpacing: 1.2,
+                            color: Colors.white,
+                            letterSpacing: 1.5,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     ...((digest['github'] as List).take(3).map((item) {
                       final repo = item as Map<String, dynamic>;
                       return GestureDetector(
                         onTap: () async {
-                          final url = Uri.tryParse(
-                            repo['url'] as String? ?? '',
-                          );
-                          if (url != null)
-                            await launchUrl(
-                              url,
-                              mode: LaunchMode.externalApplication,
-                            );
+                          final url = Uri.tryParse(repo['url'] as String? ?? '');
+                          if (url != null) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          }
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? const Color(0x0DFFFFFF)
-                                : const Color(0x06000000),
-                            borderRadius: BorderRadius.circular(12),
+                            color: isDark ? const Color(0xFF161B22) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: AppTheme.border.withValues(alpha: 0.15),
+                              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.star_rounded,
-                                size: 14,
-                                color: AppTheme.peach,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${repo['stars'] ?? 0}',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.peach,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  '${repo['owner']}/${repo['name']}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppTheme.textMain,
+                              Row(
+                                children: [
+                                  Icon(Icons.bookmark_border_rounded, size: 16, color: AppTheme.textSecondary),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${repo['owner']}/${repo['name']}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.accent,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.star_rounded, size: 12, color: AppTheme.peach),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${repo['stars'] ?? 0}',
+                                          style: GoogleFonts.jetBrainsMono(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppTheme.textMain,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Icon(
-                                Icons.open_in_new_rounded,
-                                size: 13,
-                                color: AppTheme.textSecondary,
+                              const SizedBox(height: 8),
+                              Text(
+                                repo['description'] as String? ?? 'No description provided.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                  height: 1.4,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -2303,11 +2330,12 @@ class HomeScreen extends StatelessWidget {
                           final url = Uri.tryParse(
                             video['url'] as String? ?? '',
                           );
-                          if (url != null)
+                          if (url != null) {
                             await launchUrl(
                               url,
                               mode: LaunchMode.externalApplication,
                             );
+                          }
                         },
                         child: Container(
                           margin: const EdgeInsets.only(bottom: 8),

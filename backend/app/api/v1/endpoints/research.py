@@ -966,8 +966,8 @@ async def get_whats_new(
     # 3. Call Gemini to create a rich summary and research digest
     system_prompt = (
         "You are an expert technical research agent. Analyze the following list of active GitHub repositories "
-        "and YouTube video feeds. Write a professional, high-fidelity developer summary explaining what's new "
-        "and trending. Format the output with clear bullet points. Keep it engaging, insightful, and strictly under 250 words."
+        "and YouTube video feeds. Write a very brief, one-sentence developer summary explaining what's new "
+        "and trending to minimize API token usage. Be extremely concise (strictly under 25 words)."
     )
     user_prompt = f"GitHub repositories:\n{json.dumps(github_items)}\n\nYouTube Videos:\n{json.dumps(youtube_items)}"
     ai_digest = await call_gemini(system_prompt, user_prompt)
