@@ -19,6 +19,15 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _showConversation = false;
 
   @override
+  void dispose() {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      appState.setChatOpen(false);
+    } catch (_) {}
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     final sessions = appState.getChatSessions();
@@ -36,7 +45,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppTheme.accent),
-                    onPressed: () => setState(() => _showConversation = false),
+                    onPressed: () {
+                      setState(() => _showConversation = false);
+                      appState.setChatOpen(false);
+                    },
                   ),
                   const SizedBox(width: 4),
                   Container(
@@ -118,6 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         onTap: () {
                           appState.startNewChat();
                           setState(() => _showConversation = true);
+                          appState.setChatOpen(true);
                         },
                         child: Container(
                           width: 44,
@@ -146,6 +159,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: GestureDetector(
                 onTap: () {
                   setState(() => _showConversation = true);
+                  appState.setChatOpen(true);
                 },
                 child: GlassCard(
                   borderRadius: 20,
@@ -321,6 +335,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       onTap: () {
                         appState.loadChatSession(session['id'] as String);
                         setState(() => _showConversation = true);
+                        appState.setChatOpen(true);
                       },
                       onLongPress: () {
                         _showSessionOptions(context, appState, session['id'] as String, title);
@@ -448,6 +463,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         onTap: () {
                           appState.startNewChat();
                           setState(() => _showConversation = true);
+                          appState.setChatOpen(true);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

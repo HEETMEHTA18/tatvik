@@ -1347,6 +1347,16 @@ This is simulated offline prompts.md content.
   int _currentTabIndex = 0;
   int get currentTabIndex => _currentTabIndex;
 
+  bool _isChatOpen = false;
+  bool get isChatOpen => _isChatOpen;
+
+  void setChatOpen(bool isOpen) {
+    if (_isChatOpen != isOpen) {
+      _isChatOpen = isOpen;
+      notifyListeners();
+    }
+  }
+
   void setTabIndex(int index) {
     setSelectedTab(index);
   }

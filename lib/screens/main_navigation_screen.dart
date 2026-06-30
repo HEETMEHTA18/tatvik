@@ -6,13 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:oc_liquid_glass/oc_liquid_glass.dart';
 import '../core/theme/app_theme.dart';
 import '../routes/route_paths.dart';
 import '../widgets/liquid_glass_background.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/liquid_glass_button.dart';
-import '../widgets/web_safe_liquid_glass.dart';
 import '../providers/app_state.dart';
 import '../core/utils/web_helper.dart';
 import 'home/home_screen.dart';
@@ -164,6 +162,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   void _onAppStateChanged() {
     if (!mounted) return;
 
+    setState(() {});
+
     if (_appState.notifications.length > _lastNotificationCount) {
       final newNotification = _appState.notifications.first;
       final newId = newNotification['id'] as String?;
@@ -287,6 +287,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
 
     // Apple HIG: light haptic response on tab selection
     HapticFeedback.lightImpact();
+
+    if (index != 2) {
+      _appState.setChatOpen(false);
+    }
 
     setState(() {
       _selectedIndex = index;
@@ -440,10 +444,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bool isMobileBrowser =
-        kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.iOS ||
-            defaultTargetPlatform == TargetPlatform.android);
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
     return AnimatedBuilder(
@@ -473,297 +473,184 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                   Positioned.fill(
                     child: IndexedStack(index: _selectedIndex, children: _screens),
                   ),
-                  Positioned(
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
                     left: 0,
                     right: 0,
-                    bottom: 0,
-                    child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 12,
-                    right: 12,
-                    bottom: 12,
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.bottomCenter,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDark ? 0.50 : 0.12,
-                              ),
-                              blurRadius: 32,
-                              offset: const Offset(0, 12),
-                              spreadRadius: -4,
+                    bottom: _appState.isChatOpen ? -100 : 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF16161A) : Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(
+                              alpha: isDark ? 0.40 : 0.08,
                             ),
-                            BoxShadow(
-                              color: Colors.black.withValues(
-                                alpha: isDark ? 0.30 : 0.08,
-                              ),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                            blurRadius: 20,
+                            offset: const Offset(0, -4),
+                          ),
+                        ],
+                        border: Border(
+                          top: BorderSide(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.1)
+                                : Colors.black.withValues(alpha: 0.08),
+                            width: 0.5,
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(28),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(
-                              sigmaX: isMobileBrowser
-                                  ? 25.0
-                                  : (isDark ? 40.0 : 30.0),
-                              sigmaY: isMobileBrowser
-                                  ? 25.0
-                                  : (isDark ? 40.0 : 30.0),
-                            ),
-                            child: Container(
-                              height: 68,
-                              decoration: BoxDecoration(
-                                color: isMobileBrowser
-                                    ? (isDark
-                                              ? const Color(0xFF1C1C1E)
-                                              : Colors.white)
-                                          .withValues(alpha: isDark ? 0.45 : 0.70)
-                                    : (isDark
-                                              ? const Color(0xFF1C1C1E)
-                                              : Colors.white)
-                                          .withValues(alpha: isDark ? 0.25 : 0.55),
-                                borderRadius: BorderRadius.circular(28),
-                                border: Border.all(
-                                  color: Colors.white.withValues(
-                                    alpha: isMobileBrowser
-                                        ? 0.25
-                                        : (isDark ? 0.18 : 0.45),
-                                  ),
-                                  width: 0.5,
-                                ),
-                              ),
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final sideWidth = (constraints.maxWidth - 80) / 2;
-                                  final leftItemWidth = sideWidth / 2;
-                                  final rightItemWidth = sideWidth / 3;
-                                  final int mobileIndex = _selectedIndex;
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        child: SizedBox(
+                          height: 64,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.bottomCenter,
+                            children: [
+                              Positioned.fill(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final sideWidth = (constraints.maxWidth - 80) / 2;
+                                    final leftItemWidth = sideWidth / 2;
+                                    final rightItemWidth = sideWidth / 3;
+                                    final int mobileIndex = _selectedIndex;
 
-                                  double indicatorLeft = 0;
-                                  double indicatorWidth = 0;
-                                  if (mobileIndex == 0) {
-                                    indicatorLeft = 6;
-                                    indicatorWidth = leftItemWidth - 12;
-                                  } else if (mobileIndex == 1) {
-                                    indicatorLeft = leftItemWidth + 6;
-                                    indicatorWidth = leftItemWidth - 12;
-                                  } else if (mobileIndex == 3) {
-                                    indicatorLeft = sideWidth + 80 + 6;
-                                    indicatorWidth = rightItemWidth - 12;
-                                  } else if (mobileIndex == 4) {
-                                    indicatorLeft = sideWidth + 80 + rightItemWidth + 6;
-                                    indicatorWidth = rightItemWidth - 12;
-                                  } else if (mobileIndex == 5) {
-                                    indicatorLeft = sideWidth + 80 + 2 * rightItemWidth + 6;
-                                    indicatorWidth = rightItemWidth - 12;
-                                  }
+                                    double indicatorLeft = 0;
+                                    double indicatorWidth = 0;
+                                    if (mobileIndex == 0) {
+                                      indicatorLeft = 6;
+                                      indicatorWidth = leftItemWidth - 12;
+                                    } else if (mobileIndex == 1) {
+                                      indicatorLeft = leftItemWidth + 6;
+                                      indicatorWidth = leftItemWidth - 12;
+                                    } else if (mobileIndex == 3) {
+                                      indicatorLeft = sideWidth + 80 + 6;
+                                      indicatorWidth = rightItemWidth - 12;
+                                    } else if (mobileIndex == 4) {
+                                      indicatorLeft = sideWidth + 80 + rightItemWidth + 6;
+                                      indicatorWidth = rightItemWidth - 12;
+                                    } else if (mobileIndex == 5) {
+                                      indicatorLeft = sideWidth + 80 + 2 * rightItemWidth + 6;
+                                      indicatorWidth = rightItemWidth - 12;
+                                    }
 
-                                  return Stack(
-                                    children: [
-                                      // iOS Liquid Glass Pill Indicator (Hide if index 2 since it's the floating button)
-                                      if (mobileIndex != -1 && mobileIndex != 2)
-                                        AnimatedPositioned(
-                                          duration: const Duration(milliseconds: 350),
-                                          curve: Curves.easeOutCubic,
-                                          left: indicatorLeft,
-                                          top: 6,
-                                          bottom: 6,
-                                          width: indicatorWidth,
-                                          child: SafeOCLiquidGlassGroup(
-                                            settings: const OCLiquidGlassSettings(
-                                              refractStrength: -0.07,
-                                              blurRadiusPx: 4.0,
-                                              specStrength: 28.0,
-                                            ),
-                                            child: Stack(
-                                              children: [
-                                                Positioned.fill(
-                                                  child: IgnorePointer(
-                                                    child: SafeOCLiquidGlass(
-                                                      borderRadius: 22,
-                                                      color: Colors.transparent,
-                                                      child: const SizedBox.expand(),
-                                                    ),
-                                                  ),
+                                    return Stack(
+                                      children: [
+                                        // Clean Solid Pill Indicator (Hide if index 2 since it's the floating button)
+                                        if (mobileIndex != -1 && mobileIndex != 2)
+                                          AnimatedPositioned(
+                                            duration: const Duration(milliseconds: 350),
+                                            curve: Curves.easeOutCubic,
+                                            left: indicatorLeft,
+                                            top: 6,
+                                            bottom: 6,
+                                            width: indicatorWidth,
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                color: isDark
+                                                    ? Colors.white.withValues(alpha: 0.08)
+                                                    : Colors.black.withValues(alpha: 0.05),
+                                                borderRadius: BorderRadius.circular(22),
+                                                border: Border.all(
+                                                  color: isDark
+                                                      ? Colors.white.withValues(alpha: 0.1)
+                                                      : Colors.black.withValues(alpha: 0.05),
+                                                  width: 0.5,
                                                 ),
-                                                Positioned.fill(
-                                                  child: Container(
-                                                    decoration: BoxDecoration(
-                                                      color: isDark
-                                                          ? Colors.white.withValues(alpha: 0.12)
-                                                          : Colors.white.withValues(alpha: 0.70),
-                                                      borderRadius: BorderRadius.circular(22),
-                                                      border: Border.all(
-                                                        color: Colors.white.withValues(
-                                                          alpha: isDark ? 0.20 : 0.60,
-                                                        ),
-                                                        width: 0.5,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withValues(
-                                                            alpha: isDark ? 0.25 : 0.06,
-                                                          ),
-                                                          blurRadius: 8,
-                                                          offset: const Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Stack(
-                                                      children: [
-                                                        Positioned.fill(
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              borderRadius: BorderRadius.circular(22),
-                                                              gradient: LinearGradient(
-                                                                begin: Alignment.topCenter,
-                                                                end: Alignment.bottomCenter,
-                                                                colors: [
-                                                                  Colors.white.withValues(alpha: isDark ? 0.15 : 0.45),
-                                                                  Colors.white.withValues(alpha: 0.0),
-                                                                ],
-                                                                stops: const [0.0, 0.5],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        Positioned(
-                                                          top: 0.5,
-                                                          left: 11.0,
-                                                          right: 11.0,
-                                                          height: 1.0,
-                                                          child: Container(
-                                                            decoration: BoxDecoration(
-                                                              gradient: LinearGradient(
-                                                                colors: [
-                                                                  Colors.white.withValues(alpha: 0.0),
-                                                                  Colors.white.withValues(alpha: isDark ? 0.40 : 0.80),
-                                                                  Colors.white.withValues(alpha: 0.0),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
                                           ),
+                                        // Nav Items
+                                        Positioned.fill(
+                                          child: Row(
+                                            children: [
+                                              _MainNavigationItem(
+                                                index: 0,
+                                                label: 'Home',
+                                                icon: Icons.grid_view_rounded,
+                                                width: leftItemWidth,
+                                                isSelected: _selectedIndex == 0,
+                                                onTap: () => _onTabSelected(0),
+                                              ),
+                                              _MainNavigationItem(
+                                                index: 1,
+                                                label: 'Explore',
+                                                icon: Icons.explore_rounded,
+                                                width: leftItemWidth,
+                                                isSelected: _selectedIndex == 1,
+                                                onTap: () => _onTabSelected(1),
+                                              ),
+                                              const SizedBox(width: 80), // Space for center FAB
+                                              _MainNavigationItem(
+                                                index: 3,
+                                                label: 'Prompts',
+                                                icon: Icons.psychology_rounded,
+                                                width: rightItemWidth,
+                                                isSelected: _selectedIndex == 3,
+                                                onTap: () => _onTabSelected(3),
+                                              ),
+                                              _MainNavigationItem(
+                                                index: 4,
+                                                label: 'Roadmap',
+                                                icon: Icons.route_rounded,
+                                                width: rightItemWidth,
+                                                isSelected: _selectedIndex == 4,
+                                                onTap: () => _onTabSelected(4),
+                                              ),
+                                              _MainNavigationItem(
+                                                index: 5,
+                                                label: 'Settings',
+                                                icon: Icons.settings_rounded,
+                                                width: rightItemWidth,
+                                                isSelected: _selectedIndex == 5,
+                                                onTap: () => _onTabSelected(5),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      // Nav Items
-                                      Positioned.fill(
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                          children: [
-                                            _MainNavigationItem(
-                                              index: 0,
-                                              label: 'Home',
-                                              icon: Icons.home_rounded,
-                                              width: leftItemWidth,
-                                              isSelected: _selectedIndex == 0,
-                                              onTap: () => _onTabSelected(0),
-                                            ),
-                                            _MainNavigationItem(
-                                              index: 1,
-                                              label: 'Explore',
-                                              icon: Icons.explore_rounded,
-                                              width: leftItemWidth,
-                                              isSelected: _selectedIndex == 1,
-                                              onTap: () => _onTabSelected(1),
-                                            ),
-                                            const SizedBox(width: 80), // Space for center FAB
-                                            _MainNavigationItem(
-                                              index: 3,
-                                              label: 'Prompts',
-                                              icon: Icons.psychology_rounded,
-                                              width: rightItemWidth,
-                                              isSelected: _selectedIndex == 3,
-                                              onTap: () => _onTabSelected(3),
-                                            ),
-                                            _MainNavigationItem(
-                                              index: 4,
-                                              label: 'Roadmap',
-                                              icon: Icons.route_rounded,
-                                              width: rightItemWidth,
-                                              isSelected: _selectedIndex == 4,
-                                              onTap: () => _onTabSelected(4),
-                                            ),
-                                            _MainNavigationItem(
-                                              index: 5,
-                                              label: 'Settings',
-                                              icon: Icons.settings_rounded,
-                                              width: rightItemWidth,
-                                              isSelected: _selectedIndex == 5,
-                                              onTap: () => _onTabSelected(5),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      // Floating Lifted Center Button
-                      Positioned(
-                        bottom: 24, // Lifted above the bar
-                        child: GestureDetector(
-                          onTap: () => _onTabSelected(2),
-                          child: Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.accent,
-                                  AppTheme.accent.withValues(alpha: 0.8),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.accent.withValues(alpha: 0.4),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 8),
-                                  spreadRadius: 2,
+                                      ],
+                                    );
+                                  },
                                 ),
-                              ],
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                width: 1,
                               ),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.chat_bubble_rounded, // Chat icon since they asked for the chat button
-                                color: Colors.white,
-                                size: 28,
+                              // Floating Lifted Center Button
+                              Positioned(
+                                bottom: 12, // Lifted above the bar
+                                child: GestureDetector(
+                                  onTap: () => _onTabSelected(2),
+                                  child: Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppTheme.accent,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppTheme.accent.withValues(alpha: 0.3),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                      border: Border.all(
+                                        color: isDark ? Colors.black26 : Colors.white24,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.chat_bubble_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
                     ),
                   ),
                 ],
