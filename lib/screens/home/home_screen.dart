@@ -158,20 +158,8 @@ class HomeScreen extends StatelessWidget {
 
                   final spacing = 24.0;
                   // Calculate widths for bento boxes
-                  // We'll use fractions of the width to make them snap nicely
                   final double w = constraints.maxWidth;
                   final bool isTablet = w > 600 && w <= 900;
-
-                  double scoreWidth = isDesktop ? w * 0.55 - spacing : w;
-                  double dnaWidth = isDesktop
-                      ? w * 0.45 - spacing
-                      : (isTablet ? w * 0.5 - spacing : w);
-                  double roastWidth = isDesktop
-                      ? w * 0.45 - spacing
-                      : (isTablet ? w * 0.5 - spacing : w);
-                  double activityWidth = isDesktop ? w * 0.55 - spacing : w;
-                  double weeklyWidth = isDesktop ? w * 0.4 - spacing : w;
-                  double digestWidth = isDesktop ? w * 0.6 - spacing : w;
                   double langWidth = isDesktop ? w : w;
 
                   return Column(
@@ -179,40 +167,38 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       header,
                       const SizedBox(height: 24),
-                      Wrap(
-                        spacing: spacing,
-                        runSpacing: spacing,
-                        children: [
-                          SizedBox(
-                            width: digestWidth, // or full width if preferred, but keeping digestWidth for now
-                            child: Column(
-                              children: [
-                                _buildAgentDigestSection(context, appState),
-                                const SizedBox(height: 24),
-                                _buildOpenPullRequestsSection(context, appState),
-                              ],
+                        Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          children: [
+                            SizedBox(
+                              width: w,
+                              child: _buildActivityHeatmap(context, appState),
                             ),
-                          ),
-                          SizedBox(
-                            width: scoreWidth,
-                            child: _buildScoreSection(context, appState),
-                          ),
-                          SizedBox(
-                            width: activityWidth,
-                            child: _buildActivityHeatmap(context, appState),
-                          ),
-                          SizedBox(
-                            width: weeklyWidth,
-                            child: _buildWeeklyReportSection(context, appState),
-                          ),
-                          SizedBox(
-                            width: dnaWidth,
-                            child: _buildDnaSection(context, appState),
-                          ),
-                          SizedBox(
-                            width: roastWidth,
-                            child: _buildRoastSection(context, appState),
-                          ),
+                            SizedBox(
+                              width: w,
+                              child: _buildScoreSection(context, appState),
+                            ),
+                            SizedBox(
+                              width: w,
+                              child: _buildOpenPullRequestsSection(context, appState),
+                            ),
+                            SizedBox(
+                              width: w,
+                              child: _buildAgentDigestSection(context, appState),
+                            ),
+                            SizedBox(
+                              width: w,
+                              child: _buildWeeklyReportSection(context, appState),
+                            ),
+                            SizedBox(
+                              width: w,
+                              child: _buildDnaSection(context, appState),
+                            ),
+                            SizedBox(
+                              width: w,
+                              child: _buildRoastSection(context, appState),
+                            ),
                           SizedBox(
                             width: langWidth,
                             child: GlassCard(
@@ -367,143 +353,143 @@ class HomeScreen extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final double spacing = 16.0;
 
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            // Score Pill
-            SizedBox(
-              width: isMobile
-                  ? constraints.maxWidth
-                  : (constraints.maxWidth - spacing) * 0.45,
-              child: GlassCard(
-                padding: const EdgeInsets.all(24),
-                child: Row(
+        return GlassCard(
+          padding: const EdgeInsets.all(24),
+          child: isMobile
+              ? Column(
                   children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: CircularProgressIndicator(
-                            value: scoreProgress,
-                            strokeWidth: 6,
-                            backgroundColor: AppTheme.border,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              scoreColor,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${state.developerScore}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textMain,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 20),
+                    _buildScoreContent(state, scoreProgress, scoreColor),
+                    const SizedBox(height: 24),
+                    Container(height: 1, color: AppTheme.border),
+                    const SizedBox(height: 24),
+                    _buildStatsRow(state, true),
+                  ],
+                )
+              : Row(
+                  children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'DEV SCORE',
-                            style: GoogleFonts.spaceMono(
-                              fontSize: 12,
-                              color: AppTheme.textSecondary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            state.developerScore >= 8.0
-                                ? 'Elite'
-                                : state.developerScore >= 6.0
-                                ? 'Pro'
-                                : 'Rising',
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.textMain,
-                            ),
-                          ),
-                        ],
-                      ),
+                      flex: 4,
+                      child: _buildScoreContent(state, scoreProgress, scoreColor),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 60,
+                      color: AppTheme.border,
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
+                    ),
+                    Expanded(
+                      flex: 6,
+                      child: _buildStatsRow(state, false),
                     ),
                   ],
                 ),
-              ),
-            ),
-            // Stats Pill (unified GlassCard)
-            SizedBox(
-              width: isMobile
-                  ? constraints.maxWidth
-                  : (constraints.maxWidth - spacing) * 0.55,
-              child: GlassCard(
-                padding: EdgeInsets.symmetric(
-                  vertical: isMobile ? 18 : 24,
-                  horizontal: 12,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildBentoStat(
-                        context,
-                        '${state.repos}',
-                        'Repos',
-                        Icons.folder_open,
-                        AppTheme.neonPurple,
-                        isMobile,
-                      ),
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: AppTheme.border,
-                    ),
-                    Expanded(
-                      child: _buildBentoStat(
-                        context,
-                        '${state.commits}',
-                        'Commits',
-                        Icons.history,
-                        AppTheme.neonGreen,
-                        isMobile,
-                      ),
-                    ),
-                    Container(
-                      height: 40,
-                      width: 1,
-                      color: AppTheme.border,
-                    ),
-                    Expanded(
-                      child: _buildBentoStat(
-                        context,
-                        '${state.stars}',
-                        'Stars',
-                        Icons.star_border,
-                        AppTheme.neonOrange,
-                        isMobile,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
   }
 
+  Widget _buildScoreContent(AppState state, double scoreProgress, Color scoreColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                value: scoreProgress,
+                strokeWidth: 6,
+                backgroundColor: AppTheme.border,
+                valueColor: AlwaysStoppedAnimation<Color>(scoreColor),
+              ),
+            ),
+            Text(
+              '${state.developerScore}',
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMain,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'DEV SCORE',
+                style: GoogleFonts.spaceMono(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                state.developerScore >= 8.0
+                    ? 'Elite'
+                    : state.developerScore >= 6.0
+                    ? 'Pro'
+                    : 'Rising',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textMain,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(AppState state, bool isMobile) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildBentoStat(
+            null, // context not needed here since I don't use it in _buildBentoStat
+            '${state.repos}',
+            'Repos',
+            Icons.folder_open,
+            AppTheme.neonPurple,
+            isMobile,
+          ),
+        ),
+        Container(height: 40, width: 1, color: AppTheme.border),
+        Expanded(
+          child: _buildBentoStat(
+            null,
+            '${state.commits}',
+            'Commits',
+            Icons.history,
+            AppTheme.neonGreen,
+            isMobile,
+          ),
+        ),
+        Container(height: 40, width: 1, color: AppTheme.border),
+        Expanded(
+          child: _buildBentoStat(
+            null,
+            '${state.stars}',
+            'Stars',
+            Icons.star_border,
+            AppTheme.neonOrange,
+            isMobile,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBentoStat(
-    BuildContext context,
+    BuildContext? context,
     String value,
     String label,
     IconData icon,
@@ -1011,49 +997,8 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Yesterday's stats
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.isDark
-                  ? Colors.white.withValues(alpha: 0.04)
-                  : Colors.black.withValues(alpha: 0.02),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatChip(
-                  icon: Icons.commit_rounded,
-                  label: 'Commits',
-                  value: '${state.commits}',
-                  color: AppTheme.neonGreen,
-                ),
-                _buildStatDivider(),
-                _buildStatChip(
-                  icon: Icons.book_outlined,
-                  label: 'Repos',
-                  value: '${state.repos}',
-                  color: AppTheme.accent,
-                ),
-                _buildStatDivider(),
-                _buildStatChip(
-                  icon: Icons.star_rounded,
-                  label: 'Stars',
-                  value: '${state.stars}',
-                  color: AppTheme.neonOrange,
-                ),
-                _buildStatDivider(),
-                _buildStatChip(
-                  icon: Icons.trending_up_rounded,
-                  label: 'Score',
-                  value: '${state.developerScore}',
-                  color: AppTheme.neonPurple,
-                ),
-              ],
-            ),
-          ),
+          // Stats removed from here, unified in the score card
+
           const SizedBox(height: 12),
           // Suggested Next Task
           Container(
@@ -1092,45 +1037,6 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatChip({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textMain,
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: AppTheme.textSecondary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatDivider() {
-    return Container(
-      width: 1,
-      height: 32,
-      color: AppTheme.border.withValues(alpha: 0.3),
     );
   }
 
@@ -1908,10 +1814,10 @@ class HomeScreen extends StatelessWidget {
       return _buildLockedAiFeature(context, state, 'Open Pull Requests', Icons.merge_type_rounded);
     }
     
-    // Using mock data for now, as fetching PRs from other open source repos might require a specific API call
+    // Using mock data reflecting real PR structure
     final prs = [
-      {'repo': 'flutter/flutter', 'title': 'Fix scrolling issues on iOS', 'number': 142055, 'status': 'Open'},
-      {'repo': 'HEETMEHTA18/devmentor', 'title': 'Add GitHub Events Service', 'number': 12, 'status': 'Review Required'},
+      {'repo': 'flutter/flutter', 'title': 'Fix scrolling issues on iOS', 'number': 142055, 'status': 'Open', 'url': 'https://github.com/flutter/flutter/pull/142055', 'commit': 'a4f91d2'},
+      {'repo': 'HEETMEHTA18/devmentor', 'title': 'Add GitHub Events Service', 'number': 12, 'status': 'Review Required', 'url': 'https://github.com/HEETMEHTA18/devmentor/pull/12', 'commit': '8f3a9e1'},
     ];
 
     return GlassCard(
@@ -1939,34 +1845,82 @@ class HomeScreen extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.call_merge_rounded, size: 18, color: AppTheme.success),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            pr['repo'].toString(),
-                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                    Row(
+                      children: [
+                        Icon(Icons.merge_type_rounded, size: 20, color: AppTheme.success),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${pr['repo']} #${pr['number']}',
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                pr['title'].toString(),
+                                style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.commit_rounded, size: 14, color: AppTheme.textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    pr['commit'].toString(),
+                                    style: GoogleFonts.spaceMono(fontSize: 12, color: AppTheme.textSecondary),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.neonOrange.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: AppTheme.neonOrange.withValues(alpha: 0.4)),
+                                    ),
+                                    child: Text(
+                                      pr['status'].toString(),
+                                      style: GoogleFonts.inter(fontSize: 10, color: AppTheme.neonOrange, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          Text(
-                            pr['title'].toString(),
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                        ),
+                        LiquidGlassButton(
+                          onPressed: () async {
+                            final url = Uri.parse(pr['url'].toString());
+                            if (await canLaunchUrl(url)) {
+                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          color: AppTheme.accent.withValues(alpha: 0.1),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          borderRadius: 8,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.open_in_new_rounded, size: 14, color: Colors.white),
+                              const SizedBox(width: 6),
+                              Text(
+                                'View on GitHub',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '#${pr['number']}',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
                     ),
                   ],
                 ),
