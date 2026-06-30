@@ -11,6 +11,7 @@ import '../../models/repository.dart';
 import '../mentor/mentor_chat_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/liquid_glass_button.dart';
+import '../../services/github_events_service.dart';
 import '../reviewer/reviewer_screen.dart';
 import '../intelligence/developer_growth_screen.dart';
 import '../intelligence/codebase_qa_screen.dart';
@@ -505,23 +506,53 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                   ),
                 ),
               )
-            else
-              SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final event = appState.followingActivity[index];
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      left: 16,
-                      right: 16,
-                      top: index == 0 ? 0 : 0,
-                      bottom: index == appState.followingActivity.length - 1
-                          ? 120
-                          : 12,
+            else ...() {
+              // Group events by day
+              final List<GitHubActivityEvent> events = appState.parsedActivityEvents.isNotEmpty
+                  ? appState.parsedActivityEvents
+                  : appState.followingActivity
+                      .map((e) => GitHubActivityEvent.fromBackendFormat(e))
+                      .toList();
+              final grouped = GroupedEvents.groupByDay(events);
+
+              final List<Widget> slivers = [];
+              for (final group in grouped) {
+                // Day header
+                slivers.add(
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 8),
+                      child: Text(
+                        group.label,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                    child: _buildActivityCard(context, event, isDark),
-                  );
-                }, childCount: appState.followingActivity.length),
-              ),
+                  ),
+                );
+                // Events in this group
+                slivers.add(
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final event = group.events[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          bottom: index == group.events.length - 1 ? 4 : 10,
+                        ),
+                        child: _buildRichActivityCard(context, event, isDark),
+                      );
+                    }, childCount: group.events.length),
+                  ),
+                );
+              }
+              return slivers;
+            }(),
 
             // Bottom padding
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -531,333 +562,6 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
     );
   }
 
-  Widget _buildActivityCard(
-    BuildContext context,
-    Map<String, dynamic> event,
-    bool isDark,
-  ) {
-    final String actorLogin =
-        event['actor_name'] ?? (event['actor']?['login'] ?? 'Unknown');
-    final String actorAvatar =
-        event['actor_avatar'] ?? (event['actor']?['avatar_url'] ?? '');
-    final String repoName =
-        event['repo_name'] ?? (event['repo']?['name'] ?? 'Unknown Repo');
-    final String eventType = event['type'] ?? 'PushEvent';
-    final String actionType = event['action_type'] ?? '';
-    final String action = event['action'] ?? '';
-    final String title = event['title'] ?? 'Activity';
-    final String body = event['description'] ?? (event['body'] ?? '');
-    final String createdAtStr = event['created_at'] ?? '';
-
-    DateTime? date;
-    if (createdAtStr.isNotEmpty) {
-      date = DateTime.tryParse(createdAtStr);
-    }
-    final now = DateTime.now();
-    String timeAgo = '';
-    if (date != null) {
-      final diff = now.difference(date);
-      if (diff.inMinutes < 60) {
-        timeAgo = '${diff.inMinutes}m';
-      } else if (diff.inHours < 24) {
-        timeAgo = '${diff.inHours}h';
-      } else {
-        timeAgo = '${diff.inDays}d';
-      }
-    }
-
-    // Build redirection URL dynamically
-    String targetUrl = 'https://github.com';
-    if (repoName.isNotEmpty && repoName != 'Unknown Repo') {
-      targetUrl = 'https://github.com/$repoName';
-      final issueMatch = RegExp(r'issue #(\d+)').firstMatch(title);
-      final prMatch = RegExp(r'pull request #(\d+)').firstMatch(title);
-      if (issueMatch != null) {
-        targetUrl =
-            'https://github.com/$repoName/issues/${issueMatch.group(1)}';
-      } else if (prMatch != null) {
-        targetUrl = 'https://github.com/$repoName/pull/${prMatch.group(1)}';
-      }
-    }
-
-    // Event type styling
-    IconData eventIcon = Icons.commit_rounded;
-    String typeLabel = 'pushed to';
-    Color badgeColor = const Color(0xFF8957E5);
-    String badgeLabel = 'Push';
-
-    if (eventType == 'PullRequestEvent' || actionType == 'pr') {
-      if (action == 'merged' || title.toLowerCase().contains('merged')) {
-        typeLabel = 'merged a PR in';
-        eventIcon = Icons.merge_rounded;
-        badgeColor = const Color(0xFF8957E5);
-        badgeLabel = 'Merged';
-      } else {
-        typeLabel = 'opened a PR in';
-        eventIcon = Icons.call_merge_rounded;
-        badgeColor = const Color(0xFF3FB950);
-        badgeLabel = 'Open';
-      }
-    } else if (eventType == 'ReleaseEvent' || actionType == 'release') {
-      typeLabel = 'published a release for';
-      eventIcon = Icons.new_releases_rounded;
-      badgeColor = const Color(0xFFFF9500);
-      badgeLabel = 'Release';
-    } else if (eventType == 'WatchEvent' || actionType == 'star') {
-      typeLabel = 'starred';
-      eventIcon = Icons.star_rounded;
-      badgeColor = const Color(0xFFE3B341);
-      badgeLabel = 'Star';
-    } else if (eventType == 'IssueCommentEvent' || actionType == 'comment') {
-      typeLabel = 'commented in';
-      eventIcon = Icons.comment_rounded;
-      badgeColor = const Color(0xFF007AFF);
-      badgeLabel = 'Comment';
-    } else if (eventType == 'IssuesEvent' || actionType == 'issue') {
-      typeLabel = 'updated an issue in';
-      eventIcon = Icons.info_outline_rounded;
-      badgeColor = const Color(0xFFFF453A);
-      badgeLabel = 'Issue';
-    } else if (eventType == 'ForkEvent' || actionType == 'fork') {
-      typeLabel = 'forked';
-      eventIcon = Icons.fork_right_rounded;
-      badgeColor = const Color(0xFF5856D6);
-      badgeLabel = 'Fork';
-    } else if (eventType == 'CreateEvent' || actionType == 'create') {
-      typeLabel = 'created';
-      eventIcon = Icons.add_circle_outline_rounded;
-      badgeColor = const Color(0xFF34C759);
-      badgeLabel = 'Create';
-    }
-
-    return GlassCard(
-      borderRadius: 16,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Actor row
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundImage: actorAvatar.isNotEmpty
-                    ? NetworkImage(actorAvatar)
-                    : null,
-                radius: 16,
-                backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                child: actorAvatar.isEmpty
-                    ? const Icon(Icons.person, size: 16)
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: RichText(
-                  text: TextSpan(
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: AppTheme.textMain,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: actorLogin,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      TextSpan(text: ' $typeLabel '),
-                      TextSpan(
-                        text: repoName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.accent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (timeAgo.isNotEmpty)
-                Text(
-                  timeAgo,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-            ],
-          ),
-
-          // PR/Release card body
-          if (title.isNotEmpty && title != 'Activity') ...[
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.04)
-                    : Colors.black.withValues(alpha: 0.02),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppTheme.border.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Repo name
-                  Text(
-                    repoName,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Title
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textMain,
-                    ),
-                  ),
-                  // Badge row
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: badgeColor.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(eventIcon, size: 12, color: badgeColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              badgeLabel,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: badgeColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Summary body
-                  if (body.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      'Detail',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textMain,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      body,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
-                        height: 1.4,
-                      ),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  // Action buttons row
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton.icon(
-                        onPressed: () async {
-                          final Uri uri = Uri.parse(targetUrl);
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(
-                              uri,
-                              mode: LaunchMode.externalApplication,
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.open_in_new_rounded, size: 14),
-                        label: Text(
-                          'GitHub',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.textSecondary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      LiquidGlassButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            _activeTab = 5; // Switch to Research Agent Tab
-                            _researchSubTab = 0; // Select GitHub Research
-                            _researchUrlController.text = targetUrl;
-                          });
-                          final state = Provider.of<AppState>(
-                            context,
-                            listen: false,
-                          );
-                          state.clearRateLimit();
-                          state.fetchResearchData('github', {'url': targetUrl});
-                        },
-                        icon: const Icon(
-                          Icons.psychology_rounded,
-                          size: 14,
-                          color: Colors.black,
-                        ),
-                        label: Text(
-                          'Deep Analyze',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        borderRadius: 8,
-                        color: AppTheme.accent,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildReposTab(
     BuildContext context,
@@ -2434,5 +2138,202 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
 
   Widget _buildReviewerTab(BuildContext context, AppState state) {
     return const ReviewerScreen();
+  }
+
+  Widget _buildRichActivityCard(
+    BuildContext context,
+    GitHubActivityEvent event,
+    bool isDark,
+  ) {
+    // Determine header action text
+    String actionText = 'pushed to';
+    if (event.type == 'PullRequestEvent') {
+      actionText = event.prAction == 'merged' ? 'merged a PR in' : 'opened a PR in';
+    } else if (event.type == 'IssuesEvent') {
+      actionText = 'opened an issue in';
+    } else if (event.type == 'WatchEvent') {
+      actionText = 'starred';
+    } else if (event.type == 'CreateEvent') {
+      actionText = 'created a repository';
+    } else if (event.type == 'ForkEvent') {
+      actionText = 'forked';
+    } else if (event.type == 'ReleaseEvent') {
+      actionText = 'published a release in';
+    } else if (event.type == 'IssueCommentEvent') {
+      actionText = 'commented on an issue in';
+    }
+
+    return GlassCard(
+      borderRadius: 16,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Actor Row (GitHub Mobile Style)
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundImage: event.actorAvatarUrl.isNotEmpty
+                    ? NetworkImage(event.actorAvatarUrl)
+                    : null,
+                radius: 12,
+                backgroundColor: AppTheme.border,
+                child: event.actorAvatarUrl.isEmpty
+                    ? const Icon(Icons.person, size: 14)
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                    children: [
+                      TextSpan(
+                        text: event.actorLogin,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textMain,
+                        ),
+                      ),
+                      TextSpan(text: ' $actionText '),
+                      TextSpan(
+                        text: event.repoName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textMain,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Text(
+                _timeAgo(event.createdAt),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          
+          if (event.displayTitle.isNotEmpty || event.aiSummaryBullets.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.03)
+                    : Colors.black.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title / Commit Message
+                  if (event.displayTitle.isNotEmpty) ...[
+                    Text(
+                      event.displayTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textMain,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (event.aiSummaryBullets.isNotEmpty) const SizedBox(height: 12),
+                  ],
+                  
+                  // Summary Bullets
+                  if (event.aiSummaryBullets.isNotEmpty)
+                    ...event.aiSummaryBullets.map((bullet) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6, right: 8),
+                                child: Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.textSecondary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  bullet,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                        
+                  // Diff Stats
+                  if ((event.commitCount ?? 0) > 0) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.commit_rounded, size: 14, color: AppTheme.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${event.commitCount} commit${event.commitCount! > 1 ? 's' : ''}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        if ((event.additions ?? 0) > 0) ...[
+                          Text(
+                            '+${event.additions}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.success,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        if ((event.deletions ?? 0) > 0)
+                          Text(
+                            '-${event.deletions}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFFF453A),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _timeAgo(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 30) return '${diff.inDays}d ago';
+    return '${date.day}/${date.month}';
   }
 }

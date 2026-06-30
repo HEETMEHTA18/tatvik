@@ -10,6 +10,7 @@ import '../core/config/app_config.dart';
 import '../models/prompt_item.dart';
 import '../utils/cookie_manager.dart';
 import '../core/utils/web_helper.dart' as web_helper;
+import '../services/github_events_service.dart';
 
 class AppState extends ChangeNotifier {
   AppState() {
@@ -2095,6 +2096,11 @@ This is simulated offline prompts.md content.
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
 
+        // Also parse into rich event objects
+        parsedActivityEvents = followingActivity
+            .map((e) => GitHubActivityEvent.fromBackendFormat(e))
+            .toList();
+
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString(
@@ -2108,12 +2114,69 @@ This is simulated offline prompts.md content.
         } catch (_) {}
       } else {
         debugPrint('Failed to load following activity: ${response.statusCode}');
+        // Fallback: use direct GitHub Events API
+        await _fallbackToGitHubEventsApi();
       }
     } catch (e) {
       debugPrint('Error fetching following activity: $e');
+      // Fallback: use direct GitHub Events API
+      await _fallbackToGitHubEventsApi();
     } finally {
       isLoadingFollowingActivity = false;
       notifyListeners();
+    }
+  }
+
+  /// Parsed rich events for the new activity feed.
+  List<GitHubActivityEvent> parsedActivityEvents = [];
+
+  /// Direct GitHub API fallback for activity feed.
+  Future<void> _fallbackToGitHubEventsApi() async {
+    try {
+      // Fetch user's own events
+      final events = await GitHubEventsService.fetchUserEvents(
+        githubUsername,
+        token: token,
+        perPage: 30,
+      );
+
+      if (events.isNotEmpty) {
+        parsedActivityEvents = events;
+
+        // Also convert to the legacy followingActivity format
+        followingActivity = events.map((e) => {
+          'type': e.type,
+          'actor_name': e.actorLogin,
+          'actor_avatar': e.actorAvatarUrl,
+          'repo_name': e.repoName,
+          'title': e.displayTitle,
+          'description': e.aiSummaryBullets.join('\n'),
+          'created_at': e.createdAt.toIso8601String(),
+          'action_type': e.type == 'PullRequestEvent' ? 'pr'
+              : e.type == 'IssueCommentEvent' ? 'comment'
+              : e.type == 'IssuesEvent' ? 'issue'
+              : e.type == 'WatchEvent' ? 'star'
+              : e.type == 'ForkEvent' ? 'fork'
+              : e.type == 'CreateEvent' ? 'create'
+              : e.type == 'ReleaseEvent' ? 'release'
+              : 'push',
+          'action': e.prAction ?? '',
+        }).toList();
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+            'following_activity_cache_$githubUsername',
+            jsonEncode(followingActivity),
+          );
+          await prefs.setInt(
+            'following_activity_timestamp_$githubUsername',
+            DateTime.now().millisecondsSinceEpoch,
+          );
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('GitHub Events API fallback also failed: $e');
     }
   }
 

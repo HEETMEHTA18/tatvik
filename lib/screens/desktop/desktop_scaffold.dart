@@ -28,6 +28,7 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
   static const List<String> _navItems = [
     'Home',
     'Explore',
+    'Chat',
     'Prompts',
     'Roadmap',
     'Settings',
@@ -36,6 +37,7 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
   static const List<IconData> _navIcons = [
     Icons.home_rounded,
     Icons.explore_rounded,
+    Icons.chat_bubble_rounded,
     Icons.auto_awesome_rounded,
     Icons.route_rounded,
     Icons.settings_rounded,

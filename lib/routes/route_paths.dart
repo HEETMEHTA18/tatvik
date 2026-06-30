@@ -7,7 +7,7 @@ class RoutePaths {
   static const mentor = '/mentor';
 
   // Tab names used as query parameter values for /?tab=<name>
-  static const tabNames = ['home', 'explore', 'prompts', 'roadmap', 'settings'];
+  static const tabNames = ['home', 'explore', 'chat', 'prompts', 'roadmap', 'settings'];
 
   /// Returns the tab index for a given tab name, or 0 (home) if not found.
   static int tabIndexFromName(String? name) {

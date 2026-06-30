@@ -895,33 +895,33 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildWelcomeHeader(BuildContext context, AppState state) {
+    // Time-of-day greeting
+    final hour = DateTime.now().hour;
+    String greeting;
+    IconData greetingIcon;
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      greetingIcon = Icons.wb_sunny_rounded;
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      greetingIcon = Icons.light_mode_rounded;
+    } else {
+      greeting = 'Good Evening';
+      greetingIcon = Icons.nights_stay_rounded;
+    }
+
+    final firstName = state.username.split(' ').first;
+
     return GlassCard(
-      padding: const EdgeInsets.all(32),
-      child: Stack(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Background Gradient effect for Hero
-          Positioned(
-            right: -50,
-            bottom: -50,
-            child: Container(
-              width: 150,
-              height: 150,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.neonPurple.withValues(alpha: 0.2),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
           Row(
             children: [
               Container(
-                width: 72,
-                height: 72,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppTheme.accent,
@@ -935,35 +935,47 @@ class HomeScreen extends StatelessWidget {
                           fit: BoxFit.cover,
                         )
                       : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.accent.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: state.avatarUrl == null
-                    ? const Icon(Icons.person, color: Colors.white, size: 36)
+                    ? const Icon(Icons.person, color: Colors.white, size: 28)
                     : null,
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Welcome back,',
-                      style: GoogleFonts.spaceMono(
-                        fontSize: 14,
-                        color: AppTheme.neonGreen,
-                        letterSpacing: 1.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Icon(greetingIcon, size: 16, color: AppTheme.neonOrange),
+                        const SizedBox(width: 6),
+                        Text(
+                          greeting,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: AppTheme.textSecondary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        state.username,
+                        firstName,
                         style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 32,
-                          letterSpacing: -1.0,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 28,
+                          letterSpacing: -0.5,
                           color: AppTheme.textMain,
                         ),
                       ),
@@ -974,7 +986,7 @@ class HomeScreen extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceElevated,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppTheme.border),
                 ),
                 child: IconButton(
@@ -983,7 +995,7 @@ class HomeScreen extends StatelessWidget {
                         ? Icons.light_mode_rounded
                         : Icons.dark_mode_rounded,
                     color: AppTheme.textMain,
-                    size: 24,
+                    size: 22,
                   ),
                   onPressed: () {
                     state.toggleTheme();
@@ -992,8 +1004,127 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Yesterday's stats
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.isDark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.02),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatChip(
+                  icon: Icons.commit_rounded,
+                  label: 'Commits',
+                  value: '${state.commits}',
+                  color: AppTheme.neonGreen,
+                ),
+                _buildStatDivider(),
+                _buildStatChip(
+                  icon: Icons.book_outlined,
+                  label: 'Repos',
+                  value: '${state.repos}',
+                  color: AppTheme.accent,
+                ),
+                _buildStatDivider(),
+                _buildStatChip(
+                  icon: Icons.star_rounded,
+                  label: 'Stars',
+                  value: '${state.stars}',
+                  color: AppTheme.neonOrange,
+                ),
+                _buildStatDivider(),
+                _buildStatChip(
+                  icon: Icons.trending_up_rounded,
+                  label: 'Score',
+                  value: '${state.developerScore}',
+                  color: AppTheme.neonPurple,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Suggested Next Task
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppTheme.accent.withValues(alpha: 0.08),
+                  AppTheme.neonPurple.withValues(alpha: 0.06),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 16, color: AppTheme.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    state.gaps.isNotEmpty
+                        ? '💡 Suggested: ${state.gaps.first}'
+                        : '💡 Tip: Review your latest commits for code quality improvements',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppTheme.textMain,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatChip({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textMain,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(
+      width: 1,
+      height: 32,
+      color: AppTheme.border.withValues(alpha: 0.3),
     );
   }
 
