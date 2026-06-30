@@ -26,30 +26,92 @@ class PulseEngine:
         }
 
     async def fetch_rss(self, url: str) -> List[Dict[str, Any]]:
-        """Priority 1: Official RSS Feed"""
+        """Priority 1: Official RSS or Atom Feed with redirect & header handling"""
         items = []
-        async with httpx.AsyncClient() as client:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/atom+xml, application/rss+xml, application/xml;q=0.9, text/xml, */*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
-                resp = await client.get(url, timeout=15.0)
+                resp = await client.get(url, headers=headers, timeout=15.0)
                 if resp.status_code == 200:
                     root = ET.fromstring(resp.content)
-                    for item in root.findall(".//item")[
-                        : settings.pulse_max_items_per_feed
-                    ]:
-                        title = item.findtext("title")
-                        link = item.findtext("link")
-                        desc = item.findtext("description")
-                        pub_date = item.findtext("pubDate")
-                        if title and link:
-                            items.append(
-                                {
-                                    "title": title.strip(),
-                                    "url": link.strip(),
-                                    "description": desc.strip() if desc else "",
-                                    "source": "RSS",
-                                    "published_at": pub_date,
-                                }
+                    # 1. Try standard RSS <item>
+                    xml_items = root.findall(".//item")
+                    if xml_items:
+                        for item in xml_items[: settings.pulse_max_items_per_feed]:
+                            title = item.findtext("title")
+                            link = item.findtext("link")
+                            desc = item.findtext("description") or item.findtext(
+                                "encoded"
                             )
+                            pub_date = item.findtext("pubDate")
+                            if title and link:
+                                items.append(
+                                    {
+                                        "title": title.strip(),
+                                        "url": link.strip(),
+                                        "description": desc.strip() if desc else "",
+                                        "source": "RSS",
+                                        "published_at": pub_date,
+                                    }
+                                )
+                    else:
+                        # 2. Try Atom <entry> (checking with or without namespaces)
+                        entries = root.findall(".//*")
+                        atom_entries = [e for e in entries if e.tag.endswith("entry")]
+                        for entry in atom_entries[: settings.pulse_max_items_per_feed]:
+                            title_node = next(
+                                (c for c in entry if c.tag.endswith("title")), None
+                            )
+                            link_node = next(
+                                (c for c in entry if c.tag.endswith("link")), None
+                            )
+                            summary_node = next(
+                                (
+                                    c
+                                    for c in entry
+                                    if c.tag.endswith("summary")
+                                    or c.tag.endswith("content")
+                                ),
+                                None,
+                            )
+                            updated_node = next(
+                                (
+                                    c
+                                    for c in entry
+                                    if c.tag.endswith("updated")
+                                    or c.tag.endswith("published")
+                                ),
+                                None,
+                            )
+
+                            title = title_node.text if title_node is not None else None
+                            link = None
+                            if link_node is not None:
+                                link = link_node.attrib.get("href") or link_node.text
+
+                            desc = summary_node.text if summary_node is not None else ""
+                            pub_date = (
+                                updated_node.text if updated_node is not None else None
+                            )
+
+                            if title and link:
+                                items.append(
+                                    {
+                                        "title": title.strip(),
+                                        "url": link.strip(),
+                                        "description": desc.strip() if desc else "",
+                                        "source": "Atom",
+                                        "published_at": pub_date,
+                                    }
+                                )
+                else:
+                    logger.warning(
+                        f"RSS/Atom Feed returned status code {resp.status_code} for {url}"
+                    )
             except Exception as e:
                 logger.error(f"RSS Fetch Failed {url}: {e}")
         return items
@@ -132,14 +194,16 @@ class PulseEngine:
                             start = txt.find("{")
                             end = txt.rfind("}") + 1
                             if start != -1 and end != -1:
-                                return json.loads(txt[start:end])
+                                parsed = json.loads(txt[start:end])
+                                # Proactively space out requests to stay within free-tier rate limits (15 RPM)
+                                await asyncio.sleep(4.0)
+                                return parsed
                             break
                         elif resp.status_code == 429:
-                            wait_time = backoff_factor * (2**attempt)
                             logger.warning(
-                                f"Gemini API rate limit hit (429). Retrying in {wait_time:.1f}s... (Attempt {attempt + 1}/{max_retries})"
+                                f"Gemini API rate limit hit (429). Falling back to alternate provider immediately."
                             )
-                            await asyncio.sleep(wait_time)
+                            break
                         else:
                             logger.error(
                                 f"Gemini API failed with status code {resp.status_code}: {resp.text}"
@@ -261,10 +325,6 @@ class PulseEngine:
                     if not enriched:
                         enriched = {}
 
-                    # Proactively space out requests to stay within free-tier rate limits (15 RPM)
-                    if settings.gemini_api_key:
-                        await asyncio.sleep(4.0)
-
                     # 4. Store
                     db_item = PulseItem(
                         title=item["title"],
@@ -326,12 +386,20 @@ async def run_pulse_pipeline(db: Session):
             "url": "/search/repositories?q=stars:>10000+pushed:>2023-01-01&sort=stars&order=desc",
             "type": "github",
         },
-        {"url": "https://github.com/advisories.atom", "type": "rss"},
+        # Security Alerts & Vulnerability Feeds
+        {
+            "url": "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",
+            "type": "rss",
+        },
+        {
+            "url": "https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml",
+            "type": "rss",
+        },
         # AI & Research
         {"url": "https://huggingface.co/blog/feed.xml", "type": "rss"},
-        {"url": "http://export.arxiv.org/rss/cs.AI", "type": "rss"},
+        {"url": "https://export.arxiv.org/rss/cs.AI", "type": "rss"},
         # Frameworks & Core Tech
-        {"url": "https://reactjs.org/feed.xml", "type": "rss"},
+        {"url": "https://react.dev/feed.xml", "type": "rss"},
         {"url": "https://nextjs.org/feed.xml", "type": "rss"},
         {"url": "https://blog.vuejs.org/feed.rss", "type": "rss"},
         # Cloud Providers
