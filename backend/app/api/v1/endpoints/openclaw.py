@@ -82,6 +82,7 @@ from app.services.openclaw_tools import (
     get_tool,
 )
 from app.services.tatvik_planner import TatvikPlanner
+from app.services.pipeline_status import pipeline_tracker, PipelineStepInfo
 from app.services.webhook_router import (
     DEFAULT_AUTOMATION_RULES,
     WebhookEvent,
@@ -200,6 +201,16 @@ async def get_tool_detail(tool_id: str):
 # ── Goal Planning ─────────────────────────────────────────────────────────────
 
 
+@router.get("/pipeline/status", summary="Current pipeline status and working info")
+async def get_pipeline_status():
+    """
+    Returns real-time status of the OpenClaw + Cognee pipeline:
+    - Configuration (enabled/disabled state)
+    - Current phase, goal, and step-level execution progress
+    """
+    return pipeline_tracker.report()
+
+
 @router.post("/plan", summary="Plan a workflow from a natural-language goal")
 async def plan_goal(
     body: PlanGoalRequest,
@@ -216,33 +227,47 @@ async def plan_goal(
     - "Process the meeting transcript from today's standup"
     """
     planner = TatvikPlanner()
+    pipeline_tracker.start_planning(body.goal)
     workflow = await planner.plan_workflow(
         goal=body.goal,
         user_id=user_id,
     )
+
+    for i, s in enumerate(workflow.steps):
+        pipeline_tracker.add_step(PipelineStepInfo(
+            step=s.description or f"{s.tool_id}.{s.capability}",
+            status="pending",
+            tool_id=s.tool_id,
+            capability=s.capability,
+        ))
+
     result = {
         "success": True,
         "workflow": planner.workflow_to_dict(workflow),
     }
 
     if body.execute:
-        # Execute each step sequentially via OpenClaw
+        pipeline_tracker.set_phase("executing_openclaw", "Executing workflow steps via OpenClaw...")
         openclaw = OpenClawService()
         executed_steps = []
-        for step in workflow.steps:
+        for i, step in enumerate(workflow.steps):
+            pipeline_tracker.update_step(i, "running", f"Running {step.tool_id}.{step.capability}...")
             step_result = await openclaw.execute_tool_capability(
                 tool_id=step.tool_id,
                 capability=step.capability,
                 parameters=step.parameters,
                 user_context=body.goal,
             )
-            step.status = "done" if step_result.get("success") else "failed"
+            ok = step_result.get("success", False)
+            step.status = "done" if ok else "failed"
             step.result = step_result
+            pipeline_tracker.update_step(i, step.status, step_result.get("output", ""))
             executed_steps.append(step_result)
         workflow.status = "completed"
         result["executed"] = True
         result["execution_results"] = executed_steps
         result["workflow"] = planner.workflow_to_dict(workflow)
+        pipeline_tracker.finish(all(s.status == "done" for s in workflow.steps))
 
     return result
 

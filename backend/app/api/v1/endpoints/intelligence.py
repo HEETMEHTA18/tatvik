@@ -25,6 +25,7 @@ from app.api.deps import get_current_user_id, get_optional_user_id
 from app.core.config import settings
 from app.services.cognee_service import CogneeService
 from app.services.openclaw_service import OpenClawService
+from app.services.pipeline_status import pipeline_tracker, PipelineStepInfo
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -405,6 +406,9 @@ async def voice_pipeline(
     repo_url = request.repo_url or "https://github.com/HEETMEHTA18/tatvik"
     branch = request.branch or "tatvik-voice-pipeline"
 
+    pipeline_tracker.start_planning(request.transcript)
+    pipeline_tracker.set_phase("planning", "AI Prompt Writer generating specification...")
+
     # Step 1: AI 1 generates the prompt.md content
     prompt_gen_instruction = (
         "You are an AI Architect. Based on the developer's voice instruction: "
@@ -458,6 +462,10 @@ async def voice_pipeline(
             logger.info(f"Successfully wrote local prompt file to {p}")
         except Exception as e:
             logger.warning(f"Could not write local prompt file to {p}: {e}")
+
+    pipeline_tracker.add_step(PipelineStepInfo(step="Write prompt.md", status="done", details="Specification generated"))
+    pipeline_tracker.set_phase("executing_openclaw", "OpenClaw implementing the specification...")
+    pipeline_tracker.add_step(PipelineStepInfo(step="Execute on repository", status="running", tool_id="openclaw", capability="execute_task"))
 
     # Step 3: Run the second AI (OpenClaw / GithubAgentService) on the generated prompt.md
     pr_url = None
@@ -524,9 +532,15 @@ async def voice_pipeline(
                 agent_message = result.get(
                     "error", "OpenClaw failed to execute voice pipeline."
                 )
+        ok = result.get("success", False)
+        pipeline_tracker.update_step(1, "done" if ok else "failed",
+                                     f"PR: {result.get('pull_request_url', 'N/A')}" if ok else result.get("error", ""))
+        pipeline_tracker.finish(ok)
     except Exception as e:
         logger.error(f"Error executing Voice Pipeline task: {e}")
         agent_message = f"Error: {e}"
+        pipeline_tracker.update_step(1, "failed", str(e))
+        pipeline_tracker.finish(False)
 
     return VoicePipelineResponse(
         success=True,
