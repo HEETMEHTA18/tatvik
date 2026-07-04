@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from app.core.config import settings
@@ -51,7 +51,7 @@ class PipelineStatusTracker:
     def start_planning(self, goal: str):
         self.status = PipelineStatus(
             phase="planning",
-            started_at=datetime.utcnow().isoformat(),
+            started_at=datetime.now(timezone.utc).isoformat(),
             current_goal=goal,
             steps=[],
             message="Decomposing goal into workflow steps...",
@@ -68,9 +68,9 @@ class PipelineStatusTracker:
             s.status = status
             s.details = details
             if status == "running":
-                s.started_at = datetime.utcnow().isoformat()
+                s.started_at = datetime.now(timezone.utc).isoformat()
             elif status in ("done", "failed"):
-                s.finished_at = datetime.utcnow().isoformat()
+                s.finished_at = datetime.now(timezone.utc).isoformat()
             self._log()
 
     def set_phase(self, phase: str, message: str = ""):
