@@ -407,7 +407,9 @@ async def voice_pipeline(
     branch = request.branch or "tatvik-voice-pipeline"
 
     pipeline_tracker.start_planning(request.transcript)
-    pipeline_tracker.set_phase("planning", "AI Prompt Writer generating specification...")
+    pipeline_tracker.set_phase(
+        "planning", "AI Prompt Writer generating specification..."
+    )
 
     # Step 1: AI 1 generates the prompt.md content
     prompt_gen_instruction = (
@@ -463,9 +465,22 @@ async def voice_pipeline(
         except Exception as e:
             logger.warning(f"Could not write local prompt file to {p}: {e}")
 
-    pipeline_tracker.add_step(PipelineStepInfo(step="Write prompt.md", status="done", details="Specification generated"))
-    pipeline_tracker.set_phase("executing_openclaw", "OpenClaw implementing the specification...")
-    pipeline_tracker.add_step(PipelineStepInfo(step="Execute on repository", status="running", tool_id="openclaw", capability="execute_task"))
+    pipeline_tracker.add_step(
+        PipelineStepInfo(
+            step="Write prompt.md", status="done", details="Specification generated"
+        )
+    )
+    pipeline_tracker.set_phase(
+        "executing_openclaw", "OpenClaw implementing the specification..."
+    )
+    pipeline_tracker.add_step(
+        PipelineStepInfo(
+            step="Execute on repository",
+            status="running",
+            tool_id="openclaw",
+            capability="execute_task",
+        )
+    )
 
     # Step 3: Run the second AI (OpenClaw / GithubAgentService) on the generated prompt.md
     pr_url = None
@@ -533,8 +548,15 @@ async def voice_pipeline(
                     "error", "OpenClaw failed to execute voice pipeline."
                 )
         ok = result.get("success", False)
-        pipeline_tracker.update_step(1, "done" if ok else "failed",
-                                     f"PR: {result.get('pull_request_url', 'N/A')}" if ok else result.get("error", ""))
+        pipeline_tracker.update_step(
+            1,
+            "done" if ok else "failed",
+            (
+                f"PR: {result.get('pull_request_url', 'N/A')}"
+                if ok
+                else result.get("error", "")
+            ),
+        )
         pipeline_tracker.finish(ok)
     except Exception as e:
         logger.error(f"Error executing Voice Pipeline task: {e}")

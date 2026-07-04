@@ -234,12 +234,14 @@ async def plan_goal(
     )
 
     for i, s in enumerate(workflow.steps):
-        pipeline_tracker.add_step(PipelineStepInfo(
-            step=s.description or f"{s.tool_id}.{s.capability}",
-            status="pending",
-            tool_id=s.tool_id,
-            capability=s.capability,
-        ))
+        pipeline_tracker.add_step(
+            PipelineStepInfo(
+                step=s.description or f"{s.tool_id}.{s.capability}",
+                status="pending",
+                tool_id=s.tool_id,
+                capability=s.capability,
+            )
+        )
 
     result = {
         "success": True,
@@ -247,11 +249,15 @@ async def plan_goal(
     }
 
     if body.execute:
-        pipeline_tracker.set_phase("executing_openclaw", "Executing workflow steps via OpenClaw...")
+        pipeline_tracker.set_phase(
+            "executing_openclaw", "Executing workflow steps via OpenClaw..."
+        )
         openclaw = OpenClawService()
         executed_steps = []
         for i, step in enumerate(workflow.steps):
-            pipeline_tracker.update_step(i, "running", f"Running {step.tool_id}.{step.capability}...")
+            pipeline_tracker.update_step(
+                i, "running", f"Running {step.tool_id}.{step.capability}..."
+            )
             step_result = await openclaw.execute_tool_capability(
                 tool_id=step.tool_id,
                 capability=step.capability,

@@ -1,6 +1,7 @@
 """
 Pipeline Status Tracker — real-time insight into what the Tatvik pipeline is doing.
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PipelineStepInfo:
     step: str
-    status: str       # pending | running | done | failed
+    status: str  # pending | running | done | failed
     tool_id: str = ""
     capability: str = ""
     started_at: str | None = None
@@ -26,7 +27,9 @@ class PipelineStepInfo:
 
 @dataclass
 class PipelineStatus:
-    phase: str = "idle"  # idle | planning | executing_cognee | executing_openclaw | done | failed
+    phase: str = (
+        "idle"  # idle | planning | executing_cognee | executing_openclaw | done | failed
+    )
     started_at: str | None = None
     current_goal: str = ""
     steps: list[PipelineStepInfo] = field(default_factory=list)
@@ -81,7 +84,9 @@ class PipelineStatusTracker:
 
     def finish(self, success: bool):
         self.status.phase = "done" if success else "failed"
-        self.status.message = "Pipeline completed successfully." if success else "Pipeline failed."
+        self.status.message = (
+            "Pipeline completed successfully." if success else "Pipeline failed."
+        )
         self._log()
 
     def reset(self):
@@ -117,7 +122,9 @@ class PipelineStatusTracker:
         }
 
     def _log(self):
-        logger.debug(f"[PipelineStatus] phase={self.status.phase} goal='{self.status.current_goal}'")
+        logger.debug(
+            f"[PipelineStatus] phase={self.status.phase} goal='{self.status.current_goal}'"
+        )
 
     def report(self) -> dict:
         return {
