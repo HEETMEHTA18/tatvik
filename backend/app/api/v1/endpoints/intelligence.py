@@ -495,7 +495,7 @@ async def voice_pipeline(
     try:
         from app.services.github_agent_service import GithubAgentService
 
-        github_agent = GithubAgentService()
+        github_agent = GithubAgentService(github_token=settings.github_token)
         if github_agent.enabled:
             owner, repo_name = github_agent._parse_owner_repo(repo_url)
             if owner and repo_name:
@@ -534,6 +534,10 @@ async def voice_pipeline(
                     agent_message = result.get(
                         "error", "OpenClaw failed to execute voice pipeline."
                     )
+            else:
+                result = await _openclaw.execute_task(
+                    repo_url=repo_url, task_description=task, branch_name=branch
+                )
         else:
             result = await _openclaw.execute_task(
                 repo_url=repo_url, task_description=task, branch_name=branch
