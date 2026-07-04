@@ -62,12 +62,24 @@ class OpenClawService:
                 "OpenClaw API Key is not configured (or in testing mode). Running in dry-run mode."
             )
 
+    async def warmup(self) -> bool:
+        """Pings the OpenClaw health endpoint to keep the HF Space warm."""
+        if not self.enabled:
+            return False
+        try:
+            async with httpx.AsyncClient() as client:
+                base = "/".join(self.api_url.split("/")[:3])
+                resp = await client.get(f"{base}/health", timeout=10.0)
+                return resp.status_code == 200
+        except Exception:
+            return False
+
     # ── Core dispatcher ─────────────────────────────────────────────────────
 
     async def _dispatch(
         self,
         prompt: str,
-        timeout: float = 80.0,
+        timeout: float = 180.0,
         system_context: str = "",
     ) -> dict:
         """
@@ -166,7 +178,9 @@ class OpenClawService:
             "Return a structured JSON result with 'success', 'output', and any relevant metadata."
         )
 
-        return await self._dispatch(prompt, timeout=90.0, system_context=system_context)
+        return await self._dispatch(
+            prompt, timeout=180.0, system_context=system_context
+        )
 
     # ── GitHub Tool ──────────────────────────────────────────────────────────
 
@@ -395,7 +409,7 @@ class OpenClawService:
             "Clone or fetch the code, analyze the architecture, dependencies, and code quality, "
             "then execute the task. Use all available plugins to complete this thoroughly."
         )
-        result = await self._dispatch(prompt, timeout=80.0)
+        result = await self._dispatch(prompt, timeout=180.0)
         if result.get("success"):
             result["pull_request_url"] = f"{repo_url}/pulls"
         return result
@@ -416,7 +430,7 @@ class OpenClawService:
 
         result = await self._dispatch(
             f"Run the following terminal command and return its exact output:\n\n{command}",
-            timeout=80.0,
+            timeout=180.0,
         )
         if result.get("success"):
             result["output"] = result.pop("output", "")

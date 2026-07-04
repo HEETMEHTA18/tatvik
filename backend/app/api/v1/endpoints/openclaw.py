@@ -250,9 +250,13 @@ async def plan_goal(
 
     if body.execute:
         pipeline_tracker.set_phase(
-            "executing_openclaw", "Executing workflow steps via OpenClaw..."
+            "executing_openclaw", "Warming up OpenClaw engine..."
         )
         openclaw = OpenClawService()
+        await openclaw.warmup()
+        pipeline_tracker.set_phase(
+            "executing_openclaw", "Executing workflow steps via OpenClaw..."
+        )
         executed_steps = []
         for i, step in enumerate(workflow.steps):
             pipeline_tracker.update_step(

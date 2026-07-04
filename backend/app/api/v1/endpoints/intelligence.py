@@ -33,6 +33,14 @@ _cognee = CogneeService()
 _openclaw = OpenClawService()
 
 
+async def _warmup_openclaw():
+    """Pre-warm the OpenClaw HF Space before execution."""
+    try:
+        await _openclaw.warmup()
+    except Exception:
+        pass
+
+
 # ──────────────────────────────────────────────
 # REQUEST / RESPONSE MODELS
 # ──────────────────────────────────────────────
