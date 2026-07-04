@@ -119,6 +119,7 @@ class PipelineStatusTracker:
             "openclaw_url": settings.openclaw_api_url,
             "cognee_enabled": bool(settings.cognee_api_key),
             "cognee_url": settings.cognee_base_url,
+            "cognee_brain_name": settings.cognee_brain_name,
         }
 
     def _log(self):
