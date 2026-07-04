@@ -65,3 +65,4 @@ ENV/
 node_modules/
 google_drive_sync/
 
+*.db
