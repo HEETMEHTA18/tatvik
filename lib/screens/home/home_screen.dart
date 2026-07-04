@@ -12,6 +12,10 @@ import '../../core/config/app_config.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_state.dart';
 import '../mentor/task_command_screen.dart';
+import '../memory/memory_screen.dart';
+import '../pulse/pulse_screen.dart';
+import '../studio/studio_screen.dart';
+import '../career/career_screen.dart';
 import '../../widgets/liquid_glass_button.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -165,6 +169,8 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       header,
+                      const SizedBox(height: 24),
+                      _buildQuickNav(context),
                       const SizedBox(height: 24),
                         Wrap(
                           spacing: spacing,
@@ -797,6 +803,42 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickNav(BuildContext context) {
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _quickNavItem(context, Icons.auto_awesome_rounded, 'Memory', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MemoryScreen()))),
+          _quickNavItem(context, Icons.travel_explore_rounded, 'Pulse', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PulseScreen()))),
+          _quickNavItem(context, Icons.build_circle_rounded, 'Studio', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudioScreen()))),
+          _quickNavItem(context, Icons.route_rounded, 'Career', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CareerScreen()))),
+        ],
+      ),
+    );
+  }
+
+  Widget _quickNavItem(BuildContext context, IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppTheme.accent, size: 20),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.inter(fontSize: 9, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

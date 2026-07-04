@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from app.api.deps import get_current_user_id, get_optional_user_id, get_db
 from app.core.config import settings
-from app.models.entities import ResearchSession, ResearchResult, WeeklyDigest, Roadmap
+from app.models.entities import ResearchSession, ResearchResult, WeeklyDigest, Roadmap, PulseItem
 import redis
 
 logger = logging.getLogger(__name__)
@@ -830,6 +830,43 @@ async def get_weekly_digest(
         "topic": topic,
         "digest": new_digest.digest_text,
         "created_at": new_digest.created_at,
+    }
+
+
+@router.get("/pulse")
+async def get_pulse_items(
+    request: Request,
+    category: str = "",
+    limit: int = 50,
+    user_id: Optional[str] = Depends(get_optional_user_id),
+    db: Session = Depends(get_db),
+):
+    check_rate_limit(request, user_id or "pulse")
+    stmt = select(PulseItem).order_by(PulseItem.created_at.desc()).limit(limit)
+    if category:
+        stmt = stmt.where(PulseItem.category == category)
+    items = db.scalars(stmt).all()
+    return {
+        "success": True,
+        "total": len(items),
+        "items": [
+            {
+                "id": i.id,
+                "title": i.title,
+                "summary": i.summary,
+                "source": i.source,
+                "url": i.url,
+                "author": i.author,
+                "published_at": i.published_at.isoformat() if i.published_at else None,
+                "category": i.category,
+                "tags": json.loads(i.tags) if i.tags else [],
+                "trending_score": i.trending_score,
+                "sentiment": i.sentiment,
+                "related_technologies": json.loads(i.related_technologies) if i.related_technologies else [],
+                "thumbnail": i.thumbnail,
+            }
+            for i in items
+        ],
     }
 
 
