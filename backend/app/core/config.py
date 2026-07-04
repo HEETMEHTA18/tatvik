@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     cognee_base_url: str = (
         "https://tenant-8a941fb2-e171-4bac-8bdc-48b1f70cf20c.aws.cognee.ai"
     )
+    cognee_brain_name: str = "Tatvik brain"
 
     # ── OpenClaw Execution Engine ─────────────────────────────────────────────
     openclaw_api_key: str = ""

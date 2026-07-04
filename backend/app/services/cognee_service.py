@@ -2,19 +2,25 @@ import httpx
 import logging
 import tempfile
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class CogneeService:
+    """
+    Cognee Memory Layer — stores and retrieves data inside a named brain
+    with topic-based sessions for structured recall.
+    """
+
     def __init__(self):
         """
         Initializes Cognee Cloud connection and configures target LLM/Vector store credentials.
         """
         self.api_key = settings.cognee_api_key
         self.base_url = settings.cognee_base_url.rstrip("/")
+        self.brain_name = settings.cognee_brain_name
 
         self.headers = {"Content-Type": "application/json"}
         if self.api_key:
@@ -26,15 +32,24 @@ class CogneeService:
                 "Cognee API Key is not configured. Cognee memory layer will operate in stub/dry-run mode."
             )
 
-    async def _trigger_cognify(self, dataset_name: str) -> bool:
+    # ── Brain / Dataset helpers ───────────────────────────────────────────────
+
+    @property
+    def _brain(self) -> str:
+        """The brain (dataset) all data is stored under."""
+        return self.brain_name
+
+    def _session(self, topic: str) -> str:
+        """Topic-based session ID within the Tatvik brain."""
+        return f"tatvik_{topic}"
+
+    async def _trigger_cognify(self) -> bool:
         """
         Triggers the Cognee cognify pipeline to process raw ingested data
-        into a structured knowledge graph for recall.
+        into a structured knowledge graph for recall within the Tatvik brain.
         """
         url = f"{self.base_url}/api/v1/cognify"
-        payload = {
-            "datasets": [dataset_name],
-        }
+        payload = {"datasets": [self._brain]}
 
         async with httpx.AsyncClient() as client:
             try:
@@ -43,7 +58,7 @@ class CogneeService:
                 )
                 if response.status_code == 200:
                     logger.info(
-                        f"Cognify triggered successfully for dataset: {dataset_name}"
+                        f"Cognify triggered successfully for brain: {self._brain}"
                     )
                     return True
                 logger.warning(
@@ -54,9 +69,12 @@ class CogneeService:
                 logger.warning(f"Cognify trigger failed (non-critical): {e}")
                 return False
 
+    # ── Developer Profile ─────────────────────────────────────────────────────
+
     async def add_developer_profile(self, user_id: str, profile_data: dict) -> bool:
         """
-        Saves user developer strengths, weaknesses, mistakes, and project history into the long-term memory graph.
+        Saves user developer strengths, weaknesses, mistakes, and project history
+        into the Tatvik brain under the 'profile' session.
         """
         if not self.enabled:
             logger.info(
@@ -65,15 +83,14 @@ class CogneeService:
             return True
 
         url = f"{self.base_url}/api/v1/remember/entry"
-        dataset_name = f"user_{user_id}"
         payload = {
             "entry": {
                 "type": "qa",
                 "question": f"What is the developer profile, strengths, and weaknesses for user {user_id}?",
                 "answer": str(profile_data),
             },
-            "dataset_name": dataset_name,
-            "session_id": f"tatvik_{user_id}",
+            "dataset_name": self._brain,
+            "session_id": self._session("profile"),
         }
 
         async with httpx.AsyncClient() as client:
@@ -82,8 +99,7 @@ class CogneeService:
                     url, json=payload, headers=self.headers, timeout=30.0
                 )
                 if response.status_code == 200:
-                    # Trigger cognify to process into the knowledge graph
-                    await self._trigger_cognify(dataset_name)
+                    await self._trigger_cognify()
                     return True
                 logger.error(f"Failed to add developer profile: {response.text}")
                 return False
@@ -93,7 +109,8 @@ class CogneeService:
 
     async def get_developer_profile(self, user_id: str) -> dict:
         """
-        Retrieves the long-term developer profile and mistake list from the memory layer.
+        Retrieves the long-term developer profile from the 'profile' session
+        within the Tatvik brain.
         """
         if not self.enabled:
             logger.info(f"[Stub] Get developer profile for user {user_id}")
@@ -104,7 +121,7 @@ class CogneeService:
         url = f"{self.base_url}/api/v1/recall"
         payload = {
             "query": f"developer profile metadata weaknesses strengths mistakes user_{user_id}",
-            "session_id": f"tatvik_{user_id}",
+            "session_id": self._session("profile"),
             "search_type": "GRAPH_COMPLETION",
         }
 
@@ -123,11 +140,13 @@ class CogneeService:
                 logger.exception("Failed to query Cognee Cloud profile")
                 return {"results": [], "success": False}
 
+    # ── Repository Indexing ───────────────────────────────────────────────────
+
     async def index_repository(
         self, user_id: str, repo_name: str, codebase_files: list[dict]
     ) -> bool:
         """
-        Ingests codebase metadata, architecture files (prompts.md, logs.md, todos.md), and directory maps.
+        Ingests codebase metadata into the Tatvik brain under the 'repo_index' session.
         """
         if not self.enabled:
             logger.info(
@@ -141,9 +160,8 @@ class CogneeService:
         ]
         combined = "\n\n".join(texts)
 
-        # We must use file upload for raw knowledge ingestion, NO session_id
         url = f"{self.base_url}/api/v1/remember"
-        headers = {"X-Api-Key": self.api_key}  # no application/json
+        headers = {"X-Api-Key": self.api_key}
 
         try:
             with tempfile.NamedTemporaryFile(
@@ -157,7 +175,7 @@ class CogneeService:
                     files = {
                         "data": (f"{repo_name.replace('/', '_')}.txt", f, "text/plain")
                     }
-                    data = {"datasetName": f"user_{user_id}"}
+                    data = {"datasetName": self._brain}
                     response = await client.post(
                         url, headers=headers, files=files, data=data, timeout=300.0
                     )
@@ -165,8 +183,7 @@ class CogneeService:
             os.remove(tmp_path)
 
             if response.status_code == 200:
-                # Trigger cognify to build the knowledge graph
-                await self._trigger_cognify(f"user_{user_id}")
+                await self._trigger_cognify()
                 return True
             logger.error(f"Failed to index repository in Cognee Cloud: {response.text}")
             return False
@@ -178,7 +195,7 @@ class CogneeService:
         self, user_id: str, repo_name: str, query: str
     ) -> list:
         """
-        Performs vector-graph search over the repo memory to explain code patterns or search architecture.
+        Queries the 'repo_index' session within the Tatvik brain.
         """
         if not self.enabled:
             logger.info(
@@ -189,7 +206,7 @@ class CogneeService:
         url = f"{self.base_url}/api/v1/recall"
         payload = {
             "query": f"For repository {repo_name}: {query}",
-            "session_id": f"tatvik_{user_id}",
+            "session_id": self._session("repo_index"),
             "search_type": "HYBRID_COMPLETION",
         }
 
@@ -214,25 +231,23 @@ class CogneeService:
         self, user_id: str, repo_name: str, review_data: dict
     ) -> bool:
         """
-        Persists a code review result (scores + issues) into Cognee so the AI
-        can recall past mistakes and track improvement over time.
+        Persists a code review result into the 'review' session within the Tatvik brain.
         """
         if not self.enabled:
             return True
 
         url = f"{self.base_url}/api/v1/remember/entry"
-        dataset_name = f"user_{user_id}"
         payload = {
             "entry": {
                 "type": "qa",
                 "question": (
                     f"What were the code review results for {repo_name} "
-                    f"reviewed on {datetime.utcnow().isoformat()}?"
+                    f"reviewed on {datetime.now(timezone.utc).isoformat()}?"
                 ),
                 "answer": str(review_data),
             },
-            "dataset_name": dataset_name,
-            "session_id": f"tatvik_{user_id}",
+            "dataset_name": self._brain,
+            "session_id": self._session("review"),
         }
 
         async with httpx.AsyncClient() as client:
@@ -241,7 +256,7 @@ class CogneeService:
                     url, json=payload, headers=self.headers, timeout=30.0
                 )
                 if response.status_code == 200:
-                    await self._trigger_cognify(dataset_name)
+                    await self._trigger_cognify()
                     return True
                 logger.error(f"Failed to remember review result: {response.text}")
                 return False
@@ -253,14 +268,12 @@ class CogneeService:
         self, user_id: str, mistake_description: str, category: str
     ) -> bool:
         """
-        Records a specific coding mistake into the user's long-term memory
-        so the mentor can warn them about recurring patterns.
+        Records a specific coding mistake into the 'mistake' session within the Tatvik brain.
         """
         if not self.enabled:
             return True
 
         url = f"{self.base_url}/api/v1/remember/entry"
-        dataset_name = f"user_{user_id}"
         payload = {
             "entry": {
                 "type": "qa",
@@ -270,8 +283,8 @@ class CogneeService:
                 ),
                 "answer": mistake_description,
             },
-            "dataset_name": dataset_name,
-            "session_id": f"tatvik_{user_id}",
+            "dataset_name": self._brain,
+            "session_id": self._session("mistake"),
         }
 
         async with httpx.AsyncClient() as client:
@@ -280,7 +293,7 @@ class CogneeService:
                     url, json=payload, headers=self.headers, timeout=30.0
                 )
                 if response.status_code == 200:
-                    await self._trigger_cognify(dataset_name)
+                    await self._trigger_cognify()
                     return True
                 return False
             except Exception as e:
@@ -289,8 +302,7 @@ class CogneeService:
 
     async def get_weekly_growth_data(self, user_id: str) -> dict:
         """
-        Recalls all review results, mistakes, and improvements from the
-        past week to generate a growth report.
+        Recalls growth data from the 'growth' session within the Tatvik brain.
         """
         if not self.enabled:
             return {"results": []}
@@ -303,7 +315,7 @@ class CogneeService:
                 f"Include security, performance, architecture, and "
                 f"maintainability trends."
             ),
-            "session_id": f"tatvik_{user_id}",
+            "session_id": self._session("growth"),
             "search_type": "GRAPH_COMPLETION",
         }
 
@@ -321,8 +333,7 @@ class CogneeService:
 
     async def ask_codebase(self, user_id: str, question: str) -> str:
         """
-        Natural language Q&A over an indexed codebase. Users can ask things
-        like 'Where is authentication handled?' or 'What database does this use?'
+        Natural language Q&A over indexed codebases from the 'codebase_qa' session.
         """
         if not self.enabled:
             return "Cognee is not configured. Cannot search codebase."
@@ -330,7 +341,7 @@ class CogneeService:
         url = f"{self.base_url}/api/v1/recall"
         payload = {
             "query": question,
-            "session_id": f"tatvik_{user_id}",
+            "session_id": self._session("codebase_qa"),
             "search_type": "HYBRID_COMPLETION",
         }
 
@@ -351,8 +362,7 @@ class CogneeService:
 
     async def get_skill_badges(self, user_id: str) -> dict:
         """
-        Queries all historical review data and determines which skill badges
-        the developer has earned based on consistent performance.
+        Queries skill badge data from the 'badges' session within the Tatvik brain.
         """
         if not self.enabled:
             return {"results": []}
@@ -365,7 +375,7 @@ class CogneeService:
                 f"architecture_score, and maintainability_score from every "
                 f"review session. Return the raw data."
             ),
-            "session_id": f"tatvik_{user_id}",
+            "session_id": self._session("badges"),
             "search_type": "GRAPH_COMPLETION",
         }
 
