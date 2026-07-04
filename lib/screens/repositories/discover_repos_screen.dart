@@ -18,6 +18,10 @@ import '../intelligence/codebase_qa_screen.dart';
 import '../intelligence/auto_fix_screen.dart';
 import '../intelligence/ui_audit_screen.dart';
 import '../intelligence/voice_review_screen.dart';
+import '../memory/memory_screen.dart';
+import '../pulse/pulse_screen.dart';
+import '../studio/studio_screen.dart';
+import '../career/career_screen.dart';
 
 class DiscoverReposScreen extends StatefulWidget {
   const DiscoverReposScreen({super.key});
@@ -193,6 +197,24 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
               ),
             ),
             
+            // Quick Nav to AI OS Pillars
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _navIcon(context, Icons.auto_awesome_rounded, 'Memory', AppTheme.accent, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MemoryScreen()))),
+                      _navIcon(context, Icons.travel_explore_rounded, 'Pulse', AppTheme.accent, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PulseScreen()))),
+                      _navIcon(context, Icons.build_circle_rounded, 'Studio', AppTheme.accent, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudioScreen()))),
+                      _navIcon(context, Icons.route_rounded, 'Career', AppTheme.accent, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CareerScreen()))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             // Bento Grid Section
             SliverToBoxAdapter(
               child: Padding(
@@ -2459,6 +2481,24 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
               letterSpacing: 0.5,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIcon(BuildContext context, IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 4),
+          Text(label, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
         ],
       ),
     );

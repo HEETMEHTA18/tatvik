@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/liquid_glass_button.dart';
 import '../../providers/app_state.dart';
+import '../prompts/prompt_hub_screen.dart';
 
 class RoadmapScreen extends StatefulWidget {
   const RoadmapScreen({super.key});
@@ -69,6 +70,9 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       case 3:
         tabContent = _buildCopilotTab(context, appState);
         break;
+      case 4:
+        tabContent = const PromptHubScreen();
+        break;
       default:
         tabContent = Container();
     }
@@ -81,9 +85,11 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
               ? 'Career Roadmap'
               : _activeTab == 1
               ? 'Learning Paths'
-              : _activeTab == 2
+              :           _activeTab == 2
               ? 'Developer Battle'
-              : 'Open Source Copilot',
+              : _activeTab == 3
+              ? 'Open Source Copilot'
+              : 'Prompt Hub',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
         actions: _activeTab == 0
@@ -142,7 +148,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   }
 
   Widget _buildTabBar() {
-    final tabs = ['CAREER', 'PATHS', 'BATTLE', 'COPILOT'];
+    final tabs = ['CAREER', 'PATHS', 'BATTLE', 'COPILOT', 'PROMPTS'];
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
       child: GlassCard(

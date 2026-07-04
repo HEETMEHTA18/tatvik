@@ -15,7 +15,13 @@ from sqlalchemy import select
 
 from app.api.deps import get_current_user_id, get_optional_user_id, get_db
 from app.core.config import settings
-from app.models.entities import ResearchSession, ResearchResult, WeeklyDigest, Roadmap, PulseItem
+from app.models.entities import (
+    ResearchSession,
+    ResearchResult,
+    WeeklyDigest,
+    Roadmap,
+    PulseItem,
+)
 import redis
 
 logger = logging.getLogger(__name__)
@@ -862,7 +868,9 @@ async def get_pulse_items(
                 "tags": json.loads(i.tags) if i.tags else [],
                 "trending_score": i.trending_score,
                 "sentiment": i.sentiment,
-                "related_technologies": json.loads(i.related_technologies) if i.related_technologies else [],
+                "related_technologies": (
+                    json.loads(i.related_technologies) if i.related_technologies else []
+                ),
                 "thumbnail": i.thumbnail,
             }
             for i in items
