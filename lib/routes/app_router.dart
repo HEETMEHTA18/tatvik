@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/email_auth_screen.dart';
 import '../screens/main_navigation_screen.dart';
+import '../screens/memory/memory_screen.dart';
+import '../screens/pulse/pulse_screen.dart';
+import '../screens/studio/studio_screen.dart';
+import '../screens/career/career_screen.dart';
 import '../screens/mentor/mentor_chat_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/splash/splash_screen.dart';
@@ -11,7 +15,14 @@ import 'route_paths.dart';
 import '../providers/app_state.dart';
 
 // Routes that require authentication
-const _protectedRoutes = {RoutePaths.app, RoutePaths.mentor};
+const _protectedRoutes = {
+  RoutePaths.app,
+  RoutePaths.mentor,
+  RoutePaths.memory,
+  RoutePaths.pulse,
+  RoutePaths.studio,
+  RoutePaths.career,
+};
 // Routes only for guests (non-authenticated)
 const _guestOnlyRoutes = {
   RoutePaths.splash,
@@ -99,6 +110,22 @@ GoRouter createAppRouter(AppState appState) {
       GoRoute(
         path: RoutePaths.mentor,
         builder: (context, state) => const MentorChatScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.memory,
+        builder: (context, state) => const MemoryScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.pulse,
+        builder: (context, state) => const PulseScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.studio,
+        builder: (context, state) => const StudioScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.career,
+        builder: (context, state) => const CareerScreen(),
       ),
     ],
   );

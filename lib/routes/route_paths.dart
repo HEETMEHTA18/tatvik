@@ -5,6 +5,10 @@ class RoutePaths {
   static const emailAuth = '/email-auth';
   static const app = '/';
   static const mentor = '/mentor';
+  static const memory = '/memory';
+  static const pulse = '/pulse';
+  static const studio = '/studio';
+  static const career = '/career';
 
   static const tabNames = ['home', 'explore', 'chat', 'roadmap', 'settings'];
 

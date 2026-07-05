@@ -51,8 +51,11 @@ class CareerScreen extends StatelessWidget {
     String initials = 'AJ';
     try {
       final parts = state.username.split(' ');
-      if (parts.length >= 2) initials = parts[0].substring(0, 1) + parts[1].substring(0, 1);
-      else if (state.username.isNotEmpty) initials = state.username.substring(0, 2).toUpperCase();
+      if (parts.length >= 2) {
+        initials = parts[0].substring(0, 1) + parts[1].substring(0, 1);
+      } else if (state.username.isNotEmpty) {
+        initials = state.username.substring(0, 2).toUpperCase();
+      }
     } catch (_) {}
 
     return GlassCard(
@@ -322,13 +325,48 @@ class _ResumeReviewerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Resume Reviewer', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text('Resume Reviewer', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.textMain)),
         backgroundColor: Colors.transparent,
+        iconTheme: IconThemeData(color: AppTheme.textMain),
       ),
-      body: Center(
-        child: Text('Resume upload and review', style: TextStyle(color: AppTheme.textSecondary)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            GlassCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.description_rounded, color: AppTheme.peach, size: 18),
+                      const SizedBox(width: 10),
+                      Text('ATS SCORING', style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Upload your resume for AI-powered ATS scoring, missing tech detection, and weak bullet analysis.',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.upload_file_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                        const SizedBox(height: 16),
+                        Text('Upload resume (PDF/DOCX)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

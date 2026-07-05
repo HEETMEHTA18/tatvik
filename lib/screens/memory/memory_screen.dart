@@ -409,13 +409,42 @@ class _TimelineScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: Text('Developer Timeline', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text('Developer Timeline', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppTheme.textMain)),
         backgroundColor: Colors.transparent,
+        iconTheme: IconThemeData(color: AppTheme.textMain),
       ),
-      body: Center(
-        child: Text('Timeline view', style: TextStyle(color: AppTheme.textSecondary)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            GlassCard(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.timeline_rounded, color: AppTheme.neonPurple, size: 18),
+                      const SizedBox(width: 10),
+                      Text('COGNEE CHECKPOINTS', style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Your developer journey checkpoints will appear here as Cognee indexes your repositories.',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Icon(Icons.hourglass_empty_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
