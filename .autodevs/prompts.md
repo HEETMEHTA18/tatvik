@@ -1,5 +1,8 @@
 # Prompts for tatvik
 
+> **© 2026 heetmehta. All rights reserved. Terms and conditions apply.**
+> This project is created and owned by heetmehta. Unauthorized reproduction, modification, distribution, or commercial use is prohibited without explicit written permission.
+
 This file is automatically updated by Tatvik Prompt Intelligence.
 
 - [tatvik] Create a premium bottom navigation bar inspired by the Apple Liquid Glass design language. Implement a custom BackdropFilter with a high-blur value, subtle gradient borders using glass-morphism style, and smooth translation animations on tab changes.

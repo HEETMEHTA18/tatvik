@@ -9,7 +9,6 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../models/mentor_message.dart';
 import '../../providers/app_state.dart';
-import '../../core/theme/app_theme.dart';
 import '../../widgets/animated_copy_button.dart';
 import '../../utils/speech_helper.dart';
 import '../../widgets/liquid_glass_button.dart';
@@ -638,6 +637,7 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
     return AppBar(
       backgroundColor: const Color(0xFF212121),
       elevation: 0,
+      scrolledUnderElevation: 0,
       iconTheme: const IconThemeData(color: Color(0xFFECECF1)),
       leading: isDesktop
           ? null
@@ -649,93 +649,100 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 }
               },
             ),
-      title: _buildModelSelector(),
-      centerTitle: true,
+      title: PopupMenuButton<String>(
+        offset: const Offset(0, 42),
+        color: const Color(0xFF171717),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Colors.white10),
+        ),
+        onSelected: (v) => setState(() => _selectedModel = v),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, size: 14, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Tatvik',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: const Color(0xFFECECF1),
+                letterSpacing: -0.3,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _selectedModel == 'Tatvik AI OS' ? 'AI' : _selectedModel == 'OpenClaw Agent' ? 'AG' : 'CG',
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF888888),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.keyboard_arrow_down_rounded, color: const Color(0xFF888888), size: 16),
+          ],
+        ),
+        itemBuilder: (context) => [
+          PopupMenuItem(value: 'Tatvik AI OS', child: Row(
+            children: const [Icon(Icons.psychology_rounded, color: Colors.blueAccent, size: 16), SizedBox(width: 8), Text('Tatvik AI OS', style: TextStyle(color: Colors.white, fontSize: 13))],
+          )),
+          PopupMenuItem(value: 'OpenClaw Agent', child: Row(
+            children: const [Icon(Icons.smart_toy_rounded, color: Color(0xFF00BFA5), size: 16), SizedBox(width: 8), Text('OpenClaw Agent', style: TextStyle(color: Colors.white, fontSize: 13))],
+          )),
+          PopupMenuItem(value: 'Cognee Graph', child: Row(
+            children: const [Icon(Icons.hub_rounded, color: Colors.purpleAccent, size: 16), SizedBox(width: 8), Text('Cognee Graph', style: TextStyle(color: Colors.white, fontSize: 13))],
+          )),
+        ],
+      ),
+      centerTitle: false,
       actions: [
         IconButton(
-          icon: const Icon(Icons.edit_square, color: Color(0xFFECECF1), size: 20),
+          icon: const Icon(Icons.edit_square, color: Color(0xFFECECF1), size: 18),
           tooltip: 'New Chat',
-          onPressed: () {
-            appState.startNewChat();
-          },
+          onPressed: () => appState.startNewChat(),
         ),
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Color(0xFFECECF1)),
+          icon: const Icon(Icons.more_horiz, color: Color(0xFFECECF1), size: 20),
           color: const Color(0xFF171717),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Colors.white10),
+          ),
           onSelected: (val) {
-            if (val == 'clear') {
-              appState.clearAllChatHistory();
-            }
+            if (val == 'clear') appState.clearAllChatHistory();
           },
           itemBuilder: (context) => [
             const PopupMenuItem(
               value: 'clear',
-              child: Text('Clear conversation', style: TextStyle(color: Colors.white)),
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                  SizedBox(width: 10),
+                  Text('Clear conversation', style: TextStyle(color: Color(0xFFEF4444))),
+                ],
+              ),
             ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModelSelector() {
-    return PopupMenuButton<String>(
-      offset: const Offset(0, 40),
-      color: const Color(0xFF171717),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Colors.white10),
-      ),
-      onSelected: (String value) {
-        setState(() {
-          _selectedModel = value;
-        });
-      },
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _selectedModel,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: const Color(0xFFECECF1),
-            ),
-          ),
-          const SizedBox(width: 4),
-          const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFECECF1), size: 18),
-        ],
-      ),
-      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-        PopupMenuItem<String>(
-          value: 'Tatvik AI OS',
-          child: Row(
-            children: const [
-              Icon(Icons.psychology_rounded, color: Colors.blueAccent, size: 18),
-              SizedBox(width: 8),
-              Text('Tatvik AI OS (Standard)', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'OpenClaw Agent',
-          child: Row(
-            children: const [
-              Icon(Icons.smart_toy_rounded, color: Color(0xFF00BFA5), size: 18),
-              SizedBox(width: 8),
-              Text('OpenClaw Agent (Coding)', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'Cognee Graph',
-          child: Row(
-            children: const [
-              Icon(Icons.hub_rounded, color: Colors.purpleAccent, size: 18),
-              SizedBox(width: 8),
-              Text('Cognee Graph (Memory)', style: TextStyle(color: Colors.white)),
-            ],
-          ),
         ),
       ],
     );
@@ -932,26 +939,26 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
   Widget _buildMessageRow(MentorMessage msg, AppState state) {
     final isUser = msg.role == MessageRole.user;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser)
             Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 6),
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 24,
-                    height: 24,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: const LinearGradient(
                         colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
                       ),
                     ),
-                    child: const Icon(Icons.auto_awesome_rounded, size: 12, color: Colors.white),
+                    child: const Icon(Icons.auto_awesome_rounded, size: 11, color: Colors.white),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -965,27 +972,33 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 ],
               ),
             ),
-          ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.85,
+          if (isUser)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'You',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFC5C5D2),
+                ),
+              ),
             ),
-            child: Container(
-              padding: isUser 
-                  ? const EdgeInsets.symmetric(horizontal: 18, vertical: 12)
-                  : const EdgeInsets.only(left: 32, right: 16, top: 2, bottom: 8),
-              decoration: isUser
-                  ? BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: AppTheme.accent.withValues(alpha: 0.3),
-                      ),
-                    )
-                  : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  MarkdownBody(
+          Container(
+            width: double.infinity,
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.88,
+            ),
+            padding: EdgeInsets.all(isUser ? 14 : 0),
+            decoration: isUser
+                ? BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                  )
+                : null,
+            child: isUser
+                ? MarkdownBody(
                     data: msg.content,
                     onTapLink: (text, href, title) async {
                       if (href != null) {
@@ -996,26 +1009,18 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       }
                     },
                     styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                      p: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        height: 1.5,
-                      ),
+                      p: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, height: 1.6),
                       a: const TextStyle(
-                        color: Color(0xFF10A37F),
-                        decoration: TextDecoration.underline,
-                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10A37F), decoration: TextDecoration.underline, fontWeight: FontWeight.bold,
                       ),
                       code: TextStyle(
-                        backgroundColor: Colors.white.withValues(alpha: 0.05),
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        color: const Color(0xFFECECF1),
+                        backgroundColor: Colors.white.withValues(alpha: 0.06),
+                        fontFamily: 'monospace', fontSize: 13, color: const Color(0xFFECECF1),
                       ),
                       codeblockDecoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.02),
+                        color: Colors.white.withValues(alpha: 0.03),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white10),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
                       h4: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, fontWeight: FontWeight.bold),
                       h3: const TextStyle(color: Color(0xFFECECF1), fontSize: 16, fontWeight: FontWeight.bold),
@@ -1026,37 +1031,71 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       strong: const TextStyle(color: Color(0xFFECECF1), fontWeight: FontWeight.bold),
                       em: const TextStyle(color: Color(0xFFECECF1), fontStyle: FontStyle.italic),
                     ),
-                  ),
-                  if (!isUser) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        AnimatedCopyButton(
-                          text: msg.content,
-                          size: 14,
-                          color: const Color(0xFFC5C5D2),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.volume_up_rounded, size: 14),
-                          color: const Color(0xFFC5C5D2),
-                          tooltip: 'Read Aloud',
-                          onPressed: () => SpeechHelper.speak(msg.content),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
+                  )
+                : MarkdownBody(
+                    data: msg.content,
+                    onTapLink: (text, href, title) async {
+                      if (href != null) {
+                        final url = Uri.parse(href);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      }
+                    },
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                      p: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, height: 1.7),
+                      a: const TextStyle(
+                        color: Color(0xFF10A37F), decoration: TextDecoration.underline, fontWeight: FontWeight.bold,
+                      ),
+                      code: TextStyle(
+                        backgroundColor: Colors.white.withValues(alpha: 0.06),
+                        fontFamily: 'monospace', fontSize: 13, color: const Color(0xFFECECF1),
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      h4: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, fontWeight: FontWeight.bold),
+                      h3: const TextStyle(color: Color(0xFFECECF1), fontSize: 16, fontWeight: FontWeight.bold),
+                      h2: const TextStyle(color: Color(0xFFECECF1), fontSize: 17, fontWeight: FontWeight.bold),
+                      h1: const TextStyle(color: Color(0xFFECECF1), fontSize: 18, fontWeight: FontWeight.bold),
+                      blockquote: const TextStyle(color: Color(0xFF888888), fontStyle: FontStyle.italic),
+                      listBullet: const TextStyle(color: Color(0xFFECECF1)),
+                      strong: const TextStyle(color: Color(0xFFECECF1), fontWeight: FontWeight.bold),
+                      em: const TextStyle(color: Color(0xFFECECF1), fontStyle: FontStyle.italic),
                     ),
-                    if (msg.openclawTask != null) ...[
-                      const SizedBox(height: 12),
-                      _buildOpenClawResultCard(msg.openclawTask!),
-                    ],
-                  ],
+                  ),
+          ),
+          if (!isUser) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  AnimatedCopyButton(
+                    text: msg.content,
+                    size: 13,
+                    color: const Color(0xFF888888),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.volume_up_rounded, size: 13),
+                    color: const Color(0xFF888888),
+                    tooltip: 'Read Aloud',
+                    onPressed: () => SpeechHelper.speak(msg.content),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  ),
                 ],
               ),
             ),
-          ),
+            if (msg.openclawTask != null) ...[
+              const SizedBox(height: 10),
+              _buildOpenClawResultCard(msg.openclawTask!),
+            ],
+          ],
         ],
       ),
     );
@@ -1064,44 +1103,39 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
 
   Widget _buildInputArea(AppState state) {
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF2F2F2F),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: const Color(0xFF2A2A2A),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Attachment + Button
                   PlusAttachmentButton(
                     onTap: () => _showAttachmentOptions(state),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      style: const TextStyle(color: Color(0xFFECECF1), fontSize: 15),
+                      style: const TextStyle(color: Color(0xFFECECF1), fontSize: 15, height: 1.4),
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
+                      textInputAction: TextInputAction.send,
                       decoration: const InputDecoration(
-                        hintText: 'Ask anything...',
+                        hintText: 'Message Tatvik...',
                         hintStyle: TextStyle(
-                          color: Color(0xFFC5C5D2),
+                          color: Color(0xFF888888),
                           fontSize: 14,
+                          fontWeight: FontWeight.w400,
                         ),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
@@ -1119,24 +1153,25 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                       },
                     ),
                   ),
-                  // Templates/Wand, Microphone, Soundwave Button
+                  const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFC5C5D2), size: 20),
+                    icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF888888), size: 18),
                     tooltip: 'AI Prompt Hub',
-                    onPressed: () {
-                      context.push('/?tab=prompts');
-                    },
+                    onPressed: () => context.push('/?tab=prompts'),
+                    style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                   IconButton(
                     icon: Icon(
                       _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: _isListening ? Colors.redAccent : const Color(0xFFC5C5D2),
-                      size: 20,
+                      color: _isListening ? Colors.redAccent : const Color(0xFF888888),
+                      size: 18,
                     ),
                     tooltip: 'Voice Search',
                     onPressed: () => _toggleListening(state),
+                    style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
-                  const SizedBox(width: 4),
                   WaveformButton(
                     isActive: _isListening || state.isMentorTyping,
                     onTap: () {
@@ -1154,18 +1189,86 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                 ],
               ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Tatvik can make mistakes. Verify important info.',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                color: const Color(0xFFC5C5D2).withValues(alpha: 0.6),
-              ),
+            child: Column(
+              children: [
+                Container(
+                  height: 1,
+                  margin: const EdgeInsets.symmetric(horizontal: 48, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.08),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(Icons.code_rounded, size: 8, color: Colors.white),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '© 2026 heetmehta',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.7),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '·',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      'All rights reserved',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      '·',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      'T&C apply',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
+      ),
       ),
     );
   }

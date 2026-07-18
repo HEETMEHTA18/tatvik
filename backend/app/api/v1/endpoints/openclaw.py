@@ -11,6 +11,7 @@ REST endpoints exposing the full Tatvik architecture:
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 SAFE_RESULT_KEYS = {
@@ -74,13 +75,14 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user_id
+from app.api.deps import get_current_user_id, get_optional_user_id
 from app.services.openclaw_service import OpenClawService
 from app.services.openclaw_tools import (
     get_all_tools_summary,
     get_architecture_stats,
     get_tool,
 )
+from app.services.cognee_service import CogneeService
 from app.services.tatvik_planner import TatvikPlanner
 from app.services.pipeline_status import pipeline_tracker, PipelineStepInfo
 from app.services.webhook_router import (
@@ -92,6 +94,8 @@ from app.services.webhook_router import (
     route_webhook_event,
     verify_github_signature,
 )
+
+_cognee = CogneeService()
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -198,15 +202,215 @@ async def get_tool_detail(tool_id: str):
     }
 
 
-# ── Goal Planning ─────────────────────────────────────────────────────────────
+# ── Cognee Memory Helpers ──────────────────────────────────────────────────────
+
+
+async def _recall_cognee_context(query: str) -> list[str]:
+    """Pull relevant past context from Cognee knowledge graph."""
+    if not _cognee.enabled:
+        return []
+    try:
+        result = await _cognee.ask_codebase("system", query)
+        if result and result != "Cognee is not configured. Cannot search codebase.":
+            return [result]
+    except Exception:
+        pass
+    return []
+
+
+async def _store_mission_to_cognee(user_id: str):
+    """Store the completed mission's summary into Cognee permanent memory."""
+    snap = pipeline_tracker.snapshot()
+    mission = snap.get("mission", {})
+    if not mission.get("title"):
+        return
+
+    content_lines = [
+        f"MISSION: {mission['title']}",
+        f"DESCRIPTION: {mission.get('description', '')}",
+        f"PRIORITY: {mission.get('priority', 'medium')}",
+        f"REPOSITORY: {mission.get('repository', '')}",
+        f"STATUS: {mission.get('status', 'completed')}",
+        f"COMPLETED_AT: {datetime.now(timezone.utc).isoformat()}",
+        "",
+        "STAGES:",
+    ]
+    for s in snap.get("stages", []):
+        content_lines.append(f"  - {s['name']}: {s['status']} ({s['progress']}%)")
+        for st in s.get("steps", []):
+            content_lines.append(f"    - {st['step']}: {st['status']}")
+
+    content_lines.extend(["", "TIMELINE SUMMARY:"])
+    for t in snap.get("timeline", [])[-10:]:
+        content_lines.append(f"  - {t['message']}")
+
+    await _cognee._store_text(
+        f"mission_{mission['title'].replace(' ', '_')}",
+        "\n".join(content_lines),
+    )
+
+
+# ── Missions ───────────────────────────────────────────────────────────────────
+
+
+class CreateMissionRequest(BaseModel):
+    title: str = Field(..., description="Mission title")
+    description: str = Field(default="", description="Mission description")
+    priority: str = Field(
+        default="medium", description="low | medium | high | critical"
+    )
+    deadline: str = Field(default="", description="ISO deadline date")
+    repository: str = Field(default="", description="Target GitHub repo")
+    execute: bool = Field(default=False, description="Start executing immediately")
+
+
+@router.post("/missions", summary="Create a new AI mission")
+async def create_mission(
+    body: CreateMissionRequest,
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Creates a new mission in the Tatvik pipeline.
+    A mission flows through stages: Requirement → Planning → Design → Development → Testing → Review → Deployment → Memory.
+    """
+    pipeline_tracker.start_mission(
+        title=body.title,
+        description=body.description,
+        priority=body.priority,
+        deadline=body.deadline,
+        repository=body.repository,
+    )
+
+    pipeline_tracker.register_agent(
+        "planner", "Planner", "Goal decomposition & workflow planning"
+    )
+    pipeline_tracker.register_agent(
+        "architect", "Architect", "System architecture & design"
+    )
+    pipeline_tracker.register_agent(
+        "designer", "Designer", "UI/UX design & component generation"
+    )
+    pipeline_tracker.register_agent(
+        "frontend", "Frontend", "React/Flutter code generation"
+    )
+    pipeline_tracker.register_agent("backend", "Backend", "API & database generation")
+    pipeline_tracker.register_agent("qa", "QA", "Testing & quality assurance")
+    pipeline_tracker.register_agent("devops", "DevOps", "Build & deployment")
+
+    pipeline_tracker.add_event("Querying memory for past context...", "info")
+
+    result = {"success": True, "mission": pipeline_tracker.snapshot()["mission"]}
+
+    if body.execute:
+        pipeline_tracker.set_phase("planning", "Starting mission execution...")
+        pipeline_tracker.add_event(f"Mission '{body.title}' execution started", "info")
+        pipeline_tracker.start_stage("requirement")
+        pipeline_tracker.update_agent(
+            "planner", "working", f"Analyzing requirements for: {body.title}", 10.0
+        )
+        result["execution_started"] = True
+
+    return result
+
+
+@router.get("/missions", summary="Get current mission status")
+async def get_missions(user_id: str = Depends(get_current_user_id)):
+    """Returns the current active mission with full pipeline status."""
+    return pipeline_tracker.report()
+
+
+@router.post(
+    "/missions/complete", summary="Mark mission as complete and store to memory"
+)
+async def complete_mission(
+    background_tasks: BackgroundTasks,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Completes the current mission and stores its summary to Cognee memory."""
+    pipeline_tracker.finish(success=True)
+    pipeline_tracker.complete_stage("memory", True)
+    pipeline_tracker.update_agent("devops", "done", "Deployment complete", 100.0)
+    pipeline_tracker.add_event("Mission complete. Storing to memory...", "info")
+
+    # Store to Cognee in background
+    background_tasks.add_task(_store_mission_to_cognee, user_id)
+
+    return {"success": True, "message": "Mission completed and stored to memory."}
+
+
+@router.post("/missions/cancel", summary="Cancel the current mission")
+async def cancel_mission(user_id: str = Depends(get_current_user_id)):
+    """Cancels the currently running mission."""
+    pipeline_tracker.status.mission.status = "cancelled"
+    pipeline_tracker.status.phase = "idle"
+    pipeline_tracker.add_event("Mission cancelled by user", "info")
+    return {"success": True, "message": "Mission cancelled."}
+
+
+# ── Agents ─────────────────────────────────────────────────────────────────────
+
+
+class AgentUpdateRequest(BaseModel):
+    status: str = Field(default="", description="idle | working | done | failed")
+    current_task: str = Field(default="", description="What the agent is doing")
+    progress: float = Field(default=-1.0, ge=-1.0, le=100.0)
+    confidence: float = Field(default=-1.0, ge=-1.0, le=100.0)
+    log: str = Field(default="", description="Log message to append")
+
+
+@router.get("/agents", summary="List all registered agents and their status")
+async def list_agents(user_id: str = Depends(get_current_user_id)):
+    """Returns the status of every registered AI agent in the pipeline."""
+    snap = pipeline_tracker.snapshot()
+    return {"success": True, "total": len(snap["agents"]), "agents": snap["agents"]}
+
+
+@router.post(
+    "/agents/{agent_id}/update",
+    summary="Update an agent's status (called by agents themselves)",
+)
+async def update_agent_status(
+    agent_id: str,
+    body: AgentUpdateRequest,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Allows an AI agent to report its status back to the pipeline tracker."""
+    pipeline_tracker.update_agent(
+        agent_id=agent_id,
+        status=body.status or "",
+        current_task=body.current_task or "",
+        progress=body.progress,
+        confidence=body.confidence,
+        log=body.log or "",
+    )
+    return {"success": True}
+
+
+# ── Timeline ──
+
+
+@router.get("/timeline", summary="Get pipeline timeline events")
+async def get_timeline(limit: int = 50, user_id: str = Depends(get_current_user_id)):
+    """Returns the most recent timeline events from the pipeline."""
+    snap = pipeline_tracker.snapshot()
+    return {
+        "success": True,
+        "total": len(snap["timeline"]),
+        "events": snap["timeline"][-limit:],
+    }
+
+
+# ── Pipeline Status ────────────────────────────────────────────────────────────
 
 
 @router.get("/pipeline/status", summary="Current pipeline status and working info")
 async def get_pipeline_status():
     """
-    Returns real-time status of the OpenClaw + Cognee pipeline:
+    Returns real-time status of the Tatvik pipeline:
     - Configuration (enabled/disabled state)
     - Current phase, goal, and step-level execution progress
+    - Stages, agents, timeline
     """
     return pipeline_tracker.report()
 

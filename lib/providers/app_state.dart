@@ -919,7 +919,7 @@ This is simulated offline prompts.md content.
   // Chat
   List<MentorMessage> chatMessages = [
     MentorMessage(
-      content: 'Hello! I am your Tatvik. How can I help you grow today?',
+      content: 'Hello! I\'m Tatvik — your AI OS for development.\n\nBuilt by **heetmehta**. How can I help you grow today?',
       role: MessageRole.assistant,
       timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
     ),

@@ -274,7 +274,10 @@ class TatvikPlanner:
     }
 
     def __init__(self):
-        self.llm_url = settings.openclaw_api_url
+        raw = settings.openclaw_api_url.rstrip("/")
+        self.llm_url = raw.replace(
+            "/v1", ""
+        )  # normalize: strip /v1 so we always append it
         self.llm_key = settings.openclaw_api_key
         self.tools_summary = get_all_tools_summary()
 
@@ -392,7 +395,7 @@ class TatvikPlanner:
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.llm_url}/chat/completions",
+                f"{self.llm_url}/v1/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.llm_key}",
                     "Content-Type": "application/json",
@@ -405,7 +408,7 @@ class TatvikPlanner:
                     ],
                     "temperature": 0.2,
                 },
-                timeout=30.0,
+                timeout=180.0,
             )
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
