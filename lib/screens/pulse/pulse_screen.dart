@@ -33,7 +33,7 @@ class _PulseScreenState extends State<PulseScreen> {
     try {
       final categoryParam = _selectedCategory == 'All' ? '' : _selectedCategory;
       final res = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/v1/research/pulse?category=$categoryParam&limit=50'),
+        Uri.parse('${AppConfig.apiBaseUrl}/research/pulse?category=$categoryParam&limit=50'),
         headers: {'Authorization': 'Bearer ${state.token ?? ''}'},
       );
       if (res.statusCode == 200) {

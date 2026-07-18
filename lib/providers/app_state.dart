@@ -215,7 +215,7 @@ class AppState extends ChangeNotifier {
     // Only fall back to a placeholder if there's no cached identity at all
     if (username.isEmpty) username = 'Developer';
     if (githubUsername.isEmpty) githubUsername = '';
-    avatarUrl = avatarUrl;
+    // avatarUrl preserved from cache — no-op intentionally
     sessionLoginTimestamp = null;
     showLinkGitHubPrompt = false;
   }
@@ -1848,7 +1848,7 @@ This is simulated offline prompts.md content.
     fetchRoadmap();
   }
 
-  void setEmailSession(String sessionToken) async {
+  Future<void> setEmailSession(String sessionToken) async {
     token = sessionToken;
     notifyListeners();
     authStateNotifier.value++;

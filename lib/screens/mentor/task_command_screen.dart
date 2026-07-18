@@ -32,6 +32,8 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
 
   Map<String, dynamic>? _pipelineData;
   bool _isPolling = false;
+  int _pollErrors = 0;
+  bool _backendOffline = false;
 
   final List<String> _repos = [
     'HeetMehta18/AutoDevs',
@@ -67,11 +69,21 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
         final data = jsonDecode(res.body);
         setState(() {
           _pipelineData = data;
+          _backendOffline = false;
+          _pollErrors = 0;
           _hasMission = data['pipeline']?['mission']?['title']?.isNotEmpty == true &&
               data['pipeline']?['mission']?['status'] != 'idle';
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      setState(() {
+        _pollErrors++;
+        if (_pollErrors >= 10) {
+          _backendOffline = true;
+          _isPolling = false;
+        }
+      });
+    }
   }
 
   Future<void> _createMission() async {
@@ -229,12 +241,35 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!_hasMission) ...[
-              _buildMissionForm(),
-            ] else ...[
-              _buildMissionHeader(),
-              const SizedBox(height: 20),
-              _buildPipelineFlow(stages),
+          if (_backendOffline)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.destructive.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_off, size: 16, color: AppTheme.destructive),
+                  const SizedBox(width: 8),
+                  Text('Backend offline after $_pollErrors failed retries', style: TextStyle(fontSize: 12, color: AppTheme.destructive),),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () { setState(() { _pollErrors = 0; _backendOffline = false; }); _fetchPipeline(); },
+                    child: Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.destructive)),
+                  ),
+                ],
+              ),
+            ),
+          if (!_hasMission) ...[
+            _buildMissionForm(),
+          ] else ...[
+            _buildMissionHeader(),
+            const SizedBox(height: 20),
+            _buildPipelineFlow(stages),
               const SizedBox(height: 20),
               _buildAgentGrid(agents),
               const SizedBox(height: 20),

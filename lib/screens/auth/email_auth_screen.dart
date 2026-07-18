@@ -91,8 +91,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
             }
           }
 
-          // Save session token in AppState
-          appState.setEmailSession(token);
+          await appState.setEmailSession(token);
 
           // Navigate directly to App Navigation Shell
           if (!mounted) return;

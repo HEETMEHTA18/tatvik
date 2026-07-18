@@ -405,7 +405,9 @@ async def get_timeline(limit: int = 50, user_id: str = Depends(get_current_user_
 
 
 @router.get("/pipeline/status", summary="Current pipeline status and working info")
-async def get_pipeline_status():
+async def get_pipeline_status(
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Returns real-time status of the Tatvik pipeline:
     - Configuration (enabled/disabled state)

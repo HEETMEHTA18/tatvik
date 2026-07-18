@@ -31,7 +31,7 @@ class _StudioScreenState extends State<StudioScreen> {
     final state = Provider.of<AppState>(context, listen: false);
     try {
       final res = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/v1/openclaw/tools'),
+        Uri.parse('${AppConfig.apiBaseUrl}/openclaw/tools'),
         headers: {'Authorization': 'Bearer ${state.token ?? ''}'},
       );
       if (res.statusCode == 200) {

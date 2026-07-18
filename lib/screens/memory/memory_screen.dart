@@ -35,11 +35,11 @@ class _MemoryScreenState extends State<MemoryScreen> {
 
     try {
       final growthRes = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/v1/intelligence/growth-report'),
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/growth-report'),
         headers: headers,
       );
       final badgesRes = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/v1/intelligence/badges'),
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/badges'),
         headers: headers,
       );
 
@@ -391,7 +391,7 @@ class _MemoryScreenState extends State<MemoryScreen> {
     final state = Provider.of<AppState>(context, listen: false);
     try {
       final res = await http.post(
-        Uri.parse('${AppConfig.apiBaseUrl}/api/v1/intelligence/codebase-qa'),
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/codebase-qa'),
         headers: {
           'Authorization': 'Bearer ${state.token ?? ''}',
           'Content-Type': 'application/json',
