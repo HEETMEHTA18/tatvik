@@ -13,6 +13,9 @@ import '../roadmap/roadmap_screen.dart';
 import '../profile/profile_screen.dart';
 
 import '../repositories/discover_repos_screen.dart';
+import '../memory/memory_screen.dart';
+import '../pulse/pulse_screen.dart';
+import '../studio/studio_screen.dart';
 
 class CareerScreen extends StatelessWidget {
   const CareerScreen({super.key});
@@ -33,6 +36,8 @@ class CareerScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text('Your growth path, skills, and opportunities',
                 style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+            const SizedBox(height: 20),
+            _buildPageNav(context),
             const SizedBox(height: 24),
             _buildProfileCard(context, appState),
             const SizedBox(height: 24),
@@ -48,6 +53,40 @@ class CareerScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPageNav(BuildContext context) {
+    final pages = [
+      ('Memory', Icons.memory_rounded, false, const MemoryScreen()),
+      ('Pulse', Icons.travel_explore_rounded, false, const PulseScreen()),
+      ('Studio', Icons.build_circle_rounded, false, const StudioScreen()),
+      ('Career', Icons.route_rounded, true, const CareerScreen()),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: pages.map((p) {
+        final (label, icon, active, page) = p;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: active ? null : () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => page)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: active ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: active ? Border.all(color: AppTheme.accent.withValues(alpha: 0.3)) : Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(icon, size: 14, color: active ? AppTheme.accent : AppTheme.textSecondary),
+                const SizedBox(width: 6),
+                Text(label, style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.bold : FontWeight.w500, color: active ? AppTheme.accent : AppTheme.textSecondary)),
+              ]),
+            ),
+          ),
+        );
+      }).toList()),
     );
   }
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../memory/memory_screen.dart';
+import '../pulse/pulse_screen.dart';
+import '../studio/studio_screen.dart';
+import '../career/career_screen.dart';
 
 class DesktopScaffold extends StatefulWidget {
   final int selectedIndex;
@@ -29,6 +33,18 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
   static const List<IconData> _navIcons = [
     Icons.home_rounded, Icons.explore_rounded, Icons.chat_bubble_rounded, Icons.route_rounded, Icons.settings_rounded,
   ];
+
+  static const List<String> _subPageItems = ['Memory', 'Pulse', 'Studio', 'Career'];
+  static const List<IconData> _subPageIcons = [
+    Icons.memory_rounded, Icons.travel_explore_rounded, Icons.build_circle_rounded, Icons.route_rounded,
+  ];
+  static const List<Widget> _subPages = [
+    MemoryScreen(), PulseScreen(), StudioScreen(), CareerScreen(),
+  ];
+
+  void _openSubPage(int index) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => _subPages[index]));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +96,39 @@ class _DesktopScaffoldState extends State<DesktopScaffold> {
                             Text(_navItems[index], style: GoogleFonts.inter(
                               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                               color: isSelected ? AppTheme.accent : (isHovered ? AppTheme.textMain : AppTheme.textSecondary))),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                  child: Text('AI OS', style: GoogleFonts.jetBrainsMono(fontSize: 9, color: AppTheme.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                ),
+                ...List.generate(_subPageItems.length, (index) {
+                  final isHovered = _hoveredIndex == _navItems.length + index;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
+                    child: MouseRegion(
+                      onEnter: (_) => setState(() => _hoveredIndex = _navItems.length + index),
+                      onExit: (_) => setState(() => _hoveredIndex = null),
+                      child: InkWell(
+                        onTap: () => _openSubPage(index),
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: isHovered ? AppTheme.textMain.withValues(alpha: 0.05) : Colors.transparent,
+                          ),
+                          child: Row(children: [
+                            Icon(_subPageIcons[index], size: 18, color: isHovered ? AppTheme.accent : AppTheme.textSecondary),
+                            const SizedBox(width: 16),
+                            Text(_subPageItems[index], style: GoogleFonts.inter(
+                              fontSize: 13, fontWeight: FontWeight.w500,
+                              color: isHovered ? AppTheme.textMain : AppTheme.textSecondary)),
                           ]),
                         ),
                       ),

@@ -9,6 +9,9 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/app_state.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/liquid_glass_button.dart';
+import '../pulse/pulse_screen.dart';
+import '../studio/studio_screen.dart';
+import '../career/career_screen.dart';
 
 class MemoryScreen extends StatefulWidget {
   const MemoryScreen({super.key});
@@ -69,6 +72,8 @@ class _MemoryScreenState extends State<MemoryScreen> {
               Text('Memory', style: GoogleFonts.inter(fontSize: 34, fontWeight: FontWeight.w800, color: AppTheme.textMain, letterSpacing: -0.5)),
               const SizedBox(height: 8),
               Text('Your knowledge graph, skills, and growth', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              const SizedBox(height: 20),
+              _buildPageNav(context),
               const SizedBox(height: 24),
               if (_loading)
                 const Center(child: CircularProgressIndicator())
@@ -85,6 +90,40 @@ class _MemoryScreenState extends State<MemoryScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPageNav(BuildContext context) {
+    final pages = [
+      ('Memory', Icons.memory_rounded, true, const MemoryScreen()),
+      ('Pulse', Icons.travel_explore_rounded, false, const PulseScreen()),
+      ('Studio', Icons.build_circle_rounded, false, const StudioScreen()),
+      ('Career', Icons.route_rounded, false, const CareerScreen()),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: pages.map((p) {
+        final (label, icon, active, page) = p;
+        return Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: active ? null : () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => page)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: active ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surface.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: active ? Border.all(color: AppTheme.accent.withValues(alpha: 0.3)) : Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(icon, size: 14, color: active ? AppTheme.accent : AppTheme.textSecondary),
+                const SizedBox(width: 6),
+                Text(label, style: TextStyle(fontSize: 12, fontWeight: active ? FontWeight.bold : FontWeight.w500, color: active ? AppTheme.accent : AppTheme.textSecondary)),
+              ]),
+            ),
+          ),
+        );
+      }).toList()),
     );
   }
 

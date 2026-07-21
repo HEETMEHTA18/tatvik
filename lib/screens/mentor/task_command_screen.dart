@@ -24,7 +24,7 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
   final _descController = TextEditingController();
 
   String _priority = 'medium';
-  String _deadline = '';
+  final String _deadline = '';
   String _repository = 'HeetMehta18/AutoDevs';
 
   bool _isCreating = false;
@@ -237,7 +237,7 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -255,8 +255,8 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
                 children: [
                   Icon(Icons.cloud_off, size: 16, color: AppTheme.destructive),
                   const SizedBox(width: 8),
-                  Text('Backend offline after $_pollErrors failed retries', style: TextStyle(fontSize: 12, color: AppTheme.destructive),),
-                  const Spacer(),
+                  Expanded(child: Text('Backend offline after $_pollErrors failed retries', style: TextStyle(fontSize: 12, color: AppTheme.destructive))),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () { setState(() { _pollErrors = 0; _backendOffline = false; }); _fetchPipeline(); },
                     child: Text('Retry', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.destructive)),
@@ -270,11 +270,11 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
             _buildMissionHeader(),
             const SizedBox(height: 20),
             _buildPipelineFlow(stages),
-              const SizedBox(height: 20),
-              _buildAgentGrid(agents),
-              const SizedBox(height: 20),
-              _buildTimeline(timeline),
-            ],
+            const SizedBox(height: 20),
+            _buildAgentGrid(agents),
+            const SizedBox(height: 20),
+            _buildTimeline(timeline),
+          ],
           ],
         ),
       ),
@@ -331,82 +331,26 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
             decoration: _inputDecoration('Description', 'Describe what you want built...'),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 480;
+              if (isWide) {
+                return Row(
                   children: [
-                    Text('Priority', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonHideUnderline(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: DropdownButton<String>(
-                          value: _priority,
-                          isExpanded: true,
-                          dropdownColor: AppTheme.surfaceElevated,
-                          icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.accent, size: 18),
-                          style: TextStyle(color: AppTheme.textMain, fontSize: 13),
-                          items: _priorities.map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Row(
-                              children: [
-                                Icon(
-                                  p == 'critical' ? Icons.warning : Icons.flag,
-                                  size: 14,
-                                  color: p == 'critical' ? AppTheme.destructive : p == 'high' ? AppTheme.warning : AppTheme.accent,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(p[0].toUpperCase() + p.substring(1)),
-                              ],
-                            ),
-                          )).toList(),
-                          onChanged: (v) => setState(() => _priority = v ?? 'medium'),
-                        ),
-                      ),
-                    ),
+                    Expanded(child: _buildPriorityDropdown()),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildRepoDropdown()),
                   ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Repository', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonHideUnderline(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: DropdownButton<String>(
-                          value: _repository,
-                          isExpanded: true,
-                          dropdownColor: AppTheme.surfaceElevated,
-                          icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.accent, size: 18),
-                          style: TextStyle(color: AppTheme.textMain, fontSize: 13),
-                          items: _repos.map((r) => DropdownMenuItem(
-                            value: r,
-                            child: Text(r, style: TextStyle(fontSize: 12)),
-                          )).toList(),
-                          onChanged: (v) => setState(() => _repository = v ?? _repository),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                );
+              }
+              return Column(
+                children: [
+                  _buildPriorityDropdown(),
+                  const SizedBox(height: 12),
+                  _buildRepoDropdown(),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           Row(
@@ -434,6 +378,80 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPriorityDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Priority', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        DropdownButtonHideUnderline(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: DropdownButton<String>(
+              value: _priority,
+              isExpanded: true,
+              dropdownColor: AppTheme.surfaceElevated,
+              icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.accent, size: 18),
+              style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+              items: _priorities.map((p) => DropdownMenuItem(
+                value: p,
+                child: Row(
+                  children: [
+                    Icon(
+                      p == 'critical' ? Icons.warning : Icons.flag,
+                      size: 14,
+                      color: p == 'critical' ? AppTheme.destructive : p == 'high' ? AppTheme.warning : AppTheme.accent,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(p[0].toUpperCase() + p.substring(1)),
+                  ],
+                ),
+              )).toList(),
+              onChanged: (v) => setState(() => _priority = v ?? 'medium'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRepoDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Repository', style: TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        DropdownButtonHideUnderline(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: DropdownButton<String>(
+              value: _repository,
+              isExpanded: true,
+              dropdownColor: AppTheme.surfaceElevated,
+              icon: Icon(Icons.keyboard_arrow_down, color: AppTheme.accent, size: 18),
+              style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+              items: _repos.map((r) => DropdownMenuItem(
+                value: r,
+                child: Text(r, style: TextStyle(fontSize: 12)),
+              )).toList(),
+              onChanged: (v) => setState(() => _repository = v ?? _repository),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -604,6 +622,19 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
             padding: const EdgeInsets.only(bottom: 8),
             child: AgentStatusCard(agent: agent),
           )),
+          if (agents.length > 3)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Center(
+                child: TextButton(
+                  onPressed: () {},
+                  child: Text(
+                    'Show all ${agents.length} agents',
+                    style: TextStyle(fontSize: 11, color: AppTheme.accent, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

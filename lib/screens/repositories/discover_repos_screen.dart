@@ -326,8 +326,7 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                           ),
                         ),
                         SizedBox(height: spacing),
-                        // Half Cards
-                        // Half Cards
+                        // Half Cards - Trending & Awesome
                         Wrap(
                           spacing: spacing,
                           runSpacing: spacing,
@@ -337,21 +336,52 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                               height: 160,
                               child: GestureDetector(
                                 onTap: () => setState(() => _activeTab = 1),
-                                child: GlassCard(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Icon(Icons.trending_up_rounded, size: 32, color: AppTheme.neonGreen),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Trending', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                          Text('Repositories', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                        ],
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(32),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppTheme.neonGreen.withValues(alpha: 0.2),
+                                        AppTheme.surfaceElevated.withValues(alpha: 0.4),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.neonGreen.withValues(alpha: 0.1),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 4),
                                       ),
                                     ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: GlassCard(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.neonGreen.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(Icons.trending_up_rounded, size: 24, color: AppTheme.neonGreen),
+                                          ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Trending', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                                              const SizedBox(height: 2),
+                                              Text('Hot Repositories', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -361,21 +391,52 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                               height: 160,
                               child: GestureDetector(
                                 onTap: () => setState(() => _activeTab = 4),
-                                child: GlassCard(
-                                  padding: const EdgeInsets.all(20),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Icon(Icons.star_rounded, size: 32, color: AppTheme.neonOrange),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Awesome', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                          Text('Curated Lists', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                        ],
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(32),
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppTheme.neonOrange.withValues(alpha: 0.2),
+                                        AppTheme.surfaceElevated.withValues(alpha: 0.4),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.neonOrange.withValues(alpha: 0.1),
+                                        blurRadius: 16,
+                                        offset: const Offset(0, 4),
                                       ),
                                     ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(32),
+                                    child: GlassCard(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.neonOrange.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(Icons.star_rounded, size: 24, color: AppTheme.neonOrange),
+                                          ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Awesome', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                                              const SizedBox(height: 2),
+                                              Text('Curated Lists', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
@@ -383,33 +444,51 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                           ],
                         ),
                         SizedBox(height: spacing),
-                        // Thirds for desktop, full for mobile
+                        // Action cards - full width on mobile, thirds on desktop
                         SizedBox(
                           width: third,
                           height: 120,
                           child: GestureDetector(
                             onTap: () => setState(() => _activeTab = 2),
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(color: AppTheme.blue.withValues(alpha: 0.2), shape: BoxShape.circle),
-                                    child: Icon(Icons.description_rounded, color: AppTheme.blue),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                gradient: LinearGradient(
+                                  colors: [AppTheme.blue.withValues(alpha: 0.15), AppTheme.surfaceElevated.withValues(alpha: 0.3)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(colors: [AppTheme.blue, AppTheme.blue.withValues(alpha: 0.6)]),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.description_rounded, color: Colors.white, size: 18),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text('Resume Reviewer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            const SizedBox(height: 2),
+                                            Text('AI Tailoring', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+                                    ],
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('Resume Reviewer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                                        Text('AI Tailoring', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -422,27 +501,45 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                               setState(() => _activeTab = 5);
                               appState.fetchWeeklyTechDigest();
                             },
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(color: AppTheme.peach.withValues(alpha: 0.2), shape: BoxShape.circle),
-                                    child: Icon(Icons.travel_explore_rounded, color: AppTheme.peach),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                gradient: LinearGradient(
+                                  colors: [AppTheme.peach.withValues(alpha: 0.15), AppTheme.surfaceElevated.withValues(alpha: 0.3)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(colors: [AppTheme.peach, AppTheme.peach.withValues(alpha: 0.6)]),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.travel_explore_rounded, color: Colors.white, size: 18),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text('Deep Research', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            const SizedBox(height: 2),
+                                            Text('OSINT Agent', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+                                    ],
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('Deep Research', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                                        Text('OSINT Agent', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -452,27 +549,45 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
                           height: 120,
                           child: GestureDetector(
                             onTap: () => setState(() => _activeTab = 8),
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(color: AppTheme.neonGreen.withValues(alpha: 0.2), shape: BoxShape.circle),
-                                    child: Icon(Icons.search_rounded, color: AppTheme.neonGreen),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(28),
+                                gradient: LinearGradient(
+                                  colors: [AppTheme.neonGreen.withValues(alpha: 0.15), AppTheme.surfaceElevated.withValues(alpha: 0.3)],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(colors: [AppTheme.neonGreen, AppTheme.neonGreen.withValues(alpha: 0.6)]),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(Icons.search_rounded, color: Colors.white, size: 18),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text('Codebase Q&A', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            const SizedBox(height: 2),
+                                            Text('Semantic Search', style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary)),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary, size: 20),
+                                    ],
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text('Codebase Q&A', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                                        Text('Semantic Search', style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
