@@ -123,7 +123,7 @@ class _PipelineFlowState extends State<PipelineFlow>
   }
 
   Widget _buildConnector() {
-    return AnimatedBuilder(
+    return _AnimatedBuilder(
       listenable: _pulseAnimation,
       builder: (context, child) {
         return Container(
@@ -143,7 +143,7 @@ class _PipelineFlowState extends State<PipelineFlow>
     final color = _statusColor(stage.status);
     final isRunning = stage.status == 'running';
 
-    return AnimatedBuilder(
+    return _AnimatedBuilder(
       listenable: _pulseAnimation,
       builder: (context, child) {
         return Container(
@@ -216,11 +216,10 @@ class _PipelineFlowState extends State<PipelineFlow>
   }
 }
 
-class AnimatedBuilder extends AnimatedWidget {
+class _AnimatedBuilder extends AnimatedWidget {
   final Widget Function(BuildContext, Widget?) builder;
 
-  const AnimatedBuilder({
-    super.key,
+  const _AnimatedBuilder({
     required super.listenable,
     required this.builder,
   });

@@ -168,30 +168,32 @@ class _DeveloperGrowthScreenState extends State<DeveloperGrowthScreen> {
           const SizedBox(height: 12),
           GlassCard(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildScoreRing(
-                  'Security',
-                  scores['security'] ?? 0,
-                  AppTheme.destructive,
-                ),
-                _buildScoreRing(
-                  'Performance',
-                  scores['performance'] ?? 0,
-                  AppTheme.peach,
-                ),
-                _buildScoreRing(
-                  'Arch',
-                  scores['architecture'] ?? 0,
-                  AppTheme.blue,
-                ),
-                _buildScoreRing(
-                  'Maint.',
-                  scores['maintainability'] ?? 0,
-                  AppTheme.success,
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 400;
+                if (isWide) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildScoreRing('Security', scores['security'] ?? 0, AppTheme.destructive),
+                      _buildScoreRing('Performance', scores['performance'] ?? 0, AppTheme.peach),
+                      _buildScoreRing('Arch', scores['architecture'] ?? 0, AppTheme.blue),
+                      _buildScoreRing('Maint.', scores['maintainability'] ?? 0, AppTheme.success),
+                    ],
+                  );
+                }
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 16,
+                  alignment: WrapAlignment.spaceAround,
+                  children: [
+                    _buildScoreRing('Security', scores['security'] ?? 0, AppTheme.destructive),
+                    _buildScoreRing('Performance', scores['performance'] ?? 0, AppTheme.peach),
+                    _buildScoreRing('Arch', scores['architecture'] ?? 0, AppTheme.blue),
+                    _buildScoreRing('Maint.', scores['maintainability'] ?? 0, AppTheme.success),
+                  ],
+                );
+              },
             ),
           ),
 

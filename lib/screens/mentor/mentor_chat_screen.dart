@@ -1206,63 +1206,66 @@ class _MentorChatScreenState extends State<MentorChatScreen> {
                     ),
                   ),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF10A37F), Color(0xFF00BFA5)],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        borderRadius: BorderRadius.circular(4),
+                        child: const Icon(Icons.code_rounded, size: 8, color: Colors.white),
                       ),
-                      child: const Icon(Icons.code_rounded, size: 8, color: Colors.white),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '© 2026 heetmehta',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.7),
-                        letterSpacing: 0.3,
+                      const SizedBox(width: 6),
+                      Text(
+                        '© 2026 heetmehta',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFFC5C5D2).withValues(alpha: 0.7),
+                          letterSpacing: 0.3,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '·',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                      const SizedBox(width: 3),
+                      Text(
+                        '·',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'All rights reserved',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                      const SizedBox(width: 3),
+                      Text(
+                        'All rights reserved',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '·',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                      const SizedBox(width: 3),
+                      Text(
+                        '·',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: const Color(0xFFC5C5D2).withValues(alpha: 0.3),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'T&C apply',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                      const SizedBox(width: 3),
+                      Text(
+                        'T&C apply',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: const Color(0xFFC5C5D2).withValues(alpha: 0.4),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

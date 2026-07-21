@@ -363,6 +363,49 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
     );
   }
 
+  Widget _buildOwnerField(bool isDark) {
+    return TextField(
+      controller: _repoOwnerController,
+      style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'Owner',
+        hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+        filled: true,
+        fillColor: isDark ? const Color(0x10FFFFFF) : const Color(0x08000000),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildRepoNameField(bool isDark) {
+    return TextField(
+      controller: _repoNameController,
+      style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'Repo name',
+        hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.7)),
+        filled: true,
+        fillColor: isDark ? const Color(0x10FFFFFF) : const Color(0x08000000),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(AppState state) {
+    return LiquidGlassButton(
+      onPressed: () {
+        state.addPromptRepoSource(_repoOwnerController.text, _repoNameController.text);
+        _repoOwnerController.clear();
+        _repoNameController.clear();
+        setState(() {});
+      },
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: const Text('Add'),
+    );
+  }
+
   Widget _buildRepoSourcesPanel(AppState state, bool isDark) {
     return GlassCard(
       borderRadius: 20,
@@ -433,77 +476,33 @@ class _PromptHubScreenState extends State<PromptHubScreen> {
               }),
             ),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _repoOwnerController,
-                    style: TextStyle(color: AppTheme.textMain, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Owner',
-                      hintStyle: TextStyle(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? const Color(0x10FFFFFF)
-                          : const Color(0x08000000),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth > 420) {
+                  return Row(
+                    children: [
+                      Expanded(child: _buildOwnerField(isDark)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _buildRepoNameField(isDark)),
+                      const SizedBox(width: 10),
+                      _buildAddButton(state),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: _buildOwnerField(isDark)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildRepoNameField(isDark)),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _repoNameController,
-                    style: TextStyle(color: AppTheme.textMain, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Repo name',
-                      hintStyle: TextStyle(
-                        color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? const Color(0x10FFFFFF)
-                          : const Color(0x08000000),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                LiquidGlassButton(
-                  onPressed: () {
-                    state.addPromptRepoSource(
-                      _repoOwnerController.text,
-                      _repoNameController.text,
-                    );
-                    _repoOwnerController.clear();
-                    _repoNameController.clear();
-                    setState(() {});
-                  },
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  child: const Text('Add'),
-                ),
-              ],
+                    const SizedBox(height: 10),
+                    SizedBox(width: double.infinity, child: _buildAddButton(state)),
+                  ],
+                );
+              },
             ),
           ],
         ),

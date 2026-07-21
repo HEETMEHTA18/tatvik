@@ -256,30 +256,32 @@ class _VoiceReviewScreenState extends State<VoiceReviewScreen> {
             const SizedBox(height: 16),
             GlassCard(
               padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildScoreRing(
-                    'Security',
-                    _reviewData!['scores']?['security'] ?? 0,
-                    AppTheme.destructive,
-                  ),
-                  _buildScoreRing(
-                    'Performance',
-                    _reviewData!['scores']?['performance'] ?? 0,
-                    AppTheme.peach,
-                  ),
-                  _buildScoreRing(
-                    'Arch',
-                    _reviewData!['scores']?['architecture'] ?? 0,
-                    AppTheme.blue,
-                  ),
-                  _buildScoreRing(
-                    'Maint.',
-                    _reviewData!['scores']?['maintainability'] ?? 0,
-                    AppTheme.success,
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 400;
+                  if (isWide) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildScoreRing('Security', _reviewData!['scores']?['security'] ?? 0, AppTheme.destructive),
+                        _buildScoreRing('Performance', _reviewData!['scores']?['performance'] ?? 0, AppTheme.peach),
+                        _buildScoreRing('Arch', _reviewData!['scores']?['architecture'] ?? 0, AppTheme.blue),
+                        _buildScoreRing('Maint.', _reviewData!['scores']?['maintainability'] ?? 0, AppTheme.success),
+                      ],
+                    );
+                  }
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 16,
+                    alignment: WrapAlignment.spaceAround,
+                    children: [
+                      _buildScoreRing('Security', _reviewData!['scores']?['security'] ?? 0, AppTheme.destructive),
+                      _buildScoreRing('Performance', _reviewData!['scores']?['performance'] ?? 0, AppTheme.peach),
+                      _buildScoreRing('Arch', _reviewData!['scores']?['architecture'] ?? 0, AppTheme.blue),
+                      _buildScoreRing('Maint.', _reviewData!['scores']?['maintainability'] ?? 0, AppTheme.success),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 24),
