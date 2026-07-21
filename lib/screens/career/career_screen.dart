@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/app_state.dart';
 import '../../widgets/glass_card.dart';
@@ -320,8 +324,51 @@ class CareerScreen extends StatelessWidget {
   }
 }
 
-class _ResumeReviewerScreen extends StatelessWidget {
+class _ResumeReviewerScreen extends StatefulWidget {
   const _ResumeReviewerScreen();
+  @override
+  State<_ResumeReviewerScreen> createState() => _ResumeReviewerScreenState();
+}
+
+class _ResumeReviewerScreenState extends State<_ResumeReviewerScreen> {
+  Map<String, dynamic>? _result;
+  bool _loading = false;
+  PlatformFile? _selectedFile;
+
+  Future<void> _pickAndUpload() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+
+    if (!mounted) return;
+    setState(() {
+      _selectedFile = result.files.first;
+      _loading = true;
+    });
+
+    final state = Provider.of<AppState>(context, listen: false);
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/resume-review'),
+      );
+      request.headers['Authorization'] = 'Bearer ${state.token ?? ''}';
+      request.files.add(http.MultipartFile.fromBytes(
+        'file', result.files.first.bytes!,
+        filename: result.files.first.name,
+      ));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode == 200) {
+        setState(() => _result = jsonDecode(response.body));
+      }
+    } catch (_) {}
+    setState(() => _loading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -353,15 +400,82 @@ class _ResumeReviewerScreen extends StatelessWidget {
                   Text('Upload your resume for AI-powered ATS scoring, missing tech detection, and weak bullet analysis.',
                       style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
                   const SizedBox(height: 24),
-                  Center(
-                    child: Column(
+                  if (_loading)
+                    const SizedBox(height: 60, child: Center(child: CircularProgressIndicator()))
+                  else if (_result != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.upload_file_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
-                        const SizedBox(height: 16),
-                        Text('Upload resume (PDF/DOCX)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                        if (_result!['ats_score'] != null)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [AppTheme.accent.withValues(alpha: 0.1), AppTheme.neonPurple.withValues(alpha: 0.05)]),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+                            ),
+                            child: Row(
+                              children: [
+                                Text('ATS Score: ', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                Text('${_result!['ats_score']}%', style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.accent)),
+                              ],
+                            ),
+                          ),
+                        if (_result!['missing_tech'] is List && (_result!['missing_tech'] as List).isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text('MISSING TECHNOLOGIES', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.destructive, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ...(_result!['missing_tech'] as List).map((t) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(children: [
+                              Icon(Icons.warning_rounded, size: 14, color: AppTheme.destructive),
+                              const SizedBox(width: 8),
+                              Text(t.toString(), style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+                            ]),
+                          )),
+                        ],
+                        if (_result!['weak_bullets'] is List && (_result!['weak_bullets'] as List).isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Text('WEAK BULLETS', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: AppTheme.peach, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          ...(_result!['weak_bullets'] as List).map((b) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Icon(Icons.edit_note_rounded, size: 14, color: AppTheme.peach),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(b.toString(), style: TextStyle(fontSize: 13, color: AppTheme.textSecondary))),
+                            ]),
+                          )),
+                        ],
+                        const SizedBox(height: 20),
+                        LiquidGlassButton(
+                          onPressed: () => setState(() => _result = null),
+                          color: AppTheme.accent.withValues(alpha: 0.15),
+                          borderRadius: 12,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text('UPLOAD ANOTHER', style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.accent)),
+                        ),
                       ],
+                    )
+                  else
+                    GestureDetector(
+                      onTap: _pickAndUpload,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppTheme.border, width: 1.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.upload_file_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                            const SizedBox(height: 16),
+                            Text(_selectedFile?.name ?? 'Upload resume (PDF/DOCX)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

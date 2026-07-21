@@ -404,8 +404,42 @@ class _MemoryScreenState extends State<MemoryScreen> {
   }
 }
 
-class _TimelineScreen extends StatelessWidget {
+class _TimelineScreen extends StatefulWidget {
   const _TimelineScreen();
+  @override
+  State<_TimelineScreen> createState() => _TimelineScreenState();
+}
+
+class _TimelineScreenState extends State<_TimelineScreen> {
+  List<dynamic> _checkpoints = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTimeline();
+  }
+
+  Future<void> _fetchTimeline() async {
+    final state = Provider.of<AppState>(context, listen: false);
+    try {
+      final res = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/intelligence/timeline'),
+        headers: {'Authorization': 'Bearer ${state.token ?? ''}'},
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          _checkpoints = jsonDecode(res.body)['checkpoints'] ?? [];
+          _loading = false;
+        });
+      } else {
+        setState(() => _loading = false);
+      }
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -415,35 +449,83 @@ class _TimelineScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         iconTheme: IconThemeData(color: AppTheme.textMain),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            GlassCard(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.timeline_rounded, color: AppTheme.neonPurple, size: 18),
-                      const SizedBox(width: 10),
-                      Text('COGNEE CHECKPOINTS', style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text('Your developer journey checkpoints will appear here as Cognee indexes your repositories.',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: Icon(Icons.hourglass_empty_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
-                  ),
-                ],
+      body: RefreshIndicator(
+        onRefresh: _fetchTimeline,
+        color: AppTheme.accent,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              GlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.timeline_rounded, color: AppTheme.neonPurple, size: 18),
+                        const SizedBox(width: 10),
+                        Text('COGNEE CHECKPOINTS', style: GoogleFonts.spaceMono(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (_loading)
+                      const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+                    else if (_checkpoints.isEmpty)
+                      Column(
+                        children: [
+                          Text('Your developer journey checkpoints will appear here as Cognee indexes your repositories.',
+                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                          const SizedBox(height: 24),
+                          Icon(Icons.hourglass_empty_rounded, size: 48, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
+                        ],
+                      )
+                    else
+                      ..._checkpoints.map((cp) {
+                        final title = cp['title'] ?? 'Checkpoint';
+                        final desc = cp['description'] ?? '';
+                        final date = cp['created_at'] ?? cp['timestamp'] ?? '';
+                        final type = cp['type'] ?? 'milestone';
+                        final icon = type == 'milestone' ? Icons.flag_rounded : Icons.check_circle_rounded;
+                        final color = type == 'milestone' ? AppTheme.accent : AppTheme.neonGreen;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                                child: Icon(icon, color: color, size: 18),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(title.toString(), style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textMain)),
+                                    if (desc.toString().isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(desc.toString(), style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                                    ],
+                                    if (date.toString().isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(date.toString(), style: GoogleFonts.jetBrainsMono(fontSize: 9, color: AppTheme.textSecondary)),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

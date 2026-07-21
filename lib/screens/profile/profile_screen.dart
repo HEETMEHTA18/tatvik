@@ -12,6 +12,7 @@ import 'timeline_screen.dart';
 import '../intelligence/developer_growth_screen.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -67,6 +68,29 @@ class ProfileScreen extends StatelessWidget {
                 hasSwitch: true,
                 switchValue: appState.githubUsernameLocked,
                 onToggle: () => appState.togglePreference('github_lock'),
+              ),
+              _buildSettingItem(
+                context,
+                appState.isGoogleDriveConnected
+                    ? Icons.cloud_done_rounded
+                    : Icons.cloud_outlined,
+                'Google Drive',
+                trailing: appState.isGoogleDriveConnected
+                    ? 'Connected'
+                    : 'Connect',
+                onTap: () {
+                  if (!appState.isGoogleDriveConnected) {
+                    final url = appState.getGoogleDriveAuthorizeUrl();
+                    launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Google Drive connected as ${appState.googleDriveEmail ?? ''}'),
+                        backgroundColor: AppTheme.accent,
+                      ),
+                    );
+                  }
+                },
               ),
             ]),
             const SizedBox(height: 24),

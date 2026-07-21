@@ -231,46 +231,95 @@ class _DiscoverReposScreenState extends State<DiscoverReposScreen> {
 
                     return Column(
                       children: [
-                        // Large Hero App Store Card
+                        // Large Hero App Store Card - Continuous Code Reviewer
                         SizedBox(
                           width: full,
                           height: 200,
                           child: GestureDetector(
                             onTap: () => setState(() => _activeTab = 6),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(32),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(24),
-                                child: Stack(
-                                  children: [
-                                    Positioned(
-                                      right: -30,
-                                      bottom: -30,
-                                      child: Icon(Icons.code_rounded, size: 140, color: AppTheme.neonPurple.withValues(alpha: 0.15)),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.neonPurple.withValues(alpha: 0.2),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text('FEATURED AI AGENT', style: GoogleFonts.spaceMono(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.neonPurple)),
-                                        ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('Continuous Code Reviewer', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                                            const SizedBox(height: 8),
-                                            Text('Automated PR analysis & security audits in real-time.', style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary)),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(32),
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppTheme.neonPurple.withValues(alpha: 0.3),
+                                    AppTheme.accent.withValues(alpha: 0.15),
+                                    AppTheme.surfaceElevated.withValues(alpha: 0.6),
                                   ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppTheme.neonPurple.withValues(alpha: 0.2),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(32),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Stack(
+                                    children: [
+                                      Positioned(
+                                        right: -20,
+                                        bottom: -20,
+                                        child: Icon(Icons.shield_rounded, size: 120, color: AppTheme.neonPurple.withValues(alpha: 0.12)),
+                                      ),
+                                      Positioned(
+                                        right: 30,
+                                        top: -10,
+                                        child: Icon(Icons.code_rounded, size: 80, color: AppTheme.accent.withValues(alpha: 0.08)),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [AppTheme.neonPurple, AppTheme.accent],
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.auto_awesome, size: 10, color: Colors.white),
+                                                    const SizedBox(width: 4),
+                                                    Text('FEATURED', style: GoogleFonts.spaceMono(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.success.withValues(alpha: 0.15),
+                                                  borderRadius: BorderRadius.circular(20),
+                                                  border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
+                                                ),
+                                                child: Text('AI AGENT', style: GoogleFonts.spaceMono(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.success)),
+                                              ),
+                                            ],
+                                          ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text('Continuous Code Reviewer', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                                              const SizedBox(height: 6),
+                                              Text('Automated PR analysis & security audits in real-time.', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
