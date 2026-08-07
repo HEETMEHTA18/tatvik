@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +38,31 @@ class Settings(BaseSettings):
     # ── GitHub Integration ────────────────────────────────────────────────────
     github_token: str = ""
     github_webhook_secret: str = ""
+    # GitHub OAuth App credentials (used for "Continue with GitHub" login).
+    # Accept several common env var names for flexibility.
+    github_oauth_client_id: str = Field(
+        default="Ov23liN1MaudLGibnAcW",
+        validation_alias=AliasChoices(
+            "GITHUB_OAUTH_CLIENT_ID", "GITHUB_CLIENT_ID", "GITHUB_OAUTH_ID"
+        ),
+    )
+    github_oauth_client_secret: str = Field(
+        default="46f1d1d00cb45d6e2071cafa3434235172d38ab7",
+        validation_alias=AliasChoices(
+            "GITHUB_OAUTH_CLIENT_SECRET",
+            "GITHUB_CLIENT_SECRET",
+            "GITHUB_OAUTH_SECRET",
+        ),
+    )
+
+    # Frontend origin for OAuth success/error redirects.
+    # Override with FRONTEND_BASE_URL (e.g. https://tatvik.vercel.app).
+    frontend_base_url: str = Field(
+        default="https://devsmentor.vercel.app",
+        validation_alias=AliasChoices(
+            "FRONTEND_BASE_URL", "FRONTEND_URL", "VITE_FRONTEND_URL"
+        ),
+    )
 
     # ── Notion Integration ────────────────────────────────────────────────────
     notion_api_key: str = ""

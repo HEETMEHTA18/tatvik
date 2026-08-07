@@ -35,6 +35,24 @@ def google_oauth_stub():
     return TokenResponse(access_token="google-oauth-stub-token")
 
 
+@router.get("/github/oauth-config")
+def github_oauth_config(request: Request):
+    """Return the GitHub OAuth App configuration for the frontend login button."""
+    from app.core.config import settings
+
+    host_header = request.headers.get("host", "localhost:8000")
+    is_local = any(
+        x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."]
+    )
+    scheme = "https" if not is_local else "http"
+    redirect_uri = f"{scheme}://{host_header}/api/v1/auth/github/callback"
+    return {
+        "client_id": settings.github_oauth_client_id,
+        "redirect_uri": redirect_uri,
+        "scope": "read:user,repo",
+    }
+
+
 @router.get("/google/authorize")
 def google_authorize(token: str, request: Request):
     from jose import jwt
@@ -101,7 +119,7 @@ async def google_callback(
     if is_local:
         frontend_base = f"http://{host_header.replace('8000', '8080')}"
     else:
-        frontend_base = "https://devsmentor.vercel.app"
+        frontend_base = settings.frontend_base_url
 
     try:
         payload = jwt.decode(
@@ -203,14 +221,25 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
     from app.core.security import get_password_hash, create_access_token
     from app.repositories.user_repository import UserRepository
     from app.services.github_service import GithubService
+    from app.core.config import settings
+
+    host_header = request.headers.get("host", "localhost:8000")
+    is_local = any(
+        x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."]
+    )
+    frontend_base = (
+        f"http://{host_header.replace('8000', '8080')}"
+        if is_local
+        else settings.frontend_base_url
+    )
 
     async with httpx.AsyncClient() as client:
         # 1. Exchange code for access token
         token_response = await client.post(
             "https://github.com/login/oauth/access_token",
             data={
-                "client_id": "Ov23liN1MaudLGibnAcW",
-                "client_secret": "46f1d1d00cb45d6e2071cafa3434235172d38ab7",
+                "client_id": settings.github_oauth_client_id,
+                "client_secret": settings.github_oauth_client_secret,
                 "code": code,
             },
             headers={"Accept": "application/json"},
@@ -218,14 +247,6 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
         token_data = token_response.json()
         access_token = token_data.get("access_token")
         if not access_token:
-            host_header = request.headers.get("host", "localhost:8000")
-            is_local = any(
-                x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."]
-            )
-            if is_local:
-                frontend_base = f"http://{host_header.replace('8000', '8080')}"
-            else:
-                frontend_base = "https://devsmentor.vercel.app"
             return RedirectResponse(
                 url=f"{frontend_base}/login?error=github_token_failed"
             )
@@ -279,13 +300,5 @@ async def github_callback(code: str, request: Request, db: Session = Depends(get
         system_token = create_access_token(subject=user.id)
 
         # 6. Redirect back to frontend
-        host_header = request.headers.get("host", "localhost:8000")
-        is_local = any(
-            x in host_header for x in ["localhost", "127.0.0.1", "172.", "192.168."]
-        )
-        if is_local:
-            frontend_base = f"http://{host_header.replace('8000', '8080')}"
-        else:
-            frontend_base = "https://devsmentor.vercel.app"
         frontend_url = f"{frontend_base}/?token={system_token}&username={login}"
         return RedirectResponse(url=frontend_url)

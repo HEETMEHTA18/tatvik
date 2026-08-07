@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../core/config/app_config.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/web_helper.dart';
@@ -18,12 +20,32 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
-  void _handleGithubLogin() {
+  Future<void> _handleGithubLogin() async {
     setState(() => _isLoading = true);
-    const clientId = 'Ov23liN1MaudLGibnAcW';
-    final redirectUri = '${AppConfig.apiBaseUrl}/auth/github/callback';
+    String clientId = 'Ov23liN1MaudLGibnAcW';
+    String redirectUri = '${AppConfig.apiBaseUrl}/auth/github/callback';
+    String scope = 'read:user,repo';
+
+    // Prefer the OAuth config served by the backend so the client_id and
+    // redirect_uri always match what GitHub has registered.
+    try {
+      final res = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/auth/github/oauth-config'))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        clientId = (data['client_id'] as String?) ?? clientId;
+        redirectUri = (data['redirect_uri'] as String?) ?? redirectUri;
+        scope = (data['scope'] as String?) ?? scope;
+      }
+    } catch (_) {
+      // fall back to defaults
+    }
+
     final url =
-        'https://github.com/login/oauth/authorize?client_id=$clientId&redirect_uri=$redirectUri&scope=read:user,repo';
+        'https://github.com/login/oauth/authorize?client_id=$clientId'
+        '&redirect_uri=${Uri.encodeQueryComponent(redirectUri)}'
+        '&scope=${Uri.encodeQueryComponent(scope)}';
     openUrl(url);
   }
 
