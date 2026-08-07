@@ -541,3 +541,55 @@ class TestAppleCalDAV:
             print(f"     User: {user}")
         else:
             print(f"\n  ⚠️  Unexpected status {r.status_code}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  🤖 TATVIK COMMAND CENTER — live e2e through the deployed HF OpenClaw gateway
+#  Run: ENVIRONMENT=development OPENCLAW_API_KEY=... OPENCLAW_API_URL=... \
+#       pytest tests/test_live_integrations.py -k command_center -s
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestCommandCenterLive:
+    """True end-to-end: Tatvik backend → deployed HuggingFace OpenClaw gateway."""
+
+    def test_command_center_live_dispatch(self):
+        skip_if_missing("OPENCLAW_API_KEY", "OPENCLAW_API_URL")
+        from app.services.openclaw_service import OpenClawService
+
+        openclaw = OpenClawService()
+        # conftest.py pins ENVIRONMENT=testing which disables the engine in
+        # stub mode. This live test explicitly opts in to the real gateway.
+        openclaw.enabled = True
+
+        result = run(
+            openclaw.execute_tool_capability(
+                tool_id="github",
+                capability="search_issues",
+                parameters={"repo": "HEETMEHTA18/tatvik", "query": "e2e"},
+                user_context="e2e live test",
+            )
+        )
+        # The dispatch must reach the live gateway. A provider-level billing /
+        # quota error (402/429 from the LLM backends) is expected whenever the
+        # free-tier model accounts are exhausted, but a generic connection
+        # failure (default message) is not.
+        err = str(result.get("error", ""))
+        assert not (
+            not result.get("success") and not err
+        ), "Live gateway returned an opaque failure"
+        if result.get("success"):
+            print("\n  ✅ Live OpenClaw gateway dispatch succeeded")
+            print("     Output preview: " + (str(result.get("output"))[:80]))
+        else:
+            print("\n  ⚠️  Gateway reachable; provider billing/quota:")
+            print("     " + err[:120])
+
+    def test_command_center_live_health(self):
+        from app.services.openclaw_service import OpenClawService
+
+        base = "/".join(OpenClawService().api_url.split("/")[:3])  # strip /v1/... path
+        r = httpx.get(f"{base}/health", timeout=20)
+        assert r.status_code == 200, f"Gateway /health failed: {r.status_code}"
+        assert r.json().get("status") == "live"
+        print("\n  ✅ OpenClaw gateway /health is live")

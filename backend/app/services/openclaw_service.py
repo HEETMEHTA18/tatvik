@@ -110,9 +110,10 @@ class OpenClawService:
                 logger.error(
                     f"OpenClaw returned {response.status_code}: {response.text}"
                 )
+                error_detail = self._extract_error_detail(response)
                 return {
                     "success": False,
-                    "error": "An error occurred during tool execution.",
+                    "error": error_detail,
                 }
             except httpx.TimeoutException as e:
                 logger.warning(f"OpenClaw dispatch timed out: {e}")
@@ -126,6 +127,19 @@ class OpenClawService:
                     "success": False,
                     "error": "An error occurred during tool execution.",
                 }
+
+    @staticmethod
+    def _extract_error_detail(response) -> str:
+        """Extract a human/useful error message from a non-200 gateway reply."""
+        try:
+            data = response.json()
+            error = data.get("error")
+            if isinstance(error, dict):
+                message = error.get("message") or error.get("type") or "Unknown error"
+                return str(message)[:500]
+            return str(error)[:500]
+        except Exception:
+            return (response.text or "An error occurred during tool execution.")[:500]
 
     def _stub(self, tool_id: str, capability: str, params: dict) -> dict:
         """Returns a stub response for dry-run mode."""
