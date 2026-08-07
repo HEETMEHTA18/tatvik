@@ -49,7 +49,7 @@ jobs:
             fi
           done
 
-echo "❌ Backend did not respond after $MAX_RETRIES attempts."
+          echo "❌ Backend did not respond after $MAX_RETRIES attempts."
           # Don't fail the workflow — Render spin-up can take >60s on free tier
           exit 0
 
