@@ -22,31 +22,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGithubLogin() async {
     setState(() => _isLoading = true);
-    String clientId = 'Ov23liN1MaudLGibnAcW';
-    String redirectUri = '${AppConfig.apiBaseUrl}/auth/github/callback';
-    String scope = 'read:user,repo';
 
-    // Prefer the OAuth config served by the backend so the client_id and
-    // redirect_uri always match what GitHub has registered.
+    // Always fetch the OAuth config from the backend so the client_id and
+    // redirect_uri match what GitHub has registered (no secrets in the app).
     try {
       final res = await http
           .get(Uri.parse('${AppConfig.apiBaseUrl}/auth/github/oauth-config'))
           .timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        clientId = (data['client_id'] as String?) ?? clientId;
-        redirectUri = (data['redirect_uri'] as String?) ?? redirectUri;
-        scope = (data['scope'] as String?) ?? scope;
+      if (res.statusCode != 200) {
+        throw Exception('oauth-config failed: ${res.statusCode}');
       }
-    } catch (_) {
-      // fall back to defaults
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final clientId = data['client_id'] as String? ?? '';
+      final redirectUri = data['redirect_uri'] as String? ?? '';
+      final scope = data['scope'] as String? ?? 'read:user,repo';
+      if (clientId.isEmpty || redirectUri.isEmpty) {
+        throw Exception('OAuth not configured on server');
+      }
+      final url =
+          'https://github.com/login/oauth/authorize?client_id=$clientId'
+          '&redirect_uri=${Uri.encodeQueryComponent(redirectUri)}'
+          '&scope=${Uri.encodeQueryComponent(scope)}';
+      openUrl(url);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('GitHub login unavailable: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
-
-    final url =
-        'https://github.com/login/oauth/authorize?client_id=$clientId'
-        '&redirect_uri=${Uri.encodeQueryComponent(redirectUri)}'
-        '&scope=${Uri.encodeQueryComponent(scope)}';
-    openUrl(url);
   }
 
   @override
