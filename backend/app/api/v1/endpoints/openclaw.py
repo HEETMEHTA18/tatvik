@@ -10,7 +10,9 @@ REST endpoints exposing the full Tatvik architecture:
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -75,7 +77,9 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user_id, get_optional_user_id
+from sqlalchemy.orm import Session
+from app.api.deps import get_current_user_id, get_optional_user_id, get_db
+from app.models.entities import PromptHistory, ExecutedCommand
 from app.services.openclaw_service import OpenClawService
 from app.services.openclaw_tools import (
     get_all_tools_summary,
@@ -495,6 +499,7 @@ async def plan_goal(
 async def execute_tool_capability(
     body: ToolCapabilityRequest,
     user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
 ):
     """
     Execute a specific OpenClaw tool capability directly.
@@ -520,6 +525,7 @@ async def execute_tool_capability(
         )
 
     openclaw = OpenClawService()
+    started = time.perf_counter()
     try:
         result = await openclaw.execute_tool_capability(
             tool_id=body.tool_id,
@@ -527,6 +533,51 @@ async def execute_tool_capability(
             parameters=body.parameters,
             user_context=body.user_context,
         )
+
+        # Persist execution history to the database
+        try:
+            original_prompt = (
+                f"tool capability: {body.tool_id}.{body.capability} "
+                f"params={body.parameters}"
+            )
+            history = PromptHistory(
+                user_id=user_id,
+                session_id=(
+                    body.parameters.get("session_id")
+                    if isinstance(body.parameters, dict)
+                    else None
+                ),
+                original_prompt=original_prompt,
+                refined_prompt=original_prompt,
+                response=(
+                    str(result.get("output", ""))[:4000]
+                    if result.get("output")
+                    else None
+                ),
+                workflow=f"openclaw.{body.tool_id}",
+                project_name=(
+                    body.parameters.get("repo")
+                    if isinstance(body.parameters, dict)
+                    else None
+                ),
+            )
+            db.add(history)
+            db.flush()
+            commit = ExecutedCommand(
+                session_id=f"openclaw-{body.tool_id}",
+                prompt_event_id=history.id,
+                command=f"{body.tool_id}.{body.capability}",
+                args=json.dumps(body.parameters),
+                exit_code=0 if result.get("success") else 1,
+                stdout=str(result.get("output", ""))[:4000],
+                duration_ms=int((time.perf_counter() - started) * 1000),
+            )
+            db.add(commit)
+            db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to persist openclaw execution log: {e}")
+            db.rollback()
+
         return {
             "success": result.get("success", False),
             "tool_id": body.tool_id,

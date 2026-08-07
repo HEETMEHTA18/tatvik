@@ -25,7 +25,7 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
 
   String _priority = 'medium';
   final String _deadline = '';
-  String _repository = 'HeetMehta18/AutoDevs';
+  String _repository = '';
 
   bool _isCreating = false;
   bool _hasMission = false;
@@ -35,18 +35,53 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
   int _pollErrors = 0;
   bool _backendOffline = false;
 
-  final List<String> _repos = [
-    'HeetMehta18/AutoDevs',
-    'HeetMehta18/DevMentor',
-    'HeetMehta18/Portfolio',
-  ];
+  List<String> _repos = [];
 
   final List<String> _priorities = ['low', 'medium', 'high', 'critical'];
+
+  static const String _fallbackRepo = 'HeetMehta18/AutoDevs';
 
   @override
   void initState() {
     super.initState();
+    _fetchRepositories();
     _fetchPipeline();
+  }
+
+  Future<void> _fetchRepositories() async {
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final res = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/github/repositories'),
+        headers: {
+          if (appState.token != null) 'Authorization': 'Bearer ${appState.token}',
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final items = (data['items'] as List? ?? []);
+        final repos = items.map<String>((r) {
+          final full = (r as Map<String, dynamic>)['full_name'] ?? '';
+          return full.toString().isNotEmpty ? full.toString() : _fallbackRepo;
+        }).toList();
+        setState(() {
+          _repos = repos.isEmpty ? [_fallbackRepo] : repos;
+          if (!_repos.contains(_repository)) {
+            _repository = _repos.first;
+          }
+        });
+      } else {
+        setState(() {
+          _repos = [_fallbackRepo];
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _repos = [_fallbackRepo];
+        });
+      }
+    }
   }
 
   @override

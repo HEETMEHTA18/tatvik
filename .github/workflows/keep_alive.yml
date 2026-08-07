@@ -49,6 +49,37 @@ jobs:
             fi
           done
 
-          echo "❌ Backend did not respond after $MAX_RETRIES attempts."
+echo "❌ Backend did not respond after $MAX_RETRIES attempts."
           # Don't fail the workflow — Render spin-up can take >60s on free tier
+          exit 0
+
+      - name: Ping HuggingFace OpenClaw Gateway (keep 24/7)
+        run: |
+          HF_SPACE_URL="https://heetmehta18-openclaw-devmentor.hf.space/health"
+          MAX_RETRIES=4
+          RETRY_DELAY=20
+
+          echo "Pinging OpenClaw gateway at $HF_SPACE_URL..."
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            HTTP_CODE=$(curl -s -o /tmp/hf_ping.txt -w "%{http_code}" \
+              --max-time 60 --connect-timeout 20 \
+              -A "Tatvik-KeepAlive" \
+              -H "Connection: keep-alive" \
+              -X GET "$HF_SPACE_URL" || echo "000")
+
+            if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+              echo "✅ OpenClaw gateway is awake! HTTP $HTTP_CODE (attempt $i/$MAX_RETRIES)"
+              cat /tmp/hf_ping.txt
+              exit 0
+            else
+              echo "⚠️  Attempt $i/$MAX_RETRIES: Gateway returned HTTP $HTTP_CODE"
+              if [ "$i" -lt "$MAX_RETRIES" ]; then
+                echo "   Retrying in ${RETRY_DELAY}s..."
+                sleep $RETRY_DELAY
+              fi
+            fi
+          done
+
+          echo "❌ Gateway did not respond after $MAX_RETRIES attempts."
           exit 0

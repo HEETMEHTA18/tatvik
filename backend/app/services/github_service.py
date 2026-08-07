@@ -64,17 +64,25 @@ class GithubService:
             profile.synced_at = datetime.utcnow()
             self.db.add(profile)
 
-            # 2. Fetch User's Repositories
-            repos_response = await client.get(
-                "https://api.github.com/user/repos?per_page=100",
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-            if repos_response.status_code != 200:
-                raise ValueError(
-                    f"Failed to fetch GitHub repositories: {repos_response.text}"
+            # 2. Fetch User's Repositories (paginate through ALL repos, not just 100)
+            repos_data: list = []
+            page = 1
+            while True:
+                repos_response = await client.get(
+                    "https://api.github.com/user/repos",
+                    params={"per_page": 100, "page": page, "type": "owner"},
+                    headers={"Authorization": f"Bearer {access_token}"},
                 )
+                if repos_response.status_code != 200:
+                    raise ValueError(
+                        f"Failed to fetch GitHub repositories: {repos_response.text}"
+                    )
 
-            repos_data = repos_response.json()
+                page_repos = repos_response.json()
+                repos_data.extend(page_repos)
+                if len(page_repos) < 100:
+                    break
+                page += 1
 
             # Fetch total commits using Search Commits API
             total_commits = 0
@@ -260,27 +268,36 @@ class GithubService:
                 profile.synced_at = datetime.utcnow()
                 self.db.add(profile)
 
-                # 2. Fetch User's Repositories
-                repos_response = await client.get(
-                    f"https://api.github.com/users/{username}/repos?per_page=100",
-                    headers=headers,
-                )
-                if repos_response.status_code == 401 and "Authorization" in headers:
-                    logger.warning(
-                        "GitHub token returned 401. Retrying repos fetch unauthenticated."
-                    )
-                    del headers["Authorization"]
+                # 2. Fetch User's Repositories (paginate through ALL repos)
+                repos_data: list = []
+                page = 1
+                while True:
                     repos_response = await client.get(
-                        f"https://api.github.com/users/{username}/repos?per_page=100",
+                        f"https://api.github.com/users/{username}/repos",
+                        params={"per_page": 100, "page": page, "type": "owner"},
                         headers=headers,
                     )
+                    if repos_response.status_code == 401 and "Authorization" in headers:
+                        logger.warning(
+                            "GitHub token returned 401. Retrying repos fetch unauthenticated."
+                        )
+                        del headers["Authorization"]
+                        repos_response = await client.get(
+                            f"https://api.github.com/users/{username}/repos",
+                            params={"per_page": 100, "page": page, "type": "owner"},
+                            headers=headers,
+                        )
 
-                if repos_response.status_code != 200:
-                    raise ValueError(
-                        f"Failed to fetch GitHub repositories for {username}: {repos_response.text}"
-                    )
+                    if repos_response.status_code != 200:
+                        raise ValueError(
+                            f"Failed to fetch GitHub repositories for {username}: {repos_response.text}"
+                        )
 
-                repos_data = repos_response.json()
+                    page_repos = repos_response.json()
+                    repos_data.extend(page_repos)
+                    if len(page_repos) < 100:
+                        break
+                    page += 1
 
                 # Fetch total commits using Search Commits API
                 total_commits = 0
