@@ -372,8 +372,8 @@ async def _run_mission_in_background(title: str, description: str, repository: s
 
         if result.get("success"):
             output = str(result.get("output", ""))[:2000]
-            pipeline_tracker.update_stage(stage_id, 100.0, output or "Completed")
             pipeline_tracker.complete_stage(stage_id, True)
+            pipeline_tracker.update_stage(stage_id, 100.0, output or "Completed")
             pipeline_tracker.update_agent(
                 agent_id, "done", f"{task} complete", progress, 90.0
             )
@@ -382,8 +382,8 @@ async def _run_mission_in_background(title: str, description: str, repository: s
             )
         else:
             error_detail = str(result.get("error", "Unknown error"))[:400]
-            pipeline_tracker.update_stage(stage_id, 50.0, f"Failed: {error_detail}")
             pipeline_tracker.complete_stage(stage_id, False)
+            pipeline_tracker.update_stage(stage_id, 50.0, f"Failed: {error_detail}")
             pipeline_tracker.update_agent(
                 agent_id, "failed", f"{task} failed: {error_detail}", progress, 10.0
             )
