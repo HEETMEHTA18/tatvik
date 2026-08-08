@@ -88,7 +88,11 @@ from app.services.openclaw_tools import (
 )
 from app.services.cognee_service import CogneeService
 from app.services.tatvik_planner import TatvikPlanner
-from app.services.pipeline_status import pipeline_tracker, PipelineStepInfo
+from app.services.pipeline_status import (
+    pipeline_tracker,
+    PipelineStepInfo,
+    STAGE_FLOW,
+)
 from app.services.webhook_router import (
     DEFAULT_AUTOMATION_RULES,
     WebhookEvent,
@@ -268,6 +272,135 @@ class CreateMissionRequest(BaseModel):
     execute: bool = Field(default=False, description="Start executing immediately")
 
 
+async def _run_mission_in_background(title: str, description: str, repository: str):
+    """
+    Executes a mission end-to-end through the OpenClaw (HF Space) gateway.
+    Each pipeline stage is dispatched as a real gateway request, so the
+    activity shows up in the HF Space logs and the pipeline tracker progresses
+    in real time instead of hanging at 'planning'.
+    """
+    openclaw = OpenClawService()
+
+    if not openclaw.enabled:
+        pipeline_tracker.set_phase(
+            "idle", "OpenClaw is not configured. Mission paused."
+        )
+        pipeline_tracker.add_event(
+            "OpenClaw gateway not configured — mission cannot execute.", "error"
+        )
+        return
+
+    mission_line = f"'{title}'" + (f" on {repository}" if repository else "")
+    stage_prompts = {
+        "requirement": (
+            f"Analyze the requirements for mission {mission_line}. "
+            f"Mission description: {description or 'Not provided'}. "
+            "Return a concise, structured list of functional requirements."
+        ),
+        "planning": (
+            f"Create an architecture plan for mission {mission_line}. "
+            "Outline the tech stack, modules, data flow, and key design decisions. "
+            "Return a concise structured plan."
+        ),
+        "design": (
+            f"Design the UI/UX and system interfaces for mission {mission_line}. "
+            "Describe screens, components, APIs, and data contracts. "
+            "Return a concise structured design spec."
+        ),
+        "development": (
+            f"Implement mission {mission_line}. "
+            "Describe the code modules, file structure, and implementation steps "
+            "needed to complete the mission. Return a concise structured plan."
+        ),
+        "testing": (
+            f"Define a testing strategy for mission {mission_line}. "
+            "List test cases, QA checks, and success criteria. "
+            "Return a concise structured list."
+        ),
+        "review": (
+            f"Perform a code review checklist for mission {mission_line}. "
+            "List quality gates, security checks, and review criteria. "
+            "Return a concise structured checklist."
+        ),
+        "deployment": (
+            f"Plan the deployment for mission {mission_line}. "
+            "Describe CI/CD steps, environments, and rollout strategy. "
+            "Return a concise structured plan."
+        ),
+        "memory": (
+            f"Summarize the completed mission {mission_line} for permanent memory. "
+            "Return a concise structured summary with key outcomes and artifacts."
+        ),
+    }
+
+    stage_agents = {
+        "requirement": ("planner", "Analyzing requirements", 10.0),
+        "planning": ("architect", "Designing architecture", 25.0),
+        "design": ("designer", "Creating UI/UX design", 40.0),
+        "development": ("backend", "Building implementation", 55.0),
+        "testing": ("qa", "Running tests & QA", 70.0),
+        "review": ("reviewer", "Reviewing code", 80.0),
+        "deployment": ("devops", "Deploying", 90.0),
+        "memory": ("devops", "Storing to memory", 100.0),
+    }
+
+    system_ctx = (
+        "You are the Tatvik AI OS pipeline agent. You execute each stage of a "
+        "development mission precisely and return concise, structured results "
+        "that a project tracker can display."
+    )
+
+    all_ok = True
+    for stage_id, stage_name in STAGE_FLOW:
+        pipeline_tracker.start_stage(stage_id)
+        agent_id, task, progress = stage_agents.get(
+            stage_id, ("devops", "Working", 0.0)
+        )
+        pipeline_tracker.update_agent(
+            agent_id, "working", f"{task} for: {title}", progress, 50.0
+        )
+        pipeline_tracker.add_event(f"Running stage: {stage_name}", "info", stage_id)
+
+        prompt = stage_prompts.get(stage_id, f"Execute stage: {stage_name}")
+        try:
+            result = await openclaw.generate(
+                prompt, system_context=system_ctx, timeout=240.0
+            )
+        except Exception as e:
+            logger.warning(f"Stage '{stage_id}' dispatch error: {e}")
+            result = {"success": False, "error": str(e)}
+
+        if result.get("success"):
+            output = str(result.get("output", ""))[:2000]
+            pipeline_tracker.update_stage(stage_id, 100.0, output or "Completed")
+            pipeline_tracker.complete_stage(stage_id, True)
+            pipeline_tracker.update_agent(
+                agent_id, "done", f"{task} complete", progress, 90.0
+            )
+            pipeline_tracker.add_event(
+                f"Stage '{stage_name}' completed.", "stage_completed", stage_id
+            )
+        else:
+            error_detail = str(result.get("error", "Unknown error"))[:400]
+            pipeline_tracker.update_stage(stage_id, 50.0, f"Failed: {error_detail}")
+            pipeline_tracker.complete_stage(stage_id, False)
+            pipeline_tracker.update_agent(
+                agent_id, "failed", f"{task} failed: {error_detail}", progress, 10.0
+            )
+            pipeline_tracker.add_event(
+                f"Stage '{stage_name}' failed: {error_detail}", "error", stage_id
+            )
+            all_ok = False
+
+    pipeline_tracker.finish(success=all_ok)
+    if all_ok:
+        pipeline_tracker.add_event(f"Mission '{title}' completed successfully.", "info")
+    else:
+        pipeline_tracker.add_event(
+            f"Mission '{title}' finished with some failed stages.", "info"
+        )
+
+
 @router.post("/missions", summary="Create a new AI mission")
 async def create_mission(
     body: CreateMissionRequest,
@@ -277,6 +410,10 @@ async def create_mission(
     """
     Creates a new mission in the Tatvik pipeline.
     A mission flows through stages: Requirement → Planning → Design → Development → Testing → Review → Deployment → Memory.
+
+    When ``execute=true`` the mission is actually dispatched to the OpenClaw
+    (Hugging Face) gateway in the background, so each stage appears in the
+    HF Space logs and the pipeline advances in real time.
     """
     pipeline_tracker.start_mission(
         title=body.title,
@@ -300,6 +437,9 @@ async def create_mission(
     )
     pipeline_tracker.register_agent("backend", "Backend", "API & database generation")
     pipeline_tracker.register_agent("qa", "QA", "Testing & quality assurance")
+    pipeline_tracker.register_agent(
+        "reviewer", "Code Reviewer", "Code review & quality gates"
+    )
     pipeline_tracker.register_agent("devops", "DevOps", "Build & deployment")
 
     pipeline_tracker.add_event("Querying memory for past context...", "info")
@@ -312,6 +452,14 @@ async def create_mission(
         pipeline_tracker.start_stage("requirement")
         pipeline_tracker.update_agent(
             "planner", "working", f"Analyzing requirements for: {body.title}", 10.0
+        )
+        # Dispatch the mission through the OpenClaw/HF gateway in the background
+        # so every stage is logged on the HF Space and the pipeline progresses.
+        background_tasks.add_task(
+            _run_mission_in_background,
+            body.title,
+            body.description,
+            body.repository,
         )
         result["execution_started"] = True
 

@@ -76,6 +76,22 @@ class OpenClawService:
 
     # ── Core dispatcher ─────────────────────────────────────────────────────
 
+    async def generate(
+        self,
+        prompt: str,
+        system_context: str = "",
+        timeout: float = 180.0,
+    ) -> dict:
+        """
+        Public convenience wrapper: send a free-form prompt to the OpenClaw
+        runtime (HF Space gateway) and return the parsed result dict.
+        Used by the mission executor to drive pipeline stages through the
+        gateway so every stage appears in the HF Space logs.
+        """
+        return await self._dispatch(
+            prompt, timeout=timeout, system_context=system_context
+        )
+
     async def _dispatch(
         self,
         prompt: str,
