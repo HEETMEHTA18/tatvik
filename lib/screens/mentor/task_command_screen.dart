@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/app_state.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/config/app_config.dart';
@@ -586,6 +587,44 @@ class _TaskCommandScreenState extends State<TaskCommandScreen> {
               ],
             ),
           ],
+          if (mission['pull_request_url'] != null && (mission['pull_request_url'] as String).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: InkWell(
+                onTap: () async {
+                  final prUrl = mission['pull_request_url'] as String;
+                  final uri = Uri.tryParse(prUrl.contains('://') ? prUrl : 'https://$prUrl');
+                  if (uri != null) {
+                    try {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } catch (_) {}
+                  }
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.45)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.merge_type, size: 16, color: AppTheme.accent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          mission['pull_request_url'] as String,
+                          style: TextStyle(fontSize: 11, color: AppTheme.accent, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.open_in_new, size: 14, color: AppTheme.accent),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,

@@ -79,7 +79,7 @@ from pydantic import BaseModel, Field
 
 from sqlalchemy.orm import Session
 from app.api.deps import get_current_user_id, get_optional_user_id, get_db
-from app.models.entities import PromptHistory, ExecutedCommand
+from app.models.entities import PromptHistory, ExecutedCommand, GithubProfile
 from app.services.openclaw_service import OpenClawService
 from app.services.openclaw_tools import (
     get_all_tools_summary,
@@ -87,6 +87,7 @@ from app.services.openclaw_tools import (
     get_tool,
 )
 from app.services.cognee_service import CogneeService
+from app.services.mission_pr_service import MissionPrService
 from app.services.tatvik_planner import TatvikPlanner
 from app.services.pipeline_status import (
     pipeline_tracker,
@@ -272,14 +273,25 @@ class CreateMissionRequest(BaseModel):
     execute: bool = Field(default=False, description="Start executing immediately")
 
 
-async def _run_mission_in_background(title: str, description: str, repository: str):
+async def _run_mission_in_background(
+    title: str,
+    description: str,
+    repository: str,
+    user_id: str = "",
+    github_token: str = "",
+):
     """
     Executes a mission end-to-end through the OpenClaw (HF Space) gateway.
     Each pipeline stage is dispatched as a real gateway request, so the
     activity shows up in the HF Space logs and the pipeline tracker progresses
     in real time instead of hanging at 'planning'.
+
+    When a target repository is supplied the mission first understands the
+    repository via the knowledge graph and — if significant changes are found —
+    ends by opening a proper pull request with those changes.
     """
     openclaw = OpenClawService()
+    mission = MissionPrService(github_token)
 
     if not openclaw.enabled:
         pipeline_tracker.set_phase(
@@ -290,12 +302,50 @@ async def _run_mission_in_background(title: str, description: str, repository: s
         )
         return
 
+    # ── Stage 0: understand the repository via the graph ─────────────────────
+    repo_context = ""
+    target_repo = ""
+    if repository:
+        target_repo = repository.replace("https://github.com/", "").strip("/")
+        pipeline_tracker.set_phase(
+            "requirement",
+            f"Understanding repository context: {target_repo}",
+        )
+        pipeline_tracker.add_event(
+            f"Querying the knowledge graph for repository '{target_repo}'...",
+            "info",
+        )
+        understood = await mission.understand_repository(target_repo, user_id=user_id)
+        if understood.get("success"):
+            repo_context = understood["context"].get("rendered", "")
+            pipeline_tracker.set_repo_context(repo_context)
+            if understood["context"].get("graph_context"):
+                pipeline_tracker.add_event(
+                    "Matched repository memory from the knowledge graph.", "info"
+                )
+            pipeline_tracker.add_event(
+                f"Understood {target_repo}: "
+                f"{len(understood['context'].get('file_tree', []))} files mapped.",
+                "info",
+            )
+        else:
+            pipeline_tracker.add_event(
+                f"Could not understand repository: {understood.get('error')}",
+                "error",
+            )
+
     mission_line = f"'{title}'" + (f" on {repository}" if repository else "")
+    context_block = ""
+    if repo_context:
+        context_block = (
+            "\n\nREPOSITORY CONTEXT (from the knowledge graph):\n" + repo_context[:4000]
+        )
     stage_prompts = {
         "requirement": (
             f"Analyze the requirements for mission {mission_line}. "
             f"Mission description: {description or 'Not provided'}. "
             "Return a concise, structured list of functional requirements."
+            + context_block
         ),
         "planning": (
             f"Create an architecture plan for mission {mission_line}. "
@@ -392,6 +442,46 @@ async def _run_mission_in_background(title: str, description: str, repository: s
             )
             all_ok = False
 
+    # ── Final stage: open a proper PR with the mission's changes ───────────────
+    pr_result = None
+    if repo_context and mission.enabled:
+        pipeline_tracker.set_phase(
+            "deployment", "Opening pull request for the mission changes..."
+        )
+        pipeline_tracker.add_event(
+            f"Preparing pull request on {target_repo} with the significant "
+            "mission changes...",
+            "info",
+        )
+        try:
+            pr_result = await mission.execute_mission_and_open_pr(
+                repo_full_name=target_repo,
+                mission_title=title,
+                mission_description=description,
+                user_id=user_id,
+                repo_context=repo_context,
+            )
+            if pr_result.get("pull_request_url"):
+                pipeline_tracker.set_pull_request(
+                    pr_result["pull_request_url"],
+                    pr_result.get("branch_name", ""),
+                )
+                pipeline_tracker.add_event(
+                    f"Pull request opened: {pr_result['pull_request_url']}", "info"
+                )
+            elif pr_result.get("no_changes_needed"):
+                pipeline_tracker.add_event(
+                    "No significant changes were needed for this mission.", "info"
+                )
+            else:
+                pipeline_tracker.add_event(
+                    f"PR not created: {pr_result.get('error', 'unknown reason')}",
+                    "error",
+                )
+        except Exception as e:
+            logger.exception("Mission PR step failed")
+            pipeline_tracker.add_event(f"PR step failed: {str(e)[:300]}", "error")
+
     pipeline_tracker.finish(success=all_ok)
     if all_ok:
         pipeline_tracker.add_event(f"Mission '{title}' completed successfully.", "info")
@@ -405,6 +495,7 @@ async def _run_mission_in_background(title: str, description: str, repository: s
 async def create_mission(
     body: CreateMissionRequest,
     background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
     """
@@ -455,11 +546,26 @@ async def create_mission(
         )
         # Dispatch the mission through the OpenClaw/HF gateway in the background
         # so every stage is logged on the HF Space and the pipeline progresses.
+        # Resolve the user's GitHub token so the mission can open a PR.
+        github_token = ""
+        try:
+            from sqlalchemy import select as sa_select
+
+            profile = db.execute(
+                sa_select(GithubProfile).where(GithubProfile.user_id == user_id)
+            ).scalar_one_or_none()
+            if profile and profile.access_token:
+                github_token = profile.access_token
+        except Exception as e:
+            logger.warning(f"Could not resolve GitHub token for mission: {e}")
+
         background_tasks.add_task(
             _run_mission_in_background,
             body.title,
             body.description,
             body.repository,
+            user_id,
+            github_token,
         )
         result["execution_started"] = True
 

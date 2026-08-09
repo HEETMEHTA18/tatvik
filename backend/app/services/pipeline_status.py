@@ -72,6 +72,9 @@ class MissionMetadata:
     repository: str = ""
     status: str = "idle"  # idle | running | completed | failed | cancelled
     created_at: str = ""
+    pull_request_url: str = ""  # PR opened by the mission, if any
+    branch_name: str = ""  # branch the mission worked on
+    repo_context: str = ""  # graph-derived repository understanding
 
 
 @dataclass
@@ -292,6 +295,19 @@ class PipelineStatusTracker:
             self.status.message = message
         self._log()
 
+    def set_pull_request(self, url: str, branch: str = ""):
+        """Record the PR opened by the mission."""
+        self.status.mission.pull_request_url = url
+        if branch:
+            self.status.mission.branch_name = branch
+        self._add_timeline("info", "", "", f"Pull request opened: {url}")
+        self._log()
+
+    def set_repo_context(self, context: str):
+        """Store the graph-derived repository understanding for this mission."""
+        self.status.mission.repo_context = context[:4000]
+        self._log()
+
     def finish(self, success: bool):
         self.status.phase = "done" if success else "failed"
         self.status.mission.status = "completed" if success else "failed"
@@ -319,6 +335,8 @@ class PipelineStatusTracker:
                 "repository": self.status.mission.repository,
                 "status": self.status.mission.status,
                 "created_at": self.status.mission.created_at,
+                "pull_request_url": self.status.mission.pull_request_url,
+                "branch_name": self.status.mission.branch_name,
             },
             "stages": [
                 {
