@@ -4,6 +4,8 @@ import logging
 import re
 import os
 import httpx
+import asyncio
+import random
 import yt_dlp
 from typing import List, Optional
 from datetime import datetime
@@ -109,41 +111,87 @@ def check_rate_limit(
         pass
 
 
-# Gemini AI Orchestrator Helper
+# Gemini AI Orchestrator Helper with retries and fallback
 async def call_gemini(system_prompt: str, user_prompt: str) -> str:
     api_key = settings.gemini_api_key
     if not api_key:
         return "[Gemini API Key missing] Stub summary response."
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    primary = getattr(settings, "gemini_model", "gemini-2.5-flash")
+    fallback = getattr(settings, "gemini_fallback_model", "gemini-2.5-flash-lite")
+    max_retries = max(1, getattr(settings, "gemini_max_retries", 3))
+    backoff_base = float(getattr(settings, "gemini_backoff_base", 1.0))
+
+    headers = {"Content-Type": "application/json"}
+
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                url,
-                json={
-                    "contents": [
-                        {
-                            "parts": [
-                                {"text": f"{system_prompt}\nUser Input:\n{user_prompt}"}
-                            ]
-                        }
-                    ]
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=30.0,
-            )
-            if response.status_code == 200:
-                data = response.json()
+        for model in (primary, fallback):
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            for attempt in range(1, max_retries + 1):
                 try:
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                except (KeyError, IndexError):
-                    return "Error: Malformed Gemini API response."
-            else:
-                logger.error(f"Gemini API returned status {response.status_code}")
-                return "Error: AI service returned an error. Please try again later."
-        except Exception as e:
-            logger.exception("Gemini API call failed")
-            return "Error: AI service unavailable. Please try again later."
+                    response = await client.post(
+                        url,
+                        json={
+                            "contents": [
+                                {
+                                    "parts": [
+                                        {
+                                            "text": f"{system_prompt}\nUser Input:\n{user_prompt}"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        headers=headers,
+                        timeout=30.0,
+                    )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        try:
+                            return data["candidates"][0]["content"]["parts"][0]["text"]
+                        except (KeyError, IndexError):
+                            logger.exception("Malformed Gemini API response")
+                            return "Error: Malformed Gemini API response."
+
+                    # Retry on rate limit or transient server errors
+                    if response.status_code in (429, 500, 502, 503, 504):
+                        wait = backoff_base * (2 ** (attempt - 1)) + random.uniform(
+                            0, 0.5
+                        )
+                        logger.warning(
+                            "Gemini model %s returned %s; retrying attempt %s/%s after %.2fs",
+                            model,
+                            response.status_code,
+                            attempt,
+                            max_retries,
+                            wait,
+                        )
+                        await asyncio.sleep(wait)
+                        continue
+
+                    # Other non-success codes: log and return helpful message
+                    logger.error(
+                        "Gemini API returned status %s: %s",
+                        response.status_code,
+                        response.text,
+                    )
+                    return f"Error: AI service returned status {response.status_code}."
+
+                except Exception:
+                    wait = backoff_base * (2 ** (attempt - 1))
+                    logger.exception(
+                        "Gemini API call exception; attempt %s/%s", attempt, max_retries
+                    )
+                    await asyncio.sleep(wait)
+
+            logger.info(
+                "Model %s exhausted after %s attempts, trying next fallback if available",
+                model,
+                max_retries,
+            )
+
+    return "Error: AI service unavailable after retries. Please check quota, billing, or try again later."
 
 
 GITHUB_API_HEADERS = {
