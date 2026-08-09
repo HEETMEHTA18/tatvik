@@ -16,6 +16,11 @@ class Settings(BaseSettings):
 
     # ── LLM / Intelligence Layer ──────────────────────────────────────────────
     gemini_api_key: str = ""
+    # Preferred Gemini model and fallback to use when quota/exhausted
+    gemini_model: str = "gemini-2.5-flash"
+    gemini_fallback_model: str = "gemini-2.5-flash-lite"
+    gemini_max_retries: int = 3
+    gemini_backoff_base: float = 1.0
     groq_api_key: str = ""
     openrouter_api_key: str = ""
     nvidia_api_key: str = ""
