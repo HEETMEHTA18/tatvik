@@ -1,15 +1,3 @@
-"""
-Tests for MissionPrService — the "Mission → PR" flow in the Command Center.
-
-Covers:
-  - Repository understanding (graph + file tree + README)
-  - Change planning (LLM returning a JSON plan)
-  - PR branch creation, file commits, and proper PR body
-  - Graceful degradation without a GitHub token
-
-All external GitHub / LLM calls are mocked; the suite runs fully offline.
-"""
-
 import json
 import asyncio
 import sys
@@ -235,3 +223,204 @@ def test_no_changes_needed_short_circuit():
     result = run_async(run_flow())
     assert result["success"] is True
     assert result["no_changes_needed"] is True
+
+
+# ──────────────────────────────────────────────
+# FULL COMMAND-CENTER MISSION → PR FLOW
+# ──────────────────────────────────────────────
+#
+# These mirror what the Command Center / UI sends and verify the whole path:
+#   mission (title + description + priority + repository) → repo understood
+#   via the graph → significant changes planned → feature branch → PR opened
+#   → PR URL recorded in the pipeline snapshot.
+
+
+def _fake_understand_success(repo_full_name, user_id=""):
+    return {
+        "success": True,
+        "context": {
+            "default_branch": "master",
+            "file_tree": ["backend/app/main.py"],
+            "graph_context": "matched graph memory",
+            "rendered": (
+                f"REPOSITORY: {repo_full_name}\n"
+                "LANGUAGES: Python\n"
+                "FILE_TREE_SAMPLE (4 files):\n"
+                "  - backend/app/main.py"
+            ),
+        },
+    }
+
+
+def _fake_openclaw_enabled():
+    """Wrap the module's OpenClawService with an enabled instance so the
+    mission runner actually runs the stage pipeline."""
+    from app.services.openclaw_service import OpenClawService
+    from app.api.v1.endpoints import openclaw as openclaw_ep
+
+    svc = MagicMock(spec=OpenClawService)
+    svc.enabled = True
+
+    async def fake_generate(**kwargs):
+        return {"success": True, "output": "stage complete"}
+
+    svc.generate = AsyncMock(side_effect=fake_generate)
+    svc.warmup = AsyncMock(return_value=True)
+
+    fake_cls = MagicMock(return_value=svc)
+    return patch.object(openclaw_ep, "OpenClawService", fake_cls)
+
+
+def test_full_mission_flow_success_records_pr_url():
+    """A mission with a repository + GitHub token + enough context should
+    end with a PR opened and recorded in the pipeline snapshot."""
+    from app.services.pipeline_status import pipeline_tracker
+    from app.api.v1.endpoints import openclaw as openclaw_ep
+    from app.services import mission_pr_service as mmod
+
+    captured = {}
+
+    async def fake_understand(self, repo_full_name, user_id=""):
+        captured["understood"] = repo_full_name
+        return _fake_understand_success(repo_full_name)
+
+    async def fake_pr(self, **kwargs):
+        captured["executed"] = kwargs
+        return {
+            "success": True,
+            "pull_request_url": "https://github.com/HEETMEHTA18/tatvik/pull/101",
+            "branch_name": "tatvik/mission-my-feature",
+            "files_changed": ["backend/app/main.py"],
+            "changes_count": 1,
+            "repo": "HEETMEHTA18/tatvik",
+        }
+
+    pipeline_tracker.reset()
+    pipeline_tracker.start_mission(
+        title="Add health endpoint",
+        description="Expose /health route",
+        repository="https://github.com/HEETMEHTA18/tatvik",
+    )
+    with (
+        _fake_openclaw_enabled(),
+        patch.object(mmod.MissionPrService, "understand_repository", fake_understand),
+        patch.object(mmod.MissionPrService, "execute_mission_and_open_pr", fake_pr),
+    ):
+        run_async(
+            openclaw_ep._run_mission_in_background(
+                title="Add health endpoint",
+                description="Expose /health route",
+                repository="https://github.com/HEETMEHTA18/tatvik",
+                user_id="user-1",
+                github_token="test-token",
+            )
+        )
+
+    snapshot = pipeline_tracker.snapshot()
+    mission = snapshot["mission"]
+    assert (
+        mission["pull_request_url"] == "https://github.com/HEETMEHTA18/tatvik/pull/101"
+    )
+    assert mission["branch_name"] == "tatvik/mission-my-feature"
+    assert mission["repository"] == "https://github.com/HEETMEHTA18/tatvik"
+    assert captured["understood"] == "HEETMEHTA18/tatvik"
+    assert captured["executed"]["mission_title"] == "Add health endpoint"
+    assert captured["executed"]["repo_full_name"] == "HEETMEHTA18/tatvik"
+    assert any("Pull request opened" in e["message"] for e in snapshot["timeline"])
+
+
+def test_mission_flow_without_repo_skips_pr():
+    """Missions without a repository never attempt PR description or PR
+    creation."""
+    from app.services.pipeline_status import pipeline_tracker
+    from app.api.v1.endpoints import openclaw as openclaw_ep
+    from app.services import mission_pr_service as mmod
+
+    called = {"understand": False, "pr": False}
+
+    async def dont_understand(self, *a, **k):
+        called["understand"] = True
+        return {"success": False, "error": "should not run"}
+
+    async def dont_pr(self, **k):
+        called["pr"] = True
+        return {"success": False, "error": "should not run"}
+
+    pipeline_tracker.reset()
+    with (
+        _fake_openclaw_enabled(),
+        patch.object(mmod.MissionPrService, "understand_repository", dont_understand),
+        patch.object(mmod.MissionPrService, "execute_mission_and_open_pr", dont_pr),
+    ):
+        run_async(
+            openclaw_ep._run_mission_in_background(
+                title="Refactor docs",
+                description="No repo targeted",
+                repository="",
+                user_id="user-1",
+                github_token="test-token",
+            )
+        )
+
+    assert called["understand"] is False
+    assert called["pr"] is False
+
+
+def test_mission_flow_without_token_is_graceful():
+    """Without a GitHub token the mission still runs to completion but no PR
+    is opened."""
+    from app.services.pipeline_status import pipeline_tracker
+    from app.api.v1.endpoints import openclaw as openclaw_ep
+
+    pipeline_tracker.reset()
+    with _fake_openclaw_enabled():
+        run_async(
+            openclaw_ep._run_mission_in_background(
+                title="Docs only",
+                description="No code changes needed",
+                repository="https://github.com/HEETMEHT18/tatvik",
+                user_id="user-1",
+                github_token="",
+            )
+        )
+
+    snapshot = pipeline_tracker.snapshot()
+    assert snapshot["mission"]["pull_request_url"] == ""
+
+
+def test_mission_flow_pr_failure_marks_mission_failed():
+    """When GitHub rejects the PR, the mission must not finish as a success
+    — all_ok drops to False and a PR failure event is recorded."""
+    from app.services.pipeline_status import pipeline_tracker
+    from app.api.v1.endpoints import openclaw as openclaw_ep
+    from app.services import mission_pr_service as mmod
+
+    async def fake_understand(self, repo_full_name, user_id=""):
+        return _fake_understand_success(repo_full_name)
+
+    async def pr_rejected(self, **kwargs):
+        return {
+            "success": False,
+            "pr_error": "pull request already exists (422)",
+            "error": "",
+        }
+
+    pipeline_tracker.reset()
+    with (
+        _fake_openclaw_enabled(),
+        patch.object(mmod.MissionPrService, "understand_repository", fake_understand),
+        patch.object(mmod.MissionPrService, "execute_mission_and_open_pr", pr_rejected),
+    ):
+        run_async(
+            openclaw_ep._run_mission_in_background(
+                title="Add health endpoint",
+                description="x",
+                repository="https://github.com/HEETMEHTA18/tatvik",
+                user_id="user-1",
+                github_token="test-token",
+            )
+        )
+
+    snapshot = pipeline_tracker.snapshot()
+    assert snapshot["mission"]["status"] in ("failed", "error")
+    assert any("PR failed" in e["message"] for e in snapshot["timeline"])

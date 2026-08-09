@@ -473,14 +473,37 @@ async def _run_mission_in_background(
                 pipeline_tracker.add_event(
                     "No significant changes were needed for this mission.", "info"
                 )
+            elif pr_result.get("success") is False:
+                # Commits may have landed on the branch, but GitHub rejected the
+                # PR (403/422, etc.). Fail the PR stage so the mission is not
+                # reported as complete without its pull request.
+                all_ok = False
+                pr_error = str(
+                    pr_result.get("pr_error")
+                    or pr_result.get("error")
+                    or "GitHub rejected the pull request."
+                )[:300]
+                pipeline_tracker.add_event(f"PR failed: {pr_error}", "error")
+                pipeline_tracker.update_stage(
+                    "deployment", 50.0, f"PR failed: {pr_error}"
+                )
             else:
-                pipeline_tracker.add_event(
-                    f"PR not created: {pr_result.get('error', 'unknown reason')}",
-                    "error",
+                all_ok = False
+                pr_message = str(pr_result.get("error") or "unknown reason")[:300]
+                pipeline_tracker.add_event(f"PR not created: {pr_message}", "error")
+                pipeline_tracker.update_stage(
+                    "deployment",
+                    50.0,
+                    f"PR not created: {pr_message}",
                 )
         except Exception as e:
             logger.exception("Mission PR step failed")
-            pipeline_tracker.add_event(f"PR step failed: {str(e)[:300]}", "error")
+            all_ok = False
+            error_msg = str(e)[:300]
+            pipeline_tracker.add_event(f"PR step failed: {error_msg}", "error")
+            pipeline_tracker.update_stage(
+                "deployment", 50.0, f"PR step failed: {error_msg}"
+            )
 
     pipeline_tracker.finish(success=all_ok)
     if all_ok:
