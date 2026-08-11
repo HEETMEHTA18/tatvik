@@ -861,8 +861,11 @@ async def get_pipeline_status(
     - Configuration (enabled/disabled state)
     - Current phase, goal, and step-level execution progress
     - Stages, agents, timeline
+    - Cognee memory-layer connectivity health
     """
-    return pipeline_tracker.report()
+    report = pipeline_tracker.report()
+    report["cognee_health"] = await _cognee.check_health()
+    return report
 
 
 @router.post("/plan", summary="Plan a workflow from a natural-language goal")
