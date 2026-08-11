@@ -89,6 +89,22 @@ def test_parse_plan_with_markdown_fences():
     assert plan["changes"][0]["path"] == "a.py"
 
 
+def test_parse_plan_marks_ai_unavailable_on_empty_input():
+    plan = MissionPrService._parse_plan("")
+    assert plan["ai_unavailable"] is True
+    assert plan["changes"] == []
+
+
+def test_parse_plan_marks_ai_unavailable_on_error_sentinel():
+    plan = MissionPrService._parse_plan("Error: AI service unavailable after retries.")
+    assert plan["ai_unavailable"] is True
+
+
+def test_parse_plan_marks_ai_unavailable_on_unparseable_prose():
+    plan = MissionPrService._parse_plan("I think we should refactor the API layer.")
+    assert plan["ai_unavailable"] is True
+
+
 def test_understand_repository_builds_rendered_context():
     service = MissionPrService(github_token="test-token")
 
@@ -223,6 +239,29 @@ def test_no_changes_needed_short_circuit():
     result = run_async(run_flow())
     assert result["success"] is True
     assert result["no_changes_needed"] is True
+
+
+def test_ai_unavailable_marks_mission_failed():
+    """When no AI provider can answer, the mission must not be reported as a
+    clean no-op — it fails loudly so the user knows the pipeline needs
+    credentials/quota restored."""
+    service = MissionPrService(github_token="test-token")
+    plan = {"reasoning": "", "changes": [], "ai_unavailable": True}
+
+    async def run_flow():
+        with patch("httpx.AsyncClient"), patch.object(
+            service, "_plan_changes", new=AsyncMock(return_value=plan)
+        ):
+            return await service.execute_mission_and_open_pr(
+                repo_full_name="owner/repo",
+                mission_title="Analyze repo",
+                mission_description="desc",
+                repo_context="REPOSITORY: owner/repo",
+            )
+
+    result = run_async(run_flow())
+    assert result["success"] is False
+    assert "No AI provider" in result["error"]
 
 
 # ──────────────────────────────────────────────

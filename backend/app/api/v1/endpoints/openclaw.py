@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import logging
+import hashlib
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any
@@ -66,6 +68,40 @@ def _sanitize_steps(steps: list[dict]) -> list[dict]:
     return sanitized
 
 
+# In-process cache for mission stage outputs so identical missions/retries do
+# not re-dispatch to the HF gateway (biggest free-tier quota saver).
+_STAGE_CACHE: dict[str, tuple[float, str]] = {}
+
+
+def _split_batch_output(text: str, stage_ids: list[str]) -> dict[str, str] | None:
+    """Parse a batched stage reply into {stage_id: content}.
+
+    The gateway returns either a strict JSON object ({"requirement": "...", ...})
+    or a markdown-fenced JSON blob. Returns None when the reply cannot be parsed
+    so the caller can fall back to per-stage dispatch.
+    """
+    if not text:
+        return None
+    cleaned = re.sub(r"```(?:json)?", "", text).strip()
+    try:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start < 0 or end <= start:
+            raise ValueError("no JSON object found")
+        data = json.loads(cleaned[start : end + 1])
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+
+    outputs = {}
+    for sid in stage_ids:
+        content = data.get(sid)
+        if isinstance(content, str) and content.strip():
+            outputs[sid] = content.strip()
+    return outputs or None
+
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -78,6 +114,7 @@ from fastapi import (
 from pydantic import BaseModel, Field
 
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.api.deps import get_current_user_id, get_optional_user_id, get_db
 from app.models.entities import PromptHistory, ExecutedCommand, GithubProfile
 from app.services.openclaw_service import OpenClawService
@@ -166,6 +203,15 @@ async def get_architecture():
     layers, statistics, tool count, capability count, and example workflows.
     """
     return {"success": True, "data": get_architecture_stats()}
+
+
+@router.get("/skills", summary="List developer skills (AutoDevs + skills.sh)")
+async def list_developer_skills(user_id: str = Depends(get_current_user_id)):
+    """Returns the frontend/backend developer skill registry the mission agent
+    applies when planning PR changes (AutoDevs.dev profiles + skills.sh)."""
+    from app.services.developer_skills import skills_registry
+
+    return {"success": True, "data": skills_registry()}
 
 
 @router.get("/tools", summary="List all registered OpenClaw tools")
@@ -340,6 +386,17 @@ async def _run_mission_in_background(
         context_block = (
             "\n\nREPOSITORY CONTEXT (from the knowledge graph):\n" + repo_context[:4000]
         )
+    # Give every stage the developer skills guidance so responses respect the
+    # repo's frontend/backend stack and conventions (AutoDevs + skills.sh).
+    skills_block = ""
+    try:
+        from app.services.developer_skills import build_skills_context
+
+        skills_block = build_skills_context([], [])
+    except Exception:
+        pass
+    if skills_block:
+        context_block += "\n\n" + skills_block
     stage_prompts = {
         "requirement": (
             f"Analyze the requirements for mission {mission_line}. "
@@ -400,7 +457,121 @@ async def _run_mission_in_background(
         "that a project tracker can display."
     )
 
+    # ── Per-stage output cache (re-run/retry protection) ─────────────────────
+
+    def _cache_key(stage_id: str) -> str:
+        return hashlib.sha256(
+            f"{title}|||{description}|||{repository}|||{stage_id}".encode("utf-8")
+        ).hexdigest()
+
+    def _cache_get(stage_id: str) -> str | None:
+        if not getattr(settings, "pipeline_stage_cache_enabled", True):
+            return None
+        entry = _STAGE_CACHE.get(_cache_key(stage_id))
+        if not entry:
+            return None
+        ttl = int(getattr(settings, "pipeline_stage_cache_ttl", 3600))
+        if time.monotonic() - entry[0] > ttl:
+            _STAGE_CACHE.pop(_cache_key(stage_id), None)
+            return None
+        return entry[1]
+
+    def _cache_put(stage_id: str, output: str):
+        if not getattr(settings, "pipeline_stage_cache_enabled", True):
+            return
+        if len(_STAGE_CACHE) > 64:
+            _STAGE_CACHE.clear()
+        _STAGE_CACHE[_cache_key(stage_id)] = (time.monotonic(), output)
+
+    async def _dispatch_stage(stage_id: str, prompt: str) -> dict:
+        """Single stage dispatch through the gateway (with cache + bootstrap
+        guard handled inside OpenClawService)."""
+        try:
+            return await openclaw.generate(
+                prompt, system_context=system_ctx, timeout=240.0
+            )
+        except Exception as e:
+            logger.warning(f"Stage '{stage_id}' dispatch error: {e}")
+            return {"success": False, "error": str(e)}
+
     all_ok = True
+
+    def _record_stage_result(stage_id: str, output: str, ok: bool):
+        """Shared bookkeeping for a finished stage — keeps tracker + cache in sync."""
+        stage_name = next(
+            (name for sid, name in STAGE_FLOW if sid == stage_id), stage_id
+        )
+        agent_id, task, progress = stage_agents.get(
+            stage_id, ("devops", "Working", 0.0)
+        )
+        _cache_put(stage_id, output)
+        pipeline_tracker.complete_stage(stage_id, ok)
+        pipeline_tracker.update_stage(
+            stage_id, 100.0 if ok else 50.0, output[:2000] or "Completed"
+        )
+        pipeline_tracker.update_agent(
+            agent_id,
+            "done" if ok else "failed",
+            f"{task} {'complete' if ok else 'failed'}",
+            progress,
+            90.0 if ok else 10.0,
+        )
+        pipeline_tracker.add_event(
+            f"Stage '{stage_name}' {'completed.' if ok else 'failed.'}",
+            "stage_completed" if ok else "error",
+            stage_id,
+        )
+
+    async def _run_batch(stage_ids: list[str]) -> dict[str, str]:
+        """Dispatch a group of stages in ONE gateway call, split the JSON reply
+        locally, and fall back to per-stage dispatch if the reply is not JSON."""
+        outputs: dict[str, str] = {}
+        for sid in stage_ids:
+            cached = _cache_get(sid)
+            if cached is not None:
+                outputs[sid] = cached
+
+        pending = [s for s in stage_ids if s not in outputs]
+        if not pending:
+            return outputs
+
+        lines = []
+        for sid in pending:
+            label = next((name for i, name in STAGE_FLOW if i == sid), sid)
+            lines.append(f"- {sid} ({label}): {stage_prompts[sid]}")
+        batch_prompt = (
+            f"Execute these mission stages for {mission_line} in one pass.\n"
+            f"Mission description: {description or 'Not provided'}.\n"
+            + (context_block if context_block else "")
+            + "\n\nStages:\n"
+            + "\n".join(lines)
+            + "\n\n"
+            "Return STRICT JSON — one key per stage, e.g. "
+            f'{{"{pending[0]}": "stage output", ...}}. No markdown fences, no commentary.'
+        )
+        result = await _dispatch_stage("+".join(pending), batch_prompt)
+        if result.get("success"):
+            text = str(result.get("output", ""))
+            split = _split_batch_output(text, pending)
+            if split:
+                for sid, content in split.items():
+                    outputs[sid] = content
+                    _cache_put(sid, content)
+                return outputs
+
+        # Fall back to per-stage dispatch for the pending stages.
+        for sid in pending:
+            result = await _dispatch_stage(sid, stage_prompts[sid])
+            if result.get("success"):
+                content = str(result.get("output", ""))[:2000]
+                outputs[sid] = content
+                _cache_put(sid, content)
+            else:
+                outputs[sid] = ""
+
+        return outputs
+
+    # Mark every stage as running first (UI shows progress immediately).
     for stage_id, stage_name in STAGE_FLOW:
         pipeline_tracker.start_stage(stage_id)
         agent_id, task, progress = stage_agents.get(
@@ -411,36 +582,32 @@ async def _run_mission_in_background(
         )
         pipeline_tracker.add_event(f"Running stage: {stage_name}", "info", stage_id)
 
-        prompt = stage_prompts.get(stage_id, f"Execute stage: {stage_name}")
-        try:
-            result = await openclaw.generate(
-                prompt, system_context=system_ctx, timeout=240.0
-            )
-        except Exception as e:
-            logger.warning(f"Stage '{stage_id}' dispatch error: {e}")
-            result = {"success": False, "error": str(e)}
+    batch_groups = [
+        ["requirement", "planning", "design"],
+        ["development"],
+        ["testing", "review", "deployment", "memory"],
+    ]
+    if not getattr(settings, "pipeline_batch_stages", True):
+        batch_groups = [[sid] for sid, _ in STAGE_FLOW]
 
-        if result.get("success"):
-            output = str(result.get("output", ""))[:2000]
-            pipeline_tracker.complete_stage(stage_id, True)
-            pipeline_tracker.update_stage(stage_id, 100.0, output or "Completed")
-            pipeline_tracker.update_agent(
-                agent_id, "done", f"{task} complete", progress, 90.0
-            )
-            pipeline_tracker.add_event(
-                f"Stage '{stage_name}' completed.", "stage_completed", stage_id
-            )
-        else:
-            error_detail = str(result.get("error", "Unknown error"))[:400]
-            pipeline_tracker.complete_stage(stage_id, False)
-            pipeline_tracker.update_stage(stage_id, 50.0, f"Failed: {error_detail}")
-            pipeline_tracker.update_agent(
-                agent_id, "failed", f"{task} failed: {error_detail}", progress, 10.0
-            )
-            pipeline_tracker.add_event(
-                f"Stage '{stage_name}' failed: {error_detail}", "error", stage_id
-            )
+    for group in batch_groups:
+        outputs = await _run_batch(group)
+        for sid in group:
+            content = outputs.get(sid)
+            if content is None or content == "":
+                all_ok = False
+                _record_stage_result(sid, "Failed: no output from gateway", False)
+            else:
+                _record_stage_result(sid, content, True)
+
+    # Refresh any stages still marked "running" (dispatch was skipped/failed).
+    for stage_id, _ in STAGE_FLOW:
+        stage = next(
+            (s for s in pipeline_tracker.status.stages if s.id == stage_id), None
+        )
+        if stage and stage.status == "running":
             all_ok = False
+            _record_stage_result(stage_id, "Failed: no output from gateway", False)
 
     # ── Final stage: open a proper PR with the mission's changes ───────────────
     pr_result = None

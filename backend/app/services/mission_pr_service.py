@@ -85,6 +85,8 @@ class MissionPrService:
         tree = await self._get_file_tree(owner, repo, default_branch)
         key_files = await self._sample_key_files(owner, repo, tree, default_branch)
 
+        from app.services.developer_skills import build_skills_context
+
         context = {
             "repo": repo_full_name,
             "default_branch": default_branch,
@@ -93,6 +95,7 @@ class MissionPrService:
             "key_files": key_files,
             "languages": self._infer_languages(tree),
             "readme": await self._get_readme(owner, repo, default_branch),
+            "skills": build_skills_context(self._infer_languages(tree), tree),
         }
 
         rendered = self._render_context(context)
@@ -243,6 +246,8 @@ class MissionPrService:
             parts.append(f"GRAPH_MEMORY:\n{context['graph_context'][:2000]}")
         if context.get("readme"):
             parts.append(f"README:\n{context['readme'][:1200]}")
+        if context.get("skills"):
+            parts.append(context["skills"])
         parts.append("KEY_FILES:")
         for f in context.get("key_files", [])[:5]:
             parts.append(f"\n### {f['path']}\n{f['content'][:800]}")
@@ -294,6 +299,16 @@ class MissionPrService:
             mission_description=mission_description,
             repo_context=repo_context,
         )
+
+        if plan.get("ai_unavailable"):
+            # No AI provider could be reached; the mission cannot be evaluated
+            # and must not be reported as a clean no-op.
+            return {
+                "success": False,
+                "error": "No AI provider available. Add Gemini/OpenClaw/NVIDIA "
+                "credentials or restore quota to plan mission changes.",
+                "repo": repo_full_name,
+            }
 
         if not plan.get("changes"):
             # Nothing significant to change — report and stop.
@@ -375,6 +390,11 @@ class MissionPrService:
         repo_context: str,
     ) -> dict:
         """Ask the LLM what significant changes the mission needs."""
+        skills_block = ""
+        if "DEVELOPER SKILLS" not in repo_context:
+            from app.services.developer_skills import build_skills_context
+
+            skills_block = build_skills_context([], [])
         prompt = (
             "You are the Tatvik AI OS coding agent. Based ONLY on the repository "
             "context below, decide the significant code changes required to "
@@ -382,6 +402,10 @@ class MissionPrService:
             f"MISSION TITLE: {mission_title}\n"
             f"MISSION DESCRIPTION: {mission_description}\n\n"
             f"REPOSITORY CONTEXT:\n{repo_context[:6000]}\n\n"
+        )
+        if skills_block:
+            prompt += f"{skills_block}\n\n"
+        prompt += (
             "Return STRICT JSON with this exact shape:\n"
             "{\n"
             '  "reasoning": "one paragraph explaining what must change and why",\n'
@@ -395,6 +419,8 @@ class MissionPrService:
             "}\n"
             "- changes MUST be a real path from the repo file tree if modifying "
             "an existing file; you may create a new file only when clearly required.\n"
+            "- Apply the developer skills above so changes match the repo's stack "
+            "and conventions (real, significant, working code — never stubs).\n"
             '- If the mission needs NO code change, return {"reasoning": "...", "changes": []}.\n'
             "- Return raw JSON only — no markdown fences, no commentary."
         )
@@ -455,9 +481,16 @@ class MissionPrService:
     @staticmethod
     def _parse_plan(text: str) -> dict:
         if not text:
-            return {"reasoning": "", "changes": []}
+            return {"reasoning": "", "changes": [], "ai_unavailable": True}
         # Strip markdown fences if present
         cleaned = re.sub(r"```(?:json)?", "", text).strip()
+
+        def _unavailable() -> dict:
+            return {"reasoning": "", "changes": [], "ai_unavailable": True}
+
+        # The providers return these sentinels when no model answered.
+        if text.startswith("Error:") or text.startswith("[Gemini "):
+            return _unavailable()
         try:
             start = cleaned.find("{")
             end = cleaned.rfind("}")
@@ -475,7 +508,7 @@ class MissionPrService:
                     return {"reasoning": "", "changes": changes}
                 except Exception:
                     pass
-            return {"reasoning": "", "changes": []}
+            return _unavailable()
 
         changes = data.get("changes", [])
         if isinstance(changes, list):
