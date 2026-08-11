@@ -22,12 +22,23 @@ Every workflow is a sequence of Capability invocations.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# The OpenClaw (HF Space) gateway treats each chat request as a fresh agent
+# session. When the agent has no persona/memory it wastes model quota answering
+# "Who am I?" instead of the prompt. Detect those canned bootstrap replies so we
+# never record them as real stage output or retry-loop on them.
+_BOOTSTRAP_PATTERNS = re.compile(
+    r"(just came online|who am i\?|who are you\?|i'm a new ai|i am a new ai|"
+    r"no record of a completed mission|not found / incomplete)",
+    re.IGNORECASE,
+)
 
 
 class OpenClawService:
@@ -122,9 +133,35 @@ class OpenClawService:
                         .get("message", {})
                         .get("content", "")
                     )
+                    stripped = (content or "").strip()
+                    if not stripped:
+                        return {
+                            "success": False,
+                            "error": "OpenClaw gateway returned an empty response.",
+                        }
+                    if self._looks_like_bootstrap(stripped):
+                        # A persona/bootstrap reply is NOT an answer to the
+                        # prompt. Returning failure avoids recording bogus stage
+                        # output and prevents follow-up calls that would burn
+                        # more HF free-tier quota.
+                        logger.warning(
+                            "OpenClaw gateway returned a bootstrap/identity reply "
+                            "instead of an answer (%d chars); treating as failed.",
+                            len(stripped),
+                        )
+                        return {
+                            "success": False,
+                            "error": (
+                                "OpenClaw gateway answered its bootstrap prompt "
+                                "instead of the request. Check the HF Space agent "
+                                "persona/config."
+                            ),
+                        }
                     return {"success": True, "output": content, "raw": data}
                 logger.error(
-                    f"OpenClaw returned {response.status_code}: {response.text}"
+                    "OpenClaw returned %s: %s",
+                    response.status_code,
+                    response.text[:500],
                 )
                 error_detail = self._extract_error_detail(response)
                 return {
@@ -138,11 +175,20 @@ class OpenClawService:
                     "error": "OpenClaw dispatch timed out.",
                 }
             except Exception as e:
-                logger.exception("OpenClaw dispatch failed")
+                logger.warning(f"OpenClaw dispatch failed: {e}")
                 return {
                     "success": False,
                     "error": "An error occurred during tool execution.",
                 }
+
+    @staticmethod
+    def _looks_like_bootstrap(text: str) -> bool:
+        """True when the gateway answered its own 'Who am I?' bootstrap loop
+        instead of the user prompt. Keeps short so legitimate short answers
+        (e.g. a status string) are not misclassified."""
+        if len(text) > 200:
+            return False
+        return bool(_BOOTSTRAP_PATTERNS.search(text))
 
     @staticmethod
     def _extract_error_detail(response) -> str:

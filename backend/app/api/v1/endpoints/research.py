@@ -3,6 +3,8 @@ import json
 import logging
 import re
 import os
+import hashlib
+import time
 import httpx
 import asyncio
 import random
@@ -111,15 +113,121 @@ def check_rate_limit(
         pass
 
 
-# Gemini AI Orchestrator Helper with retries and fallback
+# Gemini AI Orchestrator Helper with retries, fallback, and free-tier protection.
+#
+# The Gemini free tier trips a 429 (RESOURCE_EXHAUSTED) as soon as a burst of
+# requests exceeds its per-minute quota. The HF gateway agent compounds this by
+# running bootstrap + main + embedded model calls per request. To stop the
+# backend from making it worse we:
+#   1. Limit how many Gemini requests can be in-flight at once (semaphore).
+#   2. Enforce a minimum interval between requests (token bucket).
+#   3. Trip a circuit breaker after repeated quota errors so we stop hammering.
+#   4. Cache repeat prompts (retries/duplicate stage dispatches) in-process.
+
+
+class _GeminiRateGuard:
+    """Shared in-process throttle + circuit breaker for all Gemini traffic."""
+
+    def __init__(self):
+        self._sem: asyncio.Semaphore | None = None
+        self._last_request_at: float = 0.0
+        self._lock = asyncio.Lock()
+        self._consecutive_errors = 0
+        self._open_until: float = 0.0
+
+    @property
+    def sem(self) -> asyncio.Semaphore:
+        if self._sem is None:
+            self._sem = asyncio.Semaphore(
+                max(1, int(getattr(settings, "gemini_max_concurrency", 2)))
+            )
+        return self._sem
+
+    def is_open(self) -> bool:
+        if self._open_until and time.monotonic() < self._open_until:
+            return True
+        if self._open_until:
+            logger.info("Gemini circuit breaker reset after cool-down.")
+            self._open_until = 0.0
+            self._consecutive_errors = 0
+        return False
+
+    def record_error(self, status: int):
+        threshold = int(getattr(settings, "gemini_circuit_threshold", 3))
+        if status in (429, 500, 502, 503, 504):
+            self._consecutive_errors += 1
+            if self._consecutive_errors >= threshold:
+                cool_down = int(getattr(settings, "gemini_circuit_cool_down", 120))
+                self._open_until = time.monotonic() + cool_down
+                logger.warning(
+                    "Gemini circuit breaker tripped (%s consecutive errors); "
+                    "cooldown %ss",
+                    self._consecutive_errors,
+                    cool_down,
+                )
+
+    def record_success(self):
+        self._consecutive_errors = 0
+
+    async def acquire(self):
+        min_interval = max(
+            0.0, float(getattr(settings, "gemini_rate_min_interval", 1.5))
+        )
+        await self.sem.acquire()
+        async with self._lock:
+            elapsed = time.monotonic() - self._last_request_at
+            if elapsed < min_interval:
+                await asyncio.sleep(min_interval - elapsed)
+            self._last_request_at = time.monotonic()
+
+    def release(self):
+        self.sem.release()
+
+
+_gemini_guard = _GeminiRateGuard()
+_gemini_cache: dict[str, tuple[float, str]] = {}
+
+
+def _gemini_cache_key(system_prompt: str, user_prompt: str) -> str:
+    return hashlib.sha256(
+        f"{system_prompt}|||{user_prompt}".encode("utf-8")
+    ).hexdigest()
+
+
+def _gemini_cache_get(key: str):
+    if not getattr(settings, "gemini_cache_enabled", True):
+        return None
+    entry = _gemini_cache.get(key)
+    if not entry:
+        return None
+    ttl = int(getattr(settings, "gemini_cache_ttl", 600))
+    if time.monotonic() - entry[0] > ttl:
+        _gemini_cache.pop(key, None)
+        return None
+    return entry[1]
+
+
+def _gemini_cache_set(key: str, text: str):
+    if not getattr(settings, "gemini_cache_enabled", True):
+        return
+    if len(_gemini_cache) > 256:
+        _gemini_cache.clear()
+    _gemini_cache[key] = (time.monotonic(), text)
+
+
 async def call_gemini(system_prompt: str, user_prompt: str) -> str:
     api_key = settings.gemini_api_key
     if not api_key:
         return "[Gemini API Key missing] Stub summary response."
 
+    cache_key = _gemini_cache_key(system_prompt, user_prompt)
+    cached = _gemini_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     primary = getattr(settings, "gemini_model", "gemini-2.5-flash")
     fallback = getattr(settings, "gemini_fallback_model", "gemini-2.5-flash-lite")
-    max_retries = max(1, getattr(settings, "gemini_max_retries", 3))
+    max_retries = max(1, getattr(settings, "gemini_max_retries", 2))
     backoff_base = float(getattr(settings, "gemini_backoff_base", 1.0))
 
     headers = {"Content-Type": "application/json"}
@@ -128,6 +236,9 @@ async def call_gemini(system_prompt: str, user_prompt: str) -> str:
         for model in (primary, fallback):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
             for attempt in range(1, max_retries + 1):
+                if _gemini_guard.is_open():
+                    break
+                await _gemini_guard.acquire()
                 try:
                     response = await client.post(
                         url,
@@ -147,15 +258,19 @@ async def call_gemini(system_prompt: str, user_prompt: str) -> str:
                     )
 
                     if response.status_code == 200:
-                        data = response.json()
+                        _gemini_guard.record_success()
                         try:
-                            return data["candidates"][0]["content"]["parts"][0]["text"]
+                            data = response.json()
+                            text = data["candidates"][0]["content"]["parts"][0]["text"]
+                            _gemini_cache_set(cache_key, text)
+                            return text
                         except (KeyError, IndexError):
                             logger.exception("Malformed Gemini API response")
                             return "Error: Malformed Gemini API response."
 
                     # Retry on rate limit or transient server errors
                     if response.status_code in (429, 500, 502, 503, 504):
+                        _gemini_guard.record_error(response.status_code)
                         wait = backoff_base * (2 ** (attempt - 1)) + random.uniform(
                             0, 0.5
                         )
@@ -174,16 +289,19 @@ async def call_gemini(system_prompt: str, user_prompt: str) -> str:
                     logger.error(
                         "Gemini API returned status %s: %s",
                         response.status_code,
-                        response.text,
+                        response.text[:300],
                     )
                     return f"Error: AI service returned status {response.status_code}."
 
                 except Exception:
+                    _gemini_guard.record_error(0)
                     wait = backoff_base * (2 ** (attempt - 1))
-                    logger.exception(
+                    logger.warning(
                         "Gemini API call exception; attempt %s/%s", attempt, max_retries
                     )
                     await asyncio.sleep(wait)
+                finally:
+                    _gemini_guard.release()
 
             logger.info(
                 "Model %s exhausted after %s attempts, trying next fallback if available",

@@ -19,8 +19,19 @@ class Settings(BaseSettings):
     # Preferred Gemini model and fallback to use when quota/exhausted
     gemini_model: str = "gemini-2.5-flash"
     gemini_fallback_model: str = "gemini-2.5-flash-lite"
-    gemini_max_retries: int = 3
+    gemini_max_retries: int = 2
     gemini_backoff_base: float = 1.0
+    # Free-tier protection: never fire more than N Gemini requests at once and
+    # enforce a minimum spacing between calls so bursts don't trip the 429 quota.
+    gemini_max_concurrency: int = 2
+    gemini_rate_min_interval: float = 1.5
+    # Circuit breaker: trip after this many consecutive 429/quota errors, then
+    # cool down for this many seconds before allowing calls again.
+    gemini_circuit_threshold: int = 3
+    gemini_circuit_cool_down: int = 120
+    # Short-lived in-process cache for repeat prompts (same stage/mission retries).
+    gemini_cache_ttl: int = 600
+    gemini_cache_enabled: bool = True
     groq_api_key: str = ""
     openrouter_api_key: str = ""
     nvidia_api_key: str = ""
@@ -142,6 +153,16 @@ class Settings(BaseSettings):
     pulse_max_items_per_feed: int = (
         2  # Only 2 most recent items to reduce API/memory overhead
     )
+
+    # ── Command Center / HF free-tier protection ──────────────────────────────
+    # The HF Space gateway burns ~1 Gemini call per agent run. Batch the 8
+    # mission stages into fewer gateway dispatches (3 instead of 8) so missions
+    # consume far less free-tier quota and log output.
+    pipeline_batch_stages: bool = True
+    # Cache per-stage outputs in-process so re-runs/retries of an identical
+    # mission don't re-dispatch to the gateway.
+    pipeline_stage_cache_enabled: bool = True
+    pipeline_stage_cache_ttl: int = 3600
 
 
 settings = Settings()
