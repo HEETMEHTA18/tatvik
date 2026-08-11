@@ -3,7 +3,7 @@
 ## Target Repository Layout
 
 ```text
-devmentor/
+tatvik/
 ├── android/
 ├── ios/
 ├── linux/

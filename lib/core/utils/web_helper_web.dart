@@ -13,6 +13,25 @@ void requestNotificationPermission() {
   } catch (_) {}
 }
 
+String getNotificationPermissionStatus() {
+  try {
+    if (html.Notification.supported) {
+      return html.Notification.permission ?? 'unsupported';
+    }
+  } catch (_) {}
+  return 'unsupported';
+}
+
+Future<bool> requestNotificationPermissionGesture() async {
+  try {
+    if (html.Notification.supported) {
+      final result = await html.Notification.requestPermission();
+      return result == 'granted';
+    }
+  } catch (_) {}
+  return false;
+}
+
 bool isAppWindowBackgrounded() {
   try {
     return html.document.visibilityState == 'hidden';
@@ -23,7 +42,8 @@ bool isAppWindowBackgrounded() {
 
 void showBrowserNotification(String title, String body) {
   try {
-    if (html.Notification.supported && html.Notification.permission == 'granted') {
+    if (html.Notification.supported &&
+        html.Notification.permission == 'granted') {
       html.Notification(title, body: body, icon: 'icons/Icon-192.png');
     }
   } catch (_) {}

@@ -1,7 +1,7 @@
-# DevMentor Project Roadmap
+# Tatvik Project Roadmap
 
 ## Overview
-This roadmap covers the first 8 weeks of execution for DevMentor, with each week focused on a shippable milestone.
+This roadmap covers the first 8 weeks of execution for Tatvik, with each week focused on a shippable milestone.
 
 ## Week 1 — Foundation and UI System
 **Goal:** establish the app shell, design system, and authentication entry points.

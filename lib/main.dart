@@ -7,6 +7,7 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'routes/app_router.dart';
+import 'services/push_notification_service.dart';
 
 void main() {
   usePathUrlStrategy();
@@ -14,20 +15,20 @@ void main() {
     ProviderScope(
       child: p.ChangeNotifierProvider(
         create: (_) => AppState(),
-        child: const DevMentorApp(),
+        child: const TatvikApp(),
       ),
     ),
   );
 }
 
-class DevMentorApp extends StatefulWidget {
-  const DevMentorApp({super.key});
+class TatvikApp extends StatefulWidget {
+  const TatvikApp({super.key});
 
   @override
-  State<DevMentorApp> createState() => _DevMentorAppState();
+  State<TatvikApp> createState() => _TatvikAppState();
 }
 
-class _DevMentorAppState extends State<DevMentorApp> {
+class _TatvikAppState extends State<TatvikApp> {
   late final GoRouter _router;
 
   @override
@@ -35,6 +36,9 @@ class _DevMentorAppState extends State<DevMentorApp> {
     super.initState();
     final appState = p.Provider.of<AppState>(context, listen: false);
     _router = createAppRouter(appState);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationService.bootstrap(appState);
+    });
   }
 
   @override
@@ -43,9 +47,11 @@ class _DevMentorAppState extends State<DevMentorApp> {
     AppTheme.isDark = appState.isDarkTheme;
 
     return MaterialApp.router(
-      title: 'DevMentor',
+      title: 'Tatvik',
       debugShowCheckedModeBanner: false,
-      theme: appState.isDarkTheme ? AppTheme.darkTheme : AppTheme.lightTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: appState.isDarkTheme ? ThemeMode.dark : ThemeMode.light,
       routerConfig: _router,
     );
   }

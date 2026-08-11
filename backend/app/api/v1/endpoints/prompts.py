@@ -29,7 +29,7 @@ class UniversalEventRequest(BaseModel):
     project_name: Optional[str] = None
     file_context: Optional[str] = None
 
-    # New DevMentorEventPayload fields
+    # New TatvikEventPayload fields
     event: Optional[str] = None
     session_id: Optional[str] = None
     timestamp: Optional[str] = None
@@ -56,9 +56,9 @@ async def receive_prompt_event(
 ):
     """
     Receive an AutoDevs event, refine the prompt, score it, extract tech/workflow, and save it.
-    Supports both legacy PromptEventRequest and new structured DevMentorEventPayload.
+    Supports both legacy PromptEventRequest and new structured TatvikEventPayload.
     """
-    # 1. Handle DevMentorEventPayload structure
+    # 1. Handle TatvikEventPayload structure
     if payload.event:
         event_type = payload.event
         session_id = payload.session_id or (payload.data or {}).get("session_id")
@@ -124,39 +124,11 @@ async def receive_prompt_event(
             if not original_prompt.strip():
                 raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
-            ai_prompt = (
-                f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
-                f"Prompt: {original_prompt}\n"
-                f"Project Name Context: {project_name or 'N/A'}\n"
-                f"File Context: {payload.file_context or 'N/A'}\n\n"
-                f"Perform the following tasks:\n"
-                f"1. Refine and upgrade the original prompt to be much more clear, professional, structured (with instructions/placeholders) and effective for an AI coding assistant.\n"
-                f"2. Score the original prompt from 0 to 100 based on its clarity, specificity, context, and structural quality.\n"
-                f"3. Extract technologies, languages, libraries or frameworks referenced or relevant (e.g. Flutter, FastAPI, python, react). Return as a list of names.\n"
-                f"4. Detect the developer workflow category. Choose exactly one from: Debugging, Refactoring, Feature Building, Testing, DevOps, Architecture, Documentation.\n\n"
-                f"Return your response strictly as a JSON object with these exact keys:\n"
-                f"{{\n"
-                f'  "refined_prompt": "upgraded prompt content here",\n'
-                f'  "score": 85,\n'
-                f'  "technologies": ["Python", "FastAPI"],\n'
-                f'  "workflow": "Feature Building"\n'
-                f"}}"
-            )
-
-            ai_res = {}
-            try:
-                ai_res = await call_ai_json(ai_prompt)
-            except Exception as e:
-                logger.error(f"Error calling AI for prompt analysis: {e}")
-
-            refined_prompt = (
-                ai_res.get("refined_prompt")
-                or f"// Refined:\n{original_prompt}\n\n(Specify detailed requirements for better results.)"
-            )
-            score = ai_res.get("score") or 50
-            techs_list = ai_res.get("technologies") or []
-            workflow = ai_res.get("workflow") or "Development"
-            technologies_str = ", ".join(techs_list) if techs_list else "General"
+            refined_prompt = ""
+            score = 0
+            techs_list = []
+            workflow = "Development"
+            technologies_str = "General"
 
             db_prompt = PromptHistory(
                 user_id=user_id,
@@ -224,15 +196,67 @@ async def receive_prompt_event(
     if not original_prompt or not original_prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
 
+    refined_prompt = ""
+    score = 0
+    techs_list = []
+    workflow = "Development"
+    technologies_str = "General"
+
+    db_prompt = PromptHistory(
+        user_id=user_id,
+        original_prompt=original_prompt,
+        refined_prompt=refined_prompt,
+        score=score,
+        technologies=technologies_str,
+        workflow=workflow,
+        project_name=payload.project_name,
+    )
+
+    db.add(db_prompt)
+    db.commit()
+    db.refresh(db_prompt)
+
+    return {
+        "id": db_prompt.id,
+        "user_id": db_prompt.user_id,
+        "original_prompt": db_prompt.original_prompt,
+        "refined_prompt": db_prompt.refined_prompt,
+        "score": db_prompt.score,
+        "technologies": techs_list,
+        "workflow": db_prompt.workflow,
+        "project_name": db_prompt.project_name,
+        "created_at": db_prompt.created_at.isoformat(),
+    }
+
+
+@router.post("/{prompt_id}/refine")
+async def refine_individual_prompt(
+    prompt_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """
+    On-demand prompt refiner for a specific prompt ID.
+    Calls AI to generate the refined prompt, score, technologies, and workflow category.
+    """
+    stmt = select(PromptHistory).where(
+        PromptHistory.id == prompt_id, PromptHistory.user_id == user_id
+    )
+    db_prompt = db.scalar(stmt)
+    if not db_prompt:
+        raise HTTPException(status_code=404, detail="Prompt history item not found")
+
+    original_prompt = db_prompt.original_prompt
+    project_name = db_prompt.project_name or "N/A"
+
     ai_prompt = (
         f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
         f"Prompt: {original_prompt}\n"
-        f"Project Name Context: {payload.project_name or 'N/A'}\n"
-        f"File Context: {payload.file_context or 'N/A'}\n\n"
+        f"Project Name Context: {project_name}\n\n"
         f"Perform the following tasks:\n"
         f"1. Refine and upgrade the original prompt to be much more clear, professional, structured (with instructions/placeholders) and effective for an AI coding assistant.\n"
         f"2. Score the original prompt from 0 to 100 based on its clarity, specificity, context, and structural quality.\n"
-        f"3. Extract technologies, languages, libraries or frameworks referenced or relevant (e.g. Flutter, FastAPI, python, react). Return as a list of names.\n"
+        f"3. Extract technologies, languages, libraries or frameworks referenced or relevant. Return as a list of names.\n"
         f"4. Detect the developer workflow category. Choose exactly one from: Debugging, Refactoring, Feature Building, Testing, DevOps, Architecture, Documentation.\n\n"
         f"Return your response strictly as a JSON object with these exact keys:\n"
         f"{{\n"
@@ -247,28 +271,19 @@ async def receive_prompt_event(
     try:
         ai_res = await call_ai_json(ai_prompt)
     except Exception as e:
-        logger.error(f"Error calling AI for prompt analysis: {e}")
+        logger.error(f"Error calling AI for prompt refinement: {e}")
+        raise HTTPException(status_code=500, detail="AI service error")
 
-    refined_prompt = (
-        ai_res.get("refined_prompt")
-        or f"// Refined:\n{original_prompt}\n\n(Specify detailed requirements for better results.)"
-    )
+    refined_prompt = ai_res.get("refined_prompt") or f"// Refined:\n{original_prompt}"
     score = ai_res.get("score") or 50
     techs_list = ai_res.get("technologies") or []
     workflow = ai_res.get("workflow") or "Development"
     technologies_str = ", ".join(techs_list) if techs_list else "General"
 
-    db_prompt = PromptHistory(
-        user_id=user_id,
-        original_prompt=original_prompt,
-        refined_prompt=refined_prompt,
-        score=score,
-        technologies=technologies_str,
-        workflow=workflow,
-        project_name=payload.project_name,
-    )
-
-    db.add(db_prompt)
+    db_prompt.refined_prompt = refined_prompt
+    db_prompt.score = score
+    db_prompt.technologies = technologies_str
+    db_prompt.workflow = workflow
     db.commit()
     db.refresh(db_prompt)
 
@@ -472,6 +487,7 @@ async def get_prompt_recommendations(
 
 class GithubSyncRequest(BaseModel):
     github_username: Optional[str] = None
+    repo_sources: Optional[list[dict[str, str]]] = None
 
 
 @router.post("/sync-github")
@@ -523,65 +539,80 @@ async def sync_github_prompts(
         db.add(user)
         db.commit()
 
-    # 3. Pre-sync repositories from GitHub to the database to ensure we have the latest list!
-    try:
-        from app.services.github_service import GithubService
-
-        github_service = GithubService(db)
-        if access_token:
-            await github_service.sync_user_github_data(
-                user_id=user_id, access_token=access_token
-            )
-        elif github_username:
-            await github_service.sync_public_github_data(
-                user_id=user_id, username=github_username
-            )
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error pre-syncing repositories in prompts sync: {e}")
-
-    # Determine repository list (now fresh!)
-    repos_stmt = select(Repository).where(Repository.user_id == user_id)
-    db_repos = db.scalars(repos_stmt).all()
-
     repo_list = []
-    if db_repos:
-        for repo in db_repos:
-            repo_list.append(
-                {"owner": repo.owner, "name": repo.name, "full_name": repo.full_name}
-            )
+    if payload and payload.repo_sources:
+        for repo in payload.repo_sources:
+            owner = (repo.get("owner") or "").strip()
+            name = (repo.get("name") or "").strip()
+            full_name = (repo.get("full_name") or f"{owner}/{name}").strip("/")
+            if owner and name:
+                repo_list.append({"owner": owner, "name": name, "full_name": full_name})
     else:
-        # Fetch public repositories dynamically using GitHub API
-        async with httpx.AsyncClient() as client:
-            headers = {"User-Agent": "DevMentor-App"}
-            if access_token:
-                headers["Authorization"] = f"Bearer {access_token}"
-            try:
-                # Fetch up to 100 public repositories
-                api_url = (
-                    f"https://api.github.com/users/{github_username}/repos?per_page=100"
-                )
-                res = await client.get(api_url, headers=headers, timeout=12.0)
-                if res.status_code == 200:
-                    repos_data = res.json()
-                    for r_data in repos_data:
-                        owner = r_data.get("owner", {}).get("login", github_username)
-                        name = r_data.get("name", "")
-                        full_name = r_data.get("full_name", f"{owner}/{name}")
-                        repo_list.append(
-                            {"owner": owner, "name": name, "full_name": full_name}
-                        )
-                else:
-                    logger.warning(
-                        f"Failed to fetch public repos for {github_username}: {res.status_code} {res.text}"
-                    )
-            except Exception as e:
-                logger.error(f"Error fetching public repos for {github_username}: {e}")
+        # 3. Pre-sync repositories from GitHub to the database to ensure we have the latest list!
+        try:
+            from app.services.github_service import GithubService
 
+            github_service = GithubService(db)
+            if access_token:
+                await github_service.sync_user_github_data(
+                    user_id=user_id, access_token=access_token
+                )
+            elif github_username:
+                await github_service.sync_public_github_data(
+                    user_id=user_id, username=github_username
+                )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error pre-syncing repositories in prompts sync: {e}")
+
+        # Determine repository list (now fresh!)
+        repos_stmt = select(Repository).where(Repository.user_id == user_id)
+        db_repos = db.scalars(repos_stmt).all()
+
+        if db_repos:
+            for repo in db_repos:
+                repo_list.append(
+                    {
+                        "owner": repo.owner,
+                        "name": repo.name,
+                        "full_name": repo.full_name,
+                    }
+                )
+        else:
+            # Fetch public repositories dynamically using GitHub API
+            async with httpx.AsyncClient() as client:
+                headers = {"User-Agent": "Tatvik-App"}
+                if access_token:
+                    headers["Authorization"] = f"Bearer {access_token}"
+                try:
+                    # Fetch up to 100 public repositories
+                    api_url = f"https://api.github.com/users/{github_username}/repos?per_page=100"
+                    res = await client.get(api_url, headers=headers, timeout=12.0)
+                    if res.status_code == 200:
+                        repos_data = res.json()
+                        for r_data in repos_data:
+                            owner = r_data.get("owner", {}).get(
+                                "login", github_username
+                            )
+                            name = r_data.get("name", "")
+                            full_name = r_data.get("full_name", f"{owner}/{name}")
+                            repo_list.append(
+                                {"owner": owner, "name": name, "full_name": full_name}
+                            )
+                    else:
+                        logger.warning(
+                            f"Failed to fetch public repos for {github_username}: {res.status_code} {res.text}"
+                        )
+                except Exception as e:
+                    logger.error(
+                        f"Error fetching public repos for {github_username}: {e}"
+                    )
     if not repo_list:
         return {
             "success": True,
-            "message": f"No repositories found for GitHub user '{github_username}' to scan.",
+            "message": (
+                f"No repositories found for GitHub user '{github_username}' to scan."
+            ),
             "imported_count": 0,
         }
 
@@ -594,47 +625,123 @@ async def sync_github_prompts(
             name = repo["name"]
             full_name = repo["full_name"]
 
-            # Check for .autodevs/prompts.md
-            url = f"https://api.github.com/repos/{owner}/{name}/contents/.autodevs/prompts.md"
-            headers = {
-                "Accept": "application/vnd.github.v3+json",
-                "User-Agent": "DevMentor-App",
-            }
-            if access_token:
-                headers["Authorization"] = f"Bearer {access_token}"
+            paths_to_check = [
+                ".autodevs/prompts.md",
+                ".autodevs/prompt.md",
+                "prompts.md",
+                "prompt.md",
+            ]
 
-            try:
-                response = await client.get(url, headers=headers, timeout=12.0)
-                if response.status_code == 200:
-                    data = response.json()
-                    raw_content = data.get("content", "")
-                    raw_content = raw_content.replace("\n", "").replace("\r", "")
-                    decoded_bytes = base64.b64decode(raw_content)
-                    markdown_text = decoded_bytes.decode("utf-8")
+            markdown_text = None
 
-                    # Parse the markdown prompts
+            for check_path in paths_to_check:
+                url = (
+                    f"https://api.github.com/repos/{owner}/{name}/contents/{check_path}"
+                )
+                headers = {
+                    "Accept": "application/vnd.github.v3+json",
+                    "User-Agent": "Tatvik-App",
+                }
+                if access_token:
+                    headers["Authorization"] = f"Bearer {access_token}"
+
+                try:
+                    response = await client.get(url, headers=headers, timeout=12.0)
+                    if response.status_code in (401, 403) and access_token:
+                        public_headers = {
+                            "Accept": "application/vnd.github.v3+json",
+                            "User-Agent": "Tatvik-App",
+                        }
+                        response = await client.get(
+                            url, headers=public_headers, timeout=12.0
+                        )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        raw_content = data.get("content", "")
+                        raw_content = raw_content.replace("\n", "").replace("\r", "")
+                        decoded_bytes = base64.b64decode(raw_content)
+                        markdown_text = decoded_bytes.decode("utf-8")
+                        break  # Found the file, stop checking paths
+                except Exception as e:
+                    logger.error(f"Error checking {check_path} in {full_name}: {e}")
+
+            if markdown_text:
+                try:
+
+                    # Parse the markdown prompts block-by-block (indentation-aware)
                     lines = markdown_text.split("\n")
+                    current_prompt = None
+                    prompts_to_import = []
+
                     for line in lines:
+                        indentation = len(line) - len(line.lstrip())
                         line_str = line.strip()
-                        # Match list items like "- " or "* " or "1. "
-                        if line_str.startswith("- ") or line_str.startswith("* "):
-                            prompt_raw = line_str[2:].strip()
-                        elif line_str.startswith("1. "):
-                            prompt_raw = line_str[3:].strip()
-                        else:
+                        if not line_str:
                             continue
 
-                        if not prompt_raw:
-                            continue
+                        # If it's a top-level list item (starts with - or * or 1.) and indentation < 2
+                        if (
+                            line_str.startswith("- ")
+                            or line_str.startswith("* ")
+                            or line_str.startswith("1. ")
+                        ) and indentation < 2:
+                            if current_prompt:
+                                prompts_to_import.append(current_prompt)
 
-                        # Parse [project_name] if present
-                        project_name = None
-                        original_prompt = prompt_raw
-                        if prompt_raw.startswith("["):
-                            end_bracket = prompt_raw.find("]")
-                            if end_bracket != -1:
-                                project_name = prompt_raw[1:end_bracket].strip()
-                                original_prompt = prompt_raw[end_bracket + 1 :].strip()
+                            prefix_len = 3 if line_str.startswith("1. ") else 2
+                            raw_text = line_str[prefix_len:].strip()
+
+                            # Parse project name: [project] refined_prompt
+                            project_name = None
+                            refined_text = raw_text
+                            if raw_text.startswith("["):
+                                end_bracket = raw_text.find("]")
+                                if end_bracket != -1:
+                                    project_name = raw_text[1:end_bracket].strip()
+                                    refined_text = raw_text[end_bracket + 1 :].strip()
+
+                            current_prompt = {
+                                "refined_prompt": refined_text,
+                                "original_prompt": refined_text,  # default fallback
+                                "project_name": project_name,
+                                "score": 0,
+                                "technologies": "General",
+                                "workflow": "Development",
+                            }
+                        elif current_prompt and indentation >= 2:
+                            # Parse metadata keys
+                            if line_str.startswith("- ") or line_str.startswith("* "):
+                                meta_content = line_str[2:].strip()
+                                if meta_content.startswith("*Original:*"):
+                                    current_prompt["original_prompt"] = meta_content[
+                                        len("*Original:*") :
+                                    ].strip()
+                                elif meta_content.startswith("*Score:*"):
+                                    score_str = (
+                                        meta_content[len("*Score:*") :]
+                                        .strip()
+                                        .split("/")[0]
+                                    )
+                                    try:
+                                        current_prompt["score"] = int(score_str)
+                                    except:
+                                        pass
+                                elif meta_content.startswith("*Technologies:*"):
+                                    current_prompt["technologies"] = meta_content[
+                                        len("*Technologies:*") :
+                                    ].strip()
+                                elif meta_content.startswith("*Workflow:*"):
+                                    current_prompt["workflow"] = meta_content[
+                                        len("*Workflow:*") :
+                                    ].strip()
+
+                    if current_prompt:
+                        prompts_to_import.append(current_prompt)
+
+                    for p_data in prompts_to_import:
+                        original_prompt = p_data["original_prompt"]
+                        project_name = p_data["project_name"] or name
 
                         # Check if prompt already exists in history
                         check_stmt = select(PromptHistory).where(
@@ -643,61 +750,39 @@ async def sync_github_prompts(
                         )
                         exists = db.scalar(check_stmt)
                         if not exists:
-                            # Run prompt analysis (refine, score, extract tech & workflow)
-                            ai_prompt = (
-                                f"You are a Prompt Intelligence Analyzer. Analyze the following prompt used by a developer:\n\n"
-                                f"Prompt: {original_prompt}\n"
-                                f"Project Name Context: {project_name or 'N/A'}\n\n"
-                                f"Perform the following tasks:\n"
-                                f"1. Refine and upgrade the original prompt to be much more clear, professional, structured (with instructions/placeholders) and effective for an AI coding assistant.\n"
-                                f"2. Score the original prompt from 0 to 100 based on its clarity, specificity, context, and structural quality.\n"
-                                f"3. Extract technologies, languages, libraries or frameworks referenced or relevant. Return as a list of names.\n"
-                                f"4. Detect the developer workflow category. Choose exactly one from: Debugging, Refactoring, Feature Building, Testing, DevOps, Architecture, Documentation.\n\n"
-                                f"Return your response strictly as a JSON object with these exact keys:\n"
-                                f"{{\n"
-                                f'  "refined_prompt": "upgraded prompt content here",\n'
-                                f'  "score": 85,\n'
-                                f'  "technologies": ["Python", "FastAPI"],\n'
-                                f'  "workflow": "Feature Building"\n'
-                                f"}}"
-                            )
-
-                            ai_res = {}
-                            try:
-                                ai_res = await call_ai_json(ai_prompt)
-                            except Exception as e:
-                                logger.error(
-                                    f"Error calling AI for prompt analysis in sync: {e}"
-                                )
-
-                            refined_prompt = (
-                                ai_res.get("refined_prompt")
-                                or f"// Refined:\n{original_prompt}"
-                            )
-                            score = ai_res.get("score") or 50
-                            techs_list = ai_res.get("technologies") or []
-                            workflow = ai_res.get("workflow") or "Development"
-                            technologies_str = (
-                                ", ".join(techs_list) if techs_list else "General"
-                            )
-
                             db_prompt = PromptHistory(
                                 user_id=user_id,
                                 original_prompt=original_prompt,
-                                refined_prompt=refined_prompt,
-                                score=score,
-                                technologies=technologies_str,
-                                workflow=workflow,
+                                refined_prompt=p_data["refined_prompt"],
+                                score=p_data["score"],
+                                technologies=p_data["technologies"],
+                                workflow=p_data["workflow"],
                                 project_name=project_name,
                             )
                             db.add(db_prompt)
                             imported_count += 1
+                        elif exists.score == 0 and p_data["score"] > 0:
+                            exists.refined_prompt = p_data["refined_prompt"]
+                            exists.score = p_data["score"]
+                            exists.technologies = p_data["technologies"]
+                            exists.workflow = p_data["workflow"]
+                            db.add(exists)
 
                     scanned_repos.append(full_name)
-            except Exception as e:
-                logger.error(f"Error scanning repo {full_name} for prompts: {e}")
+                except Exception as e:
+                    logger.error(f"Error scanning repo {full_name} for prompts: {e}")
 
-    if imported_count > 0:
+    if len(scanned_repos) > 0:
+        try:
+            db.query(PromptHistory).filter(
+                PromptHistory.user_id == user_id,
+                PromptHistory.response
+                == "This is a generated AI response for the refined prompt.",
+            ).delete(synchronize_session=False)
+        except Exception as delete_ex:
+            logger.warning(f"Could not clean up mock seeded prompts: {delete_ex}")
+        db.commit()
+    elif imported_count > 0:
         db.commit()
 
     return {
@@ -706,3 +791,128 @@ async def sync_github_prompts(
         "scanned_repositories": scanned_repos,
         "imported_count": imported_count,
     }
+
+
+class GithubPushRequest(BaseModel):
+    project_name: str
+    owner: str
+    name: str
+    commit_message: Optional[str] = (
+        "chore: upgrade prompts via Tatvik Prompt Intelligence"
+    )
+
+
+@router.post("/push-github")
+async def push_github_prompts(
+    payload: GithubPushRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all refined/scored prompts for the specified project, format them as a markdown document,
+    and commit/push it back to .autodevs/prompts.md in the remote GitHub repository.
+    """
+    import base64
+    import httpx
+
+    # 1. Fetch user's GitHub access token
+    profile_stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+    profile = db.scalar(profile_stmt)
+
+    # If mock token or no integration, return mock response (to prevent failure in dev/test/mock settings)
+    is_mock = False
+    access_token = None
+    if profile:
+        access_token = profile.access_token
+        if access_token and (
+            access_token.startswith("gho_pwtSZHJk") or access_token.startswith("mock_")
+        ):
+            is_mock = True
+    else:
+        is_mock = True
+
+    # 2. Get prompt history for the project
+    stmt = (
+        select(PromptHistory)
+        .where(
+            PromptHistory.user_id == user_id,
+            PromptHistory.project_name == payload.project_name,
+        )
+        .order_by(PromptHistory.created_at.desc())
+    )
+    prompts = db.scalars(stmt).all()
+
+    if not prompts:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No prompts found in the database for project '{payload.project_name}' to push.",
+        )
+
+    # 3. Format prompts into markdown
+    md_lines = [
+        f"# Prompts for {payload.project_name}",
+        "",
+        "This file is automatically updated by Tatvik Prompt Intelligence.",
+        "",
+    ]
+    for p in prompts:
+        md_lines.append(f"- [{payload.project_name}] {p.refined_prompt}")
+        md_lines.append(f"  - *Original:* {p.original_prompt}")
+        md_lines.append(f"  - *Score:* {p.score}/100")
+        md_lines.append(f"  - *Technologies:* {p.technologies or 'General'}")
+        md_lines.append(f"  - *Workflow:* {p.workflow or 'Development'}")
+        md_lines.append("")
+
+    markdown_content = "\n".join(md_lines)
+
+    if is_mock or not access_token:
+        # Simulate pushing to github
+        return {
+            "success": True,
+            "message": f"Successfully pushed {len(prompts)} prompts to GitHub (Mock Mode).",
+            "url": f"https://github.com/{payload.owner}/{payload.name}/blob/main/.autodevs/prompts.md",
+            "mock": True,
+        }
+
+    # 4. Fetch the existing prompts.md to get the SHA
+    url = f"https://api.github.com/repos/{payload.owner}/{payload.name}/contents/.autodevs/prompts.md"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Tatvik-App",
+        "Authorization": f"Bearer {access_token}",
+    }
+
+    sha = None
+    async with httpx.AsyncClient() as client:
+        # Get existing file to find its SHA
+        res = await client.get(url, headers=headers, timeout=12.0)
+        if res.status_code == 200:
+            sha = res.json().get("sha")
+
+        # 5. Push the new markdown content
+        encoded_content = base64.b64encode(markdown_content.encode("utf-8")).decode(
+            "utf-8"
+        )
+        put_payload = {
+            "message": payload.commit_message
+            or "chore: upgrade prompts via Tatvik Prompt Intelligence",
+            "content": encoded_content,
+        }
+        if sha:
+            put_payload["sha"] = sha
+
+        put_res = await client.put(url, headers=headers, json=put_payload, timeout=12.0)
+        if put_res.status_code in [200, 201]:
+            put_data = put_res.json()
+            return {
+                "success": True,
+                "message": f"Successfully pushed {len(prompts)} prompts to GitHub.",
+                "url": put_data.get("content", {}).get("html_url")
+                or f"https://github.com/{payload.owner}/{payload.name}/blob/main/.autodevs/prompts.md",
+                "commit": put_data.get("commit", {}).get("sha"),
+            }
+        else:
+            raise HTTPException(
+                status_code=put_res.status_code,
+                detail="GitHub API error. Please try again later.",
+            )

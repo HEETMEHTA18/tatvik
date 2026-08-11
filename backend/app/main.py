@@ -10,42 +10,83 @@ from app.core.logging import configure_logging
 from app.db.base import Base
 from app.db.session import engine, SessionLocal
 import asyncio
-from app.services.news_scanner import scan_tech_news
+from app.services.pulse_engine import run_pulse_pipeline
 
 configure_logging()
 logger = logging.getLogger(__name__)
 
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="DevMentor API", version="0.1.0")
+app = FastAPI(title="Tatvik API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https://(devsmentor\.vercel\.app|devmentor\.vercel\.app)|http://(localhost|127\.0\.0\.1)(:[0-9]+)?",
+    allow_origin_regex=r"https://(devsmentor\.vercel\.app|tatvik\.vercel\.app|tatvik\.vercel\.app)|http://(localhost|127\.0\.0\.1)(:[0-9]+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-async def periodic_news_scanner():
-    await asyncio.sleep(5)
+async def periodic_pulse_scanner():
+    from app.core.config import settings
+
+    # Delay startup slightly to let API initialization finish smoothly
+    await asyncio.sleep(20)
+
+    if not settings.enable_pulse_scanner:
+        logger.info("Tatvik Pulse scanner is disabled by configuration.")
+        return
+
     while True:
         try:
-            logger.info("Periodic news scanner running...")
+            logger.info("Tatvik Pulse scanner running...")
             db = SessionLocal()
             try:
-                await scan_tech_news(db)
+                await run_pulse_pipeline(db)
             finally:
                 db.close()
         except Exception as e:
-            logger.error(f"Error in periodic news scanner: {e}")
-        # Run scan every hour (3600 seconds)
-        await asyncio.sleep(3600)
+            logger.error(f"Error in Tatvik Pulse scanner: {e}")
+
+        import gc
+
+        gc.collect()
+        logger.info(
+            f"Tatvik Pulse scanner completed. Sleeping for {settings.pulse_scanner_interval_seconds} seconds."
+        )
+        # Run scan using configurable interval
+        await asyncio.sleep(settings.pulse_scanner_interval_seconds)
+
+
+async def periodic_huggingface_ping():
+    import httpx
+    from app.core.config import settings
+
+    await asyncio.sleep(10)
+
+    # Base URL of HF Space
+    url = (
+        settings.openclaw_api_url.replace("/v1", "")
+        if settings.openclaw_api_url
+        else "https://heetmehta18-openclaw-tatvik.hf.space"
+    )
+
+    while True:
+        try:
+            logger.info(f"Pinging HuggingFace Space to keep alive: {url}")
+            async with httpx.AsyncClient() as client:
+                await client.get(url, timeout=10.0)
+        except Exception as e:
+            logger.error(f"Error pinging HuggingFace space: {e}")
+        # Ping every 10 minutes (600 seconds) to prevent HF Spaces from sleeping (30 min timeout)
+        await asyncio.sleep(600)
 
 
 @app.on_event("startup")
 def startup_event():
+    import app.models  # Ensure all models are registered in Base.metadata
+
     Base.metadata.create_all(bind=engine)
 
     # Custom self-healing migrations for users columns using schema inspection (PostgreSQL safe)
@@ -71,7 +112,29 @@ def startup_event():
     except Exception as e:
         logger.error(f"Error executing startup database migration: {e}")
 
-    asyncio.create_task(periodic_news_scanner())
+    try:
+        from app.db.seed import seed_database
+        from app.db.session import SessionLocal
+
+        db = SessionLocal()
+        try:
+            seed_database(db)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Error seeding database on startup: {e}")
+
+    import sys
+    from app.core.config import settings
+
+    # Do not start background polling tasks in testing environments
+    is_testing = "pytest" in sys.modules or settings.environment == "testing"
+
+    if not is_testing:
+        asyncio.create_task(periodic_pulse_scanner())
+        asyncio.create_task(periodic_huggingface_ping())
+    else:
+        logger.info("Skipping periodic background tasks in testing environment.")
 
 
 @app.middleware("http")
@@ -141,7 +204,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.api_route("/", methods=["GET", "HEAD"])
 def read_root():
     return {
-        "message": "Welcome to DevMentor API. Visit /docs or /redoc for interactive API documentation."
+        "message": "Welcome to Tatvik API. Visit /docs or /redoc for interactive API documentation."
     }
 
 

@@ -34,3 +34,24 @@ def get_current_user_id(
         return str(sub)
     except (JWTError, ValueError) as exc:
         raise ValueError("Invalid or expired token") from exc
+
+
+bearer_scheme_optional = HTTPBearer(auto_error=False)
+
+
+def get_optional_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme_optional),
+) -> str | None:
+    if not credentials:
+        return None
+    token = credentials.credentials
+    if not token or token == "null" or token == "undefined":
+        return None
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
+        sub = payload.get("sub")
+        return str(sub) if sub else None
+    except Exception:
+        return None

@@ -10,6 +10,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/app_state.dart';
 import '../../routes/route_paths.dart';
 import '../../widgets/liquid_glass_background.dart';
+import '../../widgets/liquid_glass_button.dart';
 
 class EmailAuthScreen extends StatefulWidget {
   const EmailAuthScreen({super.key});
@@ -77,7 +78,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         final token = data['access_token'];
         if (token != null) {
           final appState = Provider.of<AppState>(context, listen: false);
-          
+
           if (appState.twoFactorAuth) {
             final verified = await _show2FADialog(context);
             if (!verified) {
@@ -90,28 +91,31 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
             }
           }
 
-          // Save session token in AppState
-          appState.setEmailSession(token);
+          await appState.setEmailSession(token);
 
           // Navigate directly to App Navigation Shell
           if (!mounted) return;
           context.go(RoutePaths.app);
         } else {
           setState(() {
-            _errorMessage = 'Authentication succeeded but no token was returned.';
+            _errorMessage =
+                'Authentication succeeded but no token was returned.';
           });
         }
       } else {
         // Retrieve error message from response payload
         final errObj = data['error'];
-        final String? msg = errObj != null && errObj is Map ? errObj['message'] : data['detail'];
+        final String? msg = errObj != null && errObj is Map
+            ? errObj['message']
+            : data['detail'];
         setState(() {
           _errorMessage = msg ?? 'An error occurred during authentication.';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Connection failed. Please check your internet connectivity.';
+        _errorMessage =
+            'Connection failed. Please check your internet connectivity.';
       });
     } finally {
       if (mounted) {
@@ -131,7 +135,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.textMain),
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppTheme.textMain,
+            ),
             onPressed: () => context.pop(),
           ),
           title: Text(
@@ -147,7 +154,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
         body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32.0,
+              vertical: 16.0,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -172,14 +182,18 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                             child: Container(
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: _isLoginMode ? AppTheme.accent : Colors.transparent,
+                                color: _isLoginMode
+                                    ? AppTheme.accent
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: Text(
                                 'LOG IN',
                                 style: GoogleFonts.jetBrainsMono(
                                   fontWeight: FontWeight.bold,
-                                  color: _isLoginMode ? Colors.black : AppTheme.textSecondary,
+                                  color: _isLoginMode
+                                      ? Colors.black
+                                      : AppTheme.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -194,14 +208,18 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                             child: Container(
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: !_isLoginMode ? AppTheme.accent : Colors.transparent,
+                                color: !_isLoginMode
+                                    ? AppTheme.accent
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(25),
                               ),
                               child: Text(
                                 'SIGN UP',
                                 style: GoogleFonts.jetBrainsMono(
                                   fontWeight: FontWeight.bold,
-                                  color: !_isLoginMode ? Colors.black : AppTheme.textSecondary,
+                                  color: !_isLoginMode
+                                      ? Colors.black
+                                      : AppTheme.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -215,20 +233,31 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   // Error Banner
                   if (_errorMessage != null) ...[
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.withValues(alpha: 0.1),
-                        border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.5),
+                        ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.red),
+                          const Icon(
+                            Icons.error_outline_rounded,
+                            color: Colors.red,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               _errorMessage!,
-                              style: GoogleFonts.inter(color: Colors.red, fontSize: 13),
+                              style: GoogleFonts.inter(
+                                color: Colors.red,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -244,7 +273,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       decoration: InputDecoration(
                         labelText: 'Your Name',
                         labelStyle: TextStyle(color: AppTheme.textSecondary),
-                        prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textSecondary),
+                        prefixIcon: Icon(
+                          Icons.person_outline_rounded,
+                          color: AppTheme.textSecondary,
+                        ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(color: AppTheme.border),
@@ -279,7 +311,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email Address',
                       labelStyle: TextStyle(color: AppTheme.textSecondary),
-                      prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textSecondary),
+                      prefixIcon: Icon(
+                        Icons.email_outlined,
+                        color: AppTheme.textSecondary,
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(color: AppTheme.border),
@@ -301,7 +336,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your email';
                       }
-                      final emailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      final emailRegExp = RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      );
                       if (!emailRegExp.hasMatch(value.trim())) {
                         return 'Please enter a valid email address';
                       }
@@ -317,7 +354,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       labelStyle: TextStyle(color: AppTheme.textSecondary),
-                      prefixIcon: Icon(Icons.lock_outline_rounded, color: AppTheme.textSecondary),
+                      prefixIcon: Icon(
+                        Icons.lock_outline_rounded,
+                        color: AppTheme.textSecondary,
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(color: AppTheme.border),
@@ -348,15 +388,15 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                   const SizedBox(height: 48),
                   // Submit Button
                   _isLoading
-                      ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
-                      : ElevatedButton(
-                          onPressed: _submit,
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 56),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.accent,
                           ),
+                        )
+                      : LiquidGlassButton(
+                          onPressed: _submit,
+                          width: double.infinity,
+                          height: 56,
                           child: Text(
                             _isLoginMode ? 'SIGN IN' : 'CREATE ACCOUNT',
                             style: GoogleFonts.jetBrainsMono(
@@ -405,7 +445,11 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
               ),
               title: Row(
                 children: [
-                  Icon(Icons.security_rounded, color: AppTheme.accent, size: 28),
+                  Icon(
+                    Icons.security_rounded,
+                    color: AppTheme.accent,
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Text(
                     '2FA Verification',
@@ -449,7 +493,10 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       counterText: '',
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: AppTheme.accent, width: 2),
+                        borderSide: BorderSide(
+                          color: AppTheme.accent,
+                          width: 2,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -476,7 +523,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                     style: GoogleFonts.inter(color: AppTheme.textSecondary),
                   ),
                 ),
-                ElevatedButton(
+                LiquidGlassButton(
                   onPressed: () {
                     if (codeController.text == '123456') {
                       Navigator.of(context).pop(true);
@@ -489,12 +536,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                       );
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  borderRadius: 12,
                   child: Text(
                     'Verify',
                     style: GoogleFonts.inter(

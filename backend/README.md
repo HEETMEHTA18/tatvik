@@ -1,6 +1,6 @@
-# DevMentor Backend
+# Tatvik Backend
 
-FastAPI backend scaffold for DevMentor.
+FastAPI backend scaffold for Tatvik.
 
 ## Quick start
 

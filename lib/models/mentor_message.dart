@@ -5,12 +5,14 @@ class MentorMessage {
   final MessageRole role;
   final DateTime timestamp;
   final String? chatId;
+  final Map<String, dynamic>? openclawTask;
 
   MentorMessage({
     required this.content,
     required this.role,
     required this.timestamp,
     this.chatId,
+    this.openclawTask,
   });
 
   Map<String, dynamic> toJson() {

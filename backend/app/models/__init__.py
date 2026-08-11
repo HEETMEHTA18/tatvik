@@ -2,6 +2,7 @@ from app.models.user import User
 from app.models.entities import (
     DeveloperScore,
     GithubProfile,
+    GoogleProfile,
     MentorChat,
     ProjectRecommendation,
     Recommendation,
@@ -13,11 +14,16 @@ from app.models.entities import (
     AutoDevSession,
     ExecutedCommand,
     GeneratedFile,
+    ResearchSession,
+    ResearchResult,
+    WeeklyDigest,
+    PulseItem,
 )
 
 __all__ = [
     "User",
     "GithubProfile",
+    "GoogleProfile",
     "Repository",
     "DeveloperScore",
     "Skill",
@@ -30,4 +36,8 @@ __all__ = [
     "AutoDevSession",
     "ExecutedCommand",
     "GeneratedFile",
+    "ResearchSession",
+    "ResearchResult",
+    "WeeklyDigest",
+    "PulseItem",
 ]

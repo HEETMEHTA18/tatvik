@@ -1,7 +1,7 @@
-# DevMentor Features
+# Tatvik Features
 
 ## Product Vision
-DevMentor is a premium AI-powered developer growth platform that helps users understand their GitHub footprint, discover what to build next, find open-source contributions, and stay on track with a personalized career roadmap.
+Tatvik is a premium AI-powered developer growth platform that helps users understand their GitHub footprint, discover what to build next, find open-source contributions, and stay on track with a personalized career roadmap.
 
 ## Feature Map
 

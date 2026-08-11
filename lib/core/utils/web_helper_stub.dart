@@ -4,6 +4,10 @@ void openUrl(String url) {
 
 void requestNotificationPermission() {}
 
+String getNotificationPermissionStatus() => 'unsupported';
+
+Future<bool> requestNotificationPermissionGesture() async => false;
+
 bool isAppWindowBackgrounded() => false;
 
 void showBrowserNotification(String title, String body) {}

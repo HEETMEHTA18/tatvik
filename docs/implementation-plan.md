@@ -1,4 +1,4 @@
-# DevMentor Implementation Plan
+# Tatvik Implementation Plan
 
 ## Objective
 Build a production-grade Flutter application backed by FastAPI and PostgreSQL that can analyze GitHub activity, recommend repositories and projects, generate career roadmaps, and provide AI mentorship.

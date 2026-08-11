@@ -1,7 +1,7 @@
-# DevMentor Architecture
+# Tatvik Architecture
 
 ## System Overview
-DevMentor uses a production-oriented, modular, service-based architecture built for mobile-first developer intelligence. The frontend is a Flutter application, the backend is a FastAPI service, and stateful data is persisted in PostgreSQL with Redis for caching and rate limiting.
+Tatvik uses a production-oriented, modular, service-based architecture built for mobile-first developer intelligence. The frontend is a Flutter application, the backend is a FastAPI service, and stateful data is persisted in PostgreSQL with Redis for caching and rate limiting.
 
 The system is designed around four core layers:
 
@@ -112,6 +112,57 @@ This allows prompt templates, guardrails, and output schemas to stay consistent 
 - **Cache**: Managed Redis instance.
 - **Storage**: Supabase Storage.
 - **CI/CD**: GitHub Actions pipelines for lint, test, build, and deploy.
+
+## Command Center — Mission-to-PR Pipeline
+
+The Command Center lets a user create a development mission and have the AI OS
+execute it end-to-end, ending in a real pull request on a target repository.
+
+### Flow
+1. **Flutter frontend** `POST /api/v1/openclaw/missions` with `title`, `description`, `repository`, and `execute=true`.
+2. **FastAPI** records the mission in the pipeline tracker and schedules `_run_mission_in_background`.
+3. **Repository understanding** — `MissionPrService.understand_repository` combines the Cognee knowledge graph (previous missions, architecture memory) with the live GitHub file tree, key files, README, and a skill fingerprint, producing a rendered context block.
+4. **Stages** — the mission advances through 8 tracker stages (Requirement → Planning → Design → Development → Testing → Review → Deployment → Memory). To protect the HuggingFace free tier the stages are **batched into 3 gateway dispatches** (instead of 8) and per-stage outputs are cached in-process; replies are split locally from a single JSON response.
+5. **Gateway execution** — each dispatch goes to the OpenClaw gateway (`OPENCLAW_API_URL`, an HF Space) via `OpenClawService._dispatch`. The gateway runs its agent (Gemini) and returns structured text.
+6. **PR creation** — `MissionPrService.execute_mission_and_open_pr` asks the LLM for a strict-JSON change plan (`_plan_changes`), creates a `tatvik/mission-*` branch, writes files through the GitHub Contents API, and opens a formatted PR.
+
+### Model orchestration & free-tier protection
+`call_gemini` (research.py) is the backend's LLM entry point. Because the
+Gemini free tier trips `429 RESOURCE_EXHAUSTED` on bursts, it now enforces:
+
+- **Concurrency limiter** — at most `gemini_max_concurrency` in-flight requests.
+- **Rate spacing** — minimum `gemini_rate_min_interval` between calls.
+- **Circuit breaker** — trips after `gemini_circuit_threshold` consecutive quota errors and cools down for `gemini_circuit_cool_down` seconds.
+- **Response cache** — identical prompts (retries/duplicate dispatches) short-circuit in-process for `gemini_cache_ttl` seconds.
+- **Model fallback** — `gemini-2.5-flash` → `gemini-2.5-flash-lite`, then NVIDIA (`meta/llama-3.3-70b-instruct`) as last resort.
+- **Bootstrap guard** — the gateway sometimes answers its own "Who am I?" persona prompt instead of the request; `OpenClawService` detects these canned replies and fails fast rather than recording bogus output or re-dispatching.
+
+### Developer skills
+The mission agent loads the developer skills registry
+(`app/services/developer_skills.py`) built from **AutoDevs.dev** developer
+profiles and the **skills.sh** skill directory, plus the developer's own
+`.autodevs/prompts.md` list. Detected stack (Flutter/mobile, web, FastAPI,
+pytest, CI) selects the relevant frontend/backend skills, which are injected
+into the repository context and the change-plan prompt so generated PRs match
+the repo's conventions and are significant, working changes — not stubs.
+
+### Diagram
+```text
+Flutter Command Center
+        |
+        | POST /api/v1/openclaw/missions
+        v
+FastAPI Pipeline Tracker (8 stages, batched + cached)
+        |
+        +-- Understand repo: Cognee graph + GitHub tree + skills fingerprint
+        |
+        +-- OpenClaw (HF Space) gateway  --3 dispatches-->  agent (Gemini)
+        |        |                                        (bootstrap guard)
+        |        +-- Gemini retry/fallback   <- circuit breaker + rate guard
+        |        +-- NVIDIA fallback
+        |
+        +-- MissionPrService: plan (JSON) -> branch -> files -> pull request
+```
 
 ## Non-Functional Requirements
 - P95 API latency targets for common reads should stay low through caching.

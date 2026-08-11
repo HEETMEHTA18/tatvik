@@ -14,8 +14,14 @@ client = TestClient(app)
 
 
 def setup_module():
-    Base.metadata.drop_all(bind=engine)
+    try:
+        Base.metadata.drop_all(bind=engine)
+    except Exception:
+        pass
     Base.metadata.create_all(bind=engine)
+    import app.api.v1.endpoints.research as research
+
+    research.redis_client = None
 
 
 def test_health_check():
@@ -28,7 +34,7 @@ def test_register_and_login_flow():
     register_response = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "devmentor@example.com",
+            "email": "tatvik@example.com",
             "password": "Password123!",
             "name": "Dev Mentor",
         },
@@ -38,7 +44,7 @@ def test_register_and_login_flow():
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "devmentor@example.com", "password": "Password123!"},
+        json={"email": "tatvik@example.com", "password": "Password123!"},
     )
     assert login_response.status_code == 200
     assert "access_token" in login_response.json()
@@ -47,7 +53,7 @@ def test_register_and_login_flow():
 def get_auth_headers():
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"email": "devmentor@example.com", "password": "Password123!"},
+        json={"email": "tatvik@example.com", "password": "Password123!"},
     )
     token = login_response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
@@ -195,3 +201,318 @@ def test_autodev_session_telemetry_flow():
     assert db_file is not None
     assert db_file.file_path == "math.go"
     assert db_file.prompt_event_id == db_prompt.id
+
+
+def test_research_github_search():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
+        )
+        mock_gemini.return_value = "AI analysis summary"
+
+        response = client.post(
+            "/api/v1/research/github",
+            json={"query": "test query"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["platform"] == "github"
+        assert data["query"] == "test query"
+        assert len(data["results"]) == 1
+        assert data["summary"] == "AI analysis summary"
+
+
+def test_research_github_url():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_get.return_value = MagicMock(
+            status_code=200, text="Mock scraped repo contents"
+        )
+        mock_gemini.return_value = "AI repo summary"
+
+        response = client.post(
+            "/api/v1/research/github",
+            json={"url": "https://github.com/test/repo"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["platform"] == "github"
+        assert data["url"] == "https://github.com/test/repo"
+        assert data["summary"] == "AI repo summary"
+
+
+def test_research_youtube():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("yt_dlp.YoutubeDL") as mock_ydl, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini, patch("os.path.exists", return_value=True), patch(
+        "builtins.open", create=True
+    ) as mock_open:
+        mock_ydl_instance = MagicMock()
+        mock_ydl.return_value.__enter__.return_value = mock_ydl_instance
+        mock_ydl_instance.extract_info.return_value = {
+            "title": "Test Title",
+            "description": "Test Desc",
+        }
+        mock_gemini.return_value = "AI youtube summary"
+        mock_open.return_value.__enter__.return_value.read.return_value = (
+            "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello YouTube"
+        )
+
+        response = client.post(
+            "/api/v1/research/youtube",
+            json={"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["platform"] == "youtube"
+        assert data["summary"] == "AI youtube summary"
+
+
+def test_research_reddit():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_get.return_value = MagicMock(
+            status_code=200, text="Mock scraped Reddit contents"
+        )
+        mock_gemini.return_value = "AI reddit summary"
+
+        response = client.post(
+            "/api/v1/research/reddit",
+            json={"query": "test query"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["platform"] == "reddit"
+        assert data["query"] == "test query"
+        assert data["summary"] == "AI reddit summary"
+
+
+def test_research_rss():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("feedparser.parse") as mock_parse, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_entry = MagicMock()
+        mock_entry.get.side_effect = lambda k, default=None: {
+            "title": "Test Feed Entry",
+            "link": "https://example.com/entry",
+            "published": "2026-06-19",
+            "summary": "Sample summary",
+        }.get(k, default)
+        mock_parse.return_value = MagicMock(entries=[mock_entry])
+        mock_gemini.return_value = "AI rss summary"
+
+        response = client.post(
+            "/api/v1/research/rss",
+            json={"url": "https://example.com/rss.xml"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["platform"] == "rss"
+        assert data["url"] == "https://example.com/rss.xml"
+        assert data["summary"] == "AI rss summary"
+
+
+def test_research_project_analysis():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
+        )
+        mock_gemini.return_value = "AI project plan"
+
+        response = client.post(
+            "/api/v1/research/project-analysis",
+            json={"project_idea": "SaaS Platform"},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "roadmap_id" in data
+        assert "analysis" in data
+        assert data["analysis"] == "AI project plan"
+
+
+def test_research_learning_path():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("httpx.AsyncClient.get") as mock_get, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                "items": [
+                    {
+                        "full_name": "test/repo",
+                        "description": "Test description",
+                        "stargazers_count": 5,
+                        "html_url": "https://github.com/test/repo",
+                    }
+                ]
+            },
+        )
+        mock_gemini.return_value = "AI learning guide"
+
+        response = client.post(
+            "/api/v1/research/learning-path",
+            json={"role": "Python Developer", "target_technologies": ["FastAPI"]},
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "roadmap_id" in data
+        assert "learning_path" in data
+        assert data["learning_path"] == "AI learning guide"
+
+
+def test_research_digest():
+    headers = get_auth_headers()
+    from unittest.mock import patch, MagicMock
+
+    with patch("feedparser.parse") as mock_parse, patch(
+        "app.api.v1.endpoints.research.call_gemini"
+    ) as mock_gemini:
+        mock_parse.return_value = MagicMock(entries=[])
+        mock_gemini.return_value = "AI general updates digest"
+
+        response = client.get(
+            "/api/v1/research/digest?topic=general",
+            headers=headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["topic"] == "general"
+        assert data["digest"] == "AI general updates digest"
+
+
+def test_refine_prompt_endpoint():
+    headers = get_auth_headers()
+    from unittest.mock import patch
+
+    # 1. Create a prompt history entry first
+    event_response = client.post(
+        "/api/v1/prompts/event",
+        json={
+            "original_prompt": "Optimize this database query select count from table",
+            "project_name": "db-opt",
+        },
+        headers=headers,
+    )
+    if event_response.status_code != 200:
+        print("ERROR BODY:", event_response.json())
+    assert event_response.status_code == 200
+    prompt_data = event_response.json()
+    prompt_id = prompt_data["id"]
+    assert prompt_data["refined_prompt"] == ""
+    assert prompt_data["score"] == 0
+
+    # 2. Call the refine endpoint with mocked call_ai_json
+    with patch("app.api.v1.endpoints.prompts.call_ai_json") as mock_call:
+        mock_call.return_value = {
+            "refined_prompt": "Use indexed subquery or COUNT(1) to avoid sequential scan.",
+            "score": 85,
+            "technologies": ["PostgreSQL", "SQL"],
+            "workflow": "Database",
+        }
+
+        refine_response = client.post(
+            f"/api/v1/prompts/{prompt_id}/refine",
+            headers=headers,
+        )
+        assert refine_response.status_code == 200
+        res_data = refine_response.json()
+        assert "refined_prompt" in res_data
+        assert res_data["score"] == 85
+        assert "PostgreSQL" in res_data["technologies"]
+
+    # 3. Retrieve prompt detail to verify it is persisted
+    history_response = client.get(
+        "/api/v1/prompts/history",
+        headers=headers,
+    )
+    assert history_response.status_code == 200
+    history_list = history_response.json()
+    assertMatched = [p for p in history_list if p["id"] == prompt_id]
+    assert len(assertMatched) == 1
+    assert (
+        assertMatched[0]["refined_prompt"]
+        == "Use indexed subquery or COUNT(1) to avoid sequential scan."
+    )
+    assert assertMatched[0]["score"] == 85
+
+
+def test_mentor_chat_repository_targeting():
+    headers = get_auth_headers()
+    from unittest.mock import patch, AsyncMock
+
+    with patch("app.api.v1.endpoints.mentor.GithubAgentService") as mock_agent_class:
+        mock_agent_instance = mock_agent_class.return_value
+        mock_agent_instance.execute_task_and_pr = AsyncMock(
+            return_value={
+                "pull_request_url": "https://github.com/test-owner/test-repo/pull/1"
+            }
+        )
+
+        response = client.post(
+            "/api/v1/mentor/chat",
+            json={
+                "message": "implement this feature in test-owner/test-repo",
+                "resume_context": None,
+                "history": [],
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        mock_agent_instance.execute_task_and_pr.assert_called_once()
+        args, kwargs = mock_agent_instance.execute_task_and_pr.call_args
+        assert kwargs.get("repo_full_name") == "test-owner/test-repo"

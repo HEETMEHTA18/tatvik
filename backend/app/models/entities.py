@@ -18,6 +18,18 @@ class GithubProfile(Base):
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class GoogleProfile(Base):
+    __tablename__ = "google_profiles"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    access_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    refresh_token: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Repository(Base):
     __tablename__ = "repositories"
     id: Mapped[str] = mapped_column(
@@ -120,6 +132,21 @@ class TechNews(Base):
     scanned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class PushDevice(Base):
+    __tablename__ = "push_devices"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    platform: Mapped[str] = mapped_column(String(32), default="web")
+    token: Mapped[str] = mapped_column(String(1024), unique=True, index=True)
+    device_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class PromptHistory(Base):
     __tablename__ = "prompt_histories"
     id: Mapped[str] = mapped_column(
@@ -187,3 +214,76 @@ class GeneratedFile(Base):
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     action: Mapped[str] = mapped_column(String(64))  # "created" or "modified"
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ResearchSession(Base):
+    __tablename__ = "research_sessions"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), index=True)
+    query: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ResearchResult(Base):
+    __tablename__ = "research_results"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    session_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("research_sessions.id"), index=True
+    )
+    platform: Mapped[str] = mapped_column(String(32))  # github, youtube, reddit, rss
+    raw_data: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class WeeklyDigest(Base):
+    __tablename__ = "weekly_digests"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    topic: Mapped[str] = mapped_column(String(255))
+    digest_text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PulseItem(Base):
+    """
+    Tatvik Pulse Data Ingestion Engine Model
+    Stores normalized data from various tech sources (RSS, APIs, etc.)
+    """
+
+    __tablename__ = "pulse_items"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    title: Mapped[str] = mapped_column(String(512), index=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(255), index=True)
+    url: Mapped[str] = mapped_column(String(1024), unique=True)
+    author: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(255), index=True)
+    tags: Mapped[str | None] = mapped_column(
+        String(1024), nullable=True
+    )  # JSON array as string
+    difficulty: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reading_time: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    language: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    license: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    trending_score: Mapped[int] = mapped_column(Integer, default=0)
+    sentiment: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    related_repositories: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON array
+    related_technologies: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON array
+    thumbnail: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    image: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    metadata_blob: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON blob
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

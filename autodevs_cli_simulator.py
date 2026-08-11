@@ -7,10 +7,10 @@ import sqlite3
 import os
 
 # Configuration
-DB_PATH = "backend/devmentor.db"
+DB_PATH = "backend/tatvik.db"
 SECRET_KEY = "change-me"
 ALGORITHM = "HS256"
-API_URL = "https://devmentor-jmjh.onrender.com/api/v1/prompts/event"
+API_URL = "https://tatvik-jmjh.onrender.com/api/v1/prompts/event"
 
 
 def get_first_user_id():
@@ -39,20 +39,20 @@ def generate_token(user_id):
 def main():
     if len(sys.argv) < 2:
         print("Usage: python autodevs_cli_simulator.py \"your prompt here\" [project_name]")
-        print("Example: python autodevs_cli_simulator.py \"create a button widget with circular borders\" devmentor-app")
+        print("Example: python autodevs_cli_simulator.py \"create a button widget with circular borders\" tatvik-app")
         sys.exit(1)
         
     prompt_text = sys.argv[1]
     project_name = sys.argv[2] if len(sys.argv) > 2 else "autodevs-cli"
     
-    token = os.environ.get("DEVMENTOR_TOKEN")
+    token = os.environ.get("TATVIK_TOKEN")
     if token:
-        print("Using JWT token from environment variable DEVMENTOR_TOKEN.")
+        print("Using JWT token from environment variable TATVIK_TOKEN.")
     else:
         user_id = get_first_user_id()
         if not user_id:
-            print("\nNo user found in the local database and no DEVMENTOR_TOKEN environment variable is set.")
-            print("To run against production, log in via your mobile app and set the DEVMENTOR_TOKEN environment variable.")
+            print("\nNo user found in the local database and no TATVIK_TOKEN environment variable is set.")
+            print("To run against production, log in via your mobile app and set the TATVIK_TOKEN environment variable.")
             sys.exit(1)
             
         print(f"Detected User ID from DB: {user_id}")
@@ -60,7 +60,7 @@ def main():
         print("Generated JWT authentication token.")
 
     
-    print(f"\nSending prompt event to DevMentor API...")
+    print(f"\nSending prompt event to Tatvik API...")
     print(f"Original Prompt: '{prompt_text}'")
     print(f"Project context: '{project_name}'")
     
@@ -89,7 +89,7 @@ def main():
             print("\n[AI UPGRADED PROMPT]")
             print(res_data.get("refined_prompt"))
             print("="*50)
-            print("\nOpen the DevMentor app and switch to the 'PROMPTS' tab to see it live!")
+            print("\nOpen the Tatvik app and switch to the 'PROMPTS' tab to see it live!")
         else:
             print(f"\nAPI Error (Status {response.status_code}): {response.text}")
     except Exception as e:

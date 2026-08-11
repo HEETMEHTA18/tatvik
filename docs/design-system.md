@@ -1,7 +1,7 @@
 # Design System
 
 ## Design Philosophy
-DevMentor should feel like a premium developer cockpit: calm, intelligent, and highly polished. The interface should combine the clarity of Linear, the responsiveness of Raycast, the depth of Apple VisionOS, and the professional density of GitHub Mobile.
+Tatvik should feel like a premium developer cockpit: calm, intelligent, and highly polished. The interface should combine the clarity of Linear, the responsiveness of Raycast, the depth of Apple VisionOS, and the professional density of GitHub Mobile.
 
 The visual language is **dark-mode-first** with translucent surfaces, subtle glow, restrained motion, and strong hierarchy.
 

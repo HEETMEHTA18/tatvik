@@ -7,4 +7,3 @@ class CareerRoadmapScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const RoadmapScreen();
 }
-

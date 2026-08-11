@@ -1,11 +1,15 @@
+import logging
+from typing import Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.api.deps import get_current_user_id, get_db
+from app.api.deps import get_current_user_id, get_optional_user_id, get_db
 from app.models.entities import GithubProfile, Repository
 from app.models.user import User
 from app.services.github_service import GithubService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -30,12 +34,13 @@ async def sync_username(
             "message": "Public GitHub sync completed",
             "details": sync_result,
         }
-    except Exception as e:
+    except Exception:
         import logging
 
-        logging.getLogger(__name__).error(f"Failed to sync public github data: {e}")
+        logging.getLogger(__name__).exception("Failed to sync public github data")
         raise HTTPException(
-            status_code=500, detail=f"Failed to sync public GitHub data: {str(e)}"
+            status_code=500,
+            detail="Failed to sync public GitHub data. Please try again later.",
         )
 
 
@@ -67,9 +72,13 @@ async def sync_github(
             "message": "GitHub sync completed",
             "details": sync_result,
         }
-    except Exception as e:
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("GitHub sync failed")
         raise HTTPException(
-            status_code=500, detail=f"Failed to sync GitHub data: {str(e)}"
+            status_code=500,
+            detail="Failed to sync GitHub data. Please try again later.",
         )
 
 
@@ -161,7 +170,7 @@ def github_languages(
 
 async def get_github_contributions(username: str, access_token: str, year: int) -> list:
     url = "https://api.github.com/graphql"
-    headers = {"Authorization": f"bearer {access_token}", "User-Agent": "DevMentor-App"}
+    headers = {"Authorization": f"bearer {access_token}", "User-Agent": "Tatvik-App"}
 
     start_date = f"{year}-01-01T00:00:00Z"
     end_date = f"{year}-12-31T23:59:59Z"
@@ -324,7 +333,7 @@ async def github_day_activity(
     url = "https://api.github.com/graphql"
     headers = {
         "Authorization": f"bearer {profile.access_token}",
-        "User-Agent": "DevMentor-App",
+        "User-Agent": "Tatvik-App",
     }
 
     query = """
@@ -452,3 +461,365 @@ async def github_day_activity(
         "summary": f"Failed to fetch real-time activity for {date}.",
         "details": [],
     }
+
+
+@router.get("/following-activity")
+async def github_following_activity(
+    username: Optional[str] = None,
+    user_id: Optional[str] = Depends(get_optional_user_id),
+    db: Session = Depends(get_db),
+):
+    import httpx
+    from app.models.entities import GithubProfile
+    from app.models.user import User
+
+    profile = None
+    if user_id:
+        stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+        profile = db.scalar(stmt)
+
+    access_token = profile.access_token if profile else None
+    login = username or (profile.login if profile else None)
+
+    if not login:
+        if user_id:
+            user_stmt = select(User).where(User.id == user_id)
+            user = db.scalar(user_stmt)
+            if user and user.username:
+                login = user.username
+
+    if not login:
+        return {"events": []}
+
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Tatvik-App",
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
+    url = f"https://api.github.com/users/{login}/received_events?per_page=30"
+
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.get(url, headers=headers, timeout=12.0)
+            if res.status_code == 401 and "Authorization" in headers:
+                logger.warning(
+                    "GitHub token returned 401. Retrying following-activity unauthenticated."
+                )
+                del headers["Authorization"]
+                res = await client.get(url, headers=headers, timeout=12.0)
+
+            if res.status_code == 200:
+                events = res.json()
+                structured_events = []
+                for event in events:
+                    event_type = event.get("type")
+                    actor = event.get("actor", {})
+                    repo = event.get("repo", {})
+                    payload = event.get("payload", {})
+                    created_at = event.get("created_at")
+
+                    title = ""
+                    description = ""
+                    action_type = "general"
+
+                    if event_type == "WatchEvent":
+                        title = f"{actor.get('login')} starred {repo.get('name')}"
+                        action_type = "star"
+                    elif event_type == "PushEvent":
+                        commits = payload.get("commits", [])
+                        commit_msg = (
+                            commits[0].get("message")
+                            if commits
+                            else "No commit message"
+                        )
+                        count = payload.get("size", 1)
+                        ref = payload.get("ref", "").replace("refs/heads/", "")
+                        title = f"{actor.get('login')} pushed {count} commit{'s' if count != 1 else ''} to {ref} in {repo.get('name')}"
+                        description = f'"{commit_msg}"'
+                        action_type = "push"
+                    elif event_type == "PullRequestEvent":
+                        action = payload.get("action", "opened")
+                        pr = payload.get("pull_request", {})
+                        merged = pr.get("merged", False)
+                        state = "merged" if merged else (pr.get("state") or action)
+                        title = f"{actor.get('login')} {state} pull request #{payload.get('number')} in {repo.get('name')}"
+                        description = pr.get("title", "")
+                        action_type = "pr"
+                    elif event_type == "ReleaseEvent":
+                        release = payload.get("release", {})
+                        title = f"{actor.get('login')} released {release.get('tag_name')} of {repo.get('name')}"
+                        description = release.get("name") or release.get("body") or ""
+                        action_type = "release"
+                    elif event_type == "IssuesEvent":
+                        action = payload.get("action", "opened")
+                        issue = payload.get("issue", {})
+                        title = f"{actor.get('login')} {action} issue #{issue.get('number')} in {repo.get('name')}"
+                        description = issue.get("title", "")
+                        action_type = "issue"
+                    elif event_type == "CreateEvent":
+                        ref_type = payload.get("ref_type", "repository")
+                        ref = payload.get("ref", "")
+                        if ref_type == "repository":
+                            title = f"{actor.get('login')} created repository {repo.get('name')}"
+                        else:
+                            title = f"{actor.get('login')} created {ref_type} {ref} in {repo.get('name')}"
+                        action_type = "create"
+                    elif event_type == "ForkEvent":
+                        forkee = payload.get("forkee", {})
+                        title = f"{actor.get('login')} forked {repo.get('name')} to {forkee.get('full_name', '')}"
+                        action_type = "fork"
+                    elif event_type == "IssueCommentEvent":
+                        issue = payload.get("issue", {})
+                        title = f"{actor.get('login')} commented on issue #{issue.get('number')} in {repo.get('name')}"
+                        description = payload.get("comment", {}).get("body", "")[:200]
+                        action_type = "comment"
+                    else:
+                        title = f"{actor.get('login')} performed {event_type} on {repo.get('name')}"
+                        action_type = "general"
+
+                    structured_events.append(
+                        {
+                            "id": event.get("id"),
+                            "actor_name": actor.get("login"),
+                            "actor_avatar": actor.get("avatar_url"),
+                            "repo_name": repo.get("name"),
+                            "type": event_type,
+                            "action_type": action_type,
+                            "title": title,
+                            "description": description,
+                            "created_at": created_at,
+                        }
+                    )
+                return {"events": structured_events}
+            else:
+                return {"events": [], "error": f"GitHub API returned {res.status_code}"}
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("Failed to fetch following activity")
+            return {
+                "events": [],
+                "error": "Failed to fetch activity. Please try again later.",
+            }
+
+
+@router.get("/file-content")
+async def github_file_content(
+    owner: str,
+    repo: str,
+    path: str = ".autodevs/prompts.md",
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    import httpx
+    import base64
+    from app.models.entities import GithubProfile
+
+    stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+    profile = db.scalar(stmt)
+    access_token = profile.access_token if profile else None
+
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Tatvik-App",
+    }
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
+    paths_to_check = [path]
+    if path == ".autodevs/prompts.md":
+        paths_to_check.extend([".autodevs/prompt.md", "prompts.md", "prompt.md"])
+
+    async with httpx.AsyncClient() as client:
+        try:
+            last_status = None
+            for check_path in paths_to_check:
+                url = (
+                    f"https://api.github.com/repos/{owner}/{repo}/contents/{check_path}"
+                )
+                res = await client.get(url, headers=headers, timeout=12.0)
+                last_status = res.status_code
+
+                if res.status_code in (401, 403) and access_token:
+                    public_headers = {
+                        "Accept": "application/vnd.github.v3+json",
+                        "User-Agent": "Tatvik-App",
+                    }
+                    res = await client.get(url, headers=public_headers, timeout=12.0)
+                    last_status = res.status_code
+
+                if res.status_code == 200:
+                    data = res.json()
+                    content = data.get("content", "")
+                    content_cleaned = content.replace("\n", "").replace("\r", "")
+                    decoded = base64.b64decode(content_cleaned).decode("utf-8")
+                    return {"content": decoded}
+                elif res.status_code == 404:
+                    continue  # Try next path
+                else:
+                    raise HTTPException(
+                        status_code=res.status_code,
+                        detail="GitHub API error. Please try again later.",
+                    )
+
+            # If we exhausted all paths, return empty content gracefully instead of raising a 404 error
+            return {
+                "content": "",
+                "status": "not_found",
+                "error": "File not found on GitHub.",
+            }
+        except HTTPException as he:
+            raise he
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).exception("Failed to fetch GitHub file content")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to fetch file content. Please try again later.",
+            )
+
+
+@router.get("/public-stats/{username}")
+async def get_public_stats(
+    username: str,
+    user_id: Optional[str] = Depends(get_optional_user_id),
+    db: Session = Depends(get_db),
+):
+    import httpx
+
+    # Strip any leading '@'
+    clean_username = username.strip().replace("@", "")
+    if not clean_username:
+        raise HTTPException(status_code=400, detail="Invalid username")
+
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Tatvik-App",
+    }
+
+    # Attempt to load a token from the DB to avoid unauthenticated rate limiting
+    access_token = None
+    if user_id:
+        stmt = select(GithubProfile).where(GithubProfile.user_id == user_id)
+        profile = db.scalar(stmt)
+        if profile and profile.access_token:
+            access_token = profile.access_token
+
+    if not access_token:
+        # Fall back to any active access token in the DB
+        fallback_stmt = (
+            select(GithubProfile)
+            .where(GithubProfile.access_token.is_not(None))
+            .limit(1)
+        )
+        fallback_profile = db.scalar(fallback_stmt)
+        if fallback_profile:
+            access_token = fallback_profile.access_token
+
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
+
+    async with httpx.AsyncClient() as client:
+        # 1. Fetch main profile
+        try:
+            profile_response = await client.get(
+                f"https://api.github.com/users/{clean_username}",
+                headers=headers,
+                timeout=8.0,
+            )
+            if profile_response.status_code == 401 and "Authorization" in headers:
+                logger.warning(
+                    "GitHub token returned 401. Retrying profile fetch unauthenticated."
+                )
+                del headers["Authorization"]
+                profile_response = await client.get(
+                    f"https://api.github.com/users/{clean_username}",
+                    headers=headers,
+                    timeout=8.0,
+                )
+
+            if profile_response.status_code == 404:
+                raise HTTPException(status_code=404, detail="GitHub user not found")
+            elif profile_response.status_code != 200:
+                raise ValueError(
+                    f"GitHub API returned status {profile_response.status_code}: {profile_response.text}"
+                )
+
+            profile_data = profile_response.json()
+        except Exception:
+            logger.exception(
+                f"Failed to fetch public GitHub profile for {clean_username}. Returning fallback mock."
+            )
+            return {
+                "login": clean_username,
+                "name": clean_username,
+                "avatar_url": f"https://avatars.githubusercontent.com/{clean_username}",
+                "public_repos": 12,
+                "total_stars": 18,
+                "total_commits": 145,
+                "repos": [
+                    {
+                        "name": "tatvik",
+                        "stargazers_count": 8,
+                        "language": "Dart",
+                        "description": "Mock repo description",
+                        "owner": {"login": clean_username},
+                    }
+                ],
+                "is_fallback": True,
+            }
+
+        # 2. Fetch commits count (ignore failures)
+        commits_count = 0
+        try:
+            commits_response = await client.get(
+                f"https://api.github.com/search/commits?q=author:{clean_username}",
+                headers={
+                    **headers,
+                    "Accept": "application/vnd.github.v3+json",
+                },
+                timeout=6.0,
+            )
+            if commits_response.status_code == 200:
+                commits_count = commits_response.json().get("total_count", 0)
+        except Exception:
+            pass
+
+        # 3. Fetch repositories to count stars (ignore failures)
+        total_stars = 0
+        repos_list = []
+        try:
+            repos_response = await client.get(
+                f"https://api.github.com/users/{clean_username}/repos?per_page=100",
+                headers=headers,
+                timeout=8.0,
+            )
+            if repos_response.status_code == 200:
+                repos_data = repos_response.json()
+                for repo in repos_data:
+                    stars = repo.get("stargazers_count", 0)
+                    total_stars += stars
+                    repos_list.append(
+                        {
+                            "name": repo.get("name"),
+                            "stargazers_count": stars,
+                            "language": repo.get("language"),
+                            "description": repo.get("description"),
+                            "owner": {"login": repo.get("owner", {}).get("login")},
+                        }
+                    )
+        except Exception:
+            pass
+
+        return {
+            "login": profile_data.get("login"),
+            "name": profile_data.get("name") or profile_data.get("login"),
+            "avatar_url": profile_data.get("avatar_url"),
+            "public_repos": profile_data.get("public_repos", 0),
+            "total_stars": total_stars,
+            "total_commits": commits_count,
+            "repos": repos_list,
+        }

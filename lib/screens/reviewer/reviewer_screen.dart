@@ -1,0 +1,507 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+
+import '../../core/config/app_config.dart';
+import '../../core/theme/app_theme.dart';
+import '../../providers/app_state.dart';
+import '../../widgets/glass_card.dart';
+import '../../widgets/liquid_glass_button.dart';
+
+class ReviewerScreen extends StatefulWidget {
+  const ReviewerScreen({super.key});
+
+  @override
+  State<ReviewerScreen> createState() => _ReviewerScreenState();
+}
+
+class _ReviewerScreenState extends State<ReviewerScreen> {
+  final _pathController = TextEditingController(
+    text: 'https://github.com/HEETMEHTA18/tatvik',
+  );
+  bool _isLoading = false;
+  Map<String, dynamic>? _reviewData;
+  String _errorMsg = '';
+
+  Timer? _loadingTimer;
+  int _loadingMsgIndex = 0;
+
+  final List<String> _loadingMessages = [
+    'Waking up OpenClaw...',
+    'Cloning repository securely...',
+    'Analyzing architecture & dependencies...',
+    'Running security vulnerability scans...',
+    'Evaluating performance metrics...',
+    'Compiling actionable issues...',
+    'Generating final review...',
+    'Almost there, hanging tight...',
+  ];
+
+  @override
+  void dispose() {
+    _loadingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startLoadingMessages() {
+    setState(() {
+      _loadingMsgIndex = 0;
+    });
+    _loadingTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!_isLoading) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_loadingMsgIndex < _loadingMessages.length - 1) {
+          _loadingMsgIndex++;
+        }
+      });
+    });
+  }
+
+  Future<void> _runReview() async {
+    final path = _pathController.text.trim();
+    if (path.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMsg = '';
+      _reviewData = null;
+    });
+
+    _startLoadingMessages();
+
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.apiBaseUrl}/reviewer/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${appState.token}',
+        },
+        body: jsonEncode({'repo_url': path}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            _reviewData = data;
+          });
+        } else {
+          setState(() {
+            _errorMsg = data['error'] ?? 'Unknown error occurred.';
+          });
+        }
+      } else {
+        setState(() {
+          _errorMsg = 'Server error: ${response.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMsg = 'Failed to connect: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Widget _buildScoreRing(String label, int score, Color color) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 500),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 72,
+                height: 72,
+                child: CircularProgressIndicator(
+                  value: score / 10,
+                  strokeWidth: 7,
+                  backgroundColor: color.withValues(alpha: 0.08),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  strokeCap: StrokeCap.round,
+                ),
+              ),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.06),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.15),
+                    width: 0.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$score',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 600;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GlassCard(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [AppTheme.neonPurple, AppTheme.accent],
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.shield_rounded, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'CONTINUOUS CODE REVIEWER',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppTheme.textMain,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Provide a public GitHub repository URL to run a continuous code review using OpenClaw.',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _pathController,
+                  style: TextStyle(color: AppTheme.textMain, fontSize: 13),
+                  decoration: InputDecoration(
+                    labelText: 'Repository URL',
+                    labelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    hintText: 'https://github.com/user/repo',
+                    hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4), fontSize: 12),
+                    filled: true,
+                    fillColor: AppTheme.isDark
+                        ? const Color(0x10FFFFFF)
+                        : const Color(0x05000000),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppTheme.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppTheme.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppTheme.neonPurple.withValues(alpha: 0.6)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(Icons.link_rounded, size: 18, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: LiquidGlassButton(
+                    onPressed: _isLoading ? null : _runReview,
+                    color: AppTheme.accent,
+                    borderRadius: 14,
+                    child: _isLoading
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Text(
+                                  _loadingMessages[_loadingMsgIndex],
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    color: Colors.black,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.play_arrow_rounded, size: 20, color: Colors.black),
+                              const SizedBox(width: 8),
+                              Text(
+                                'RUN REVIEW',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_errorMsg.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.destructive.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.destructive.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, size: 18, color: AppTheme.destructive),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _errorMsg,
+                      style: TextStyle(color: AppTheme.destructive, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_reviewData != null && _reviewData!['success'] == true) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Text(
+                  'Code Quality Scores',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.success.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    'LIVE',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.success,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            GlassCard(
+              padding: const EdgeInsets.all(24),
+              child: isWide
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildScoreRing('Security', _reviewData!['security_score'] ?? 0, AppTheme.destructive),
+                        _buildScoreRing('Performance', _reviewData!['performance_score'] ?? 0, AppTheme.peach),
+                        _buildScoreRing('Architecture', _reviewData!['architecture_score'] ?? 0, AppTheme.blue),
+                        _buildScoreRing('Maintainability', _reviewData!['maintainability_score'] ?? 0, AppTheme.success),
+                      ],
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 20,
+                      alignment: WrapAlignment.spaceAround,
+                      children: [
+                        _buildScoreRing('Security', _reviewData!['security_score'] ?? 0, AppTheme.destructive),
+                        _buildScoreRing('Performance', _reviewData!['performance_score'] ?? 0, AppTheme.peach),
+                        _buildScoreRing('Architecture', _reviewData!['architecture_score'] ?? 0, AppTheme.blue),
+                        _buildScoreRing('Maintainability', _reviewData!['maintainability_score'] ?? 0, AppTheme.success),
+                      ],
+                    ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Icon(Icons.bug_report_rounded, size: 18, color: AppTheme.peach),
+                const SizedBox(width: 8),
+                Text(
+                  'Actionable Issues',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+                if (_reviewData!['issues'] != null)
+                  Container(
+                    margin: const EdgeInsets.only(left: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.peach.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${(_reviewData!['issues'] as List).length}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.peach,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (_reviewData!['issues'] != null &&
+                (_reviewData!['issues'] as List).isNotEmpty)
+              ...(_reviewData!['issues'] as List).map((issue) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(16),
+                    borderRadius: 16,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.peach.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.warning_amber_rounded,
+                            color: AppTheme.peach,
+                            size: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            issue.toString(),
+                            style: TextStyle(
+                              color: AppTheme.textMain,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              })
+            else
+              GlassCard(
+                padding: const EdgeInsets.all(24),
+                borderRadius: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, color: AppTheme.success, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'No issues found. Great job!',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.success,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Icon(Icons.summarize_rounded, size: 18, color: AppTheme.accent),
+                const SizedBox(width: 8),
+                Text(
+                  'Overall Feedback',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                    color: AppTheme.textMain,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            GlassCard(
+              padding: const EdgeInsets.all(20),
+              borderRadius: 16,
+              child: Text(
+                _reviewData!['summary'] ?? '',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                  height: 1.6,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

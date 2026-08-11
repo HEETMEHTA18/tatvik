@@ -3,6 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/email_auth_screen.dart';
 import '../screens/main_navigation_screen.dart';
+import '../screens/memory/memory_screen.dart';
+import '../screens/pulse/pulse_screen.dart';
+import '../screens/studio/studio_screen.dart';
+import '../screens/career/career_screen.dart';
 import '../screens/mentor/mentor_chat_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/splash/splash_screen.dart';
@@ -11,7 +15,14 @@ import 'route_paths.dart';
 import '../providers/app_state.dart';
 
 // Routes that require authentication
-const _protectedRoutes = {RoutePaths.app, RoutePaths.mentor};
+const _protectedRoutes = {
+  RoutePaths.app,
+  RoutePaths.mentor,
+  RoutePaths.memory,
+  RoutePaths.pulse,
+  RoutePaths.studio,
+  RoutePaths.career,
+};
 // Routes only for guests (non-authenticated)
 const _guestOnlyRoutes = {
   RoutePaths.splash,
@@ -23,7 +34,7 @@ const _guestOnlyRoutes = {
 GoRouter createAppRouter(AppState appState) {
   return GoRouter(
     initialLocation: RoutePaths.splash,
-    refreshListenable: appState,
+    refreshListenable: appState.authStateNotifier,
     // Use a stable navigator key so the navigator tree is never torn down on rebuilds
     navigatorKey: GlobalKey<NavigatorState>(debugLabel: 'root'),
     redirect: (context, state) {
@@ -39,7 +50,8 @@ GoRouter createAppRouter(AppState appState) {
         if (appState.token != queryToken) {
           appState.setGithubSession(queryUsername ?? '', queryToken);
         }
-        return RoutePaths.app; // Redirect to clean URL path without query params
+        return RoutePaths
+            .app; // Redirect to clean URL path without query params
       }
 
       final isLoggedIn = appState.token != null && appState.token!.isNotEmpty;
@@ -64,7 +76,8 @@ GoRouter createAppRouter(AppState appState) {
       ),
       GoRoute(
         path: '/app',
-        redirect: (context, state) => state.uri.replace(path: RoutePaths.app).toString(),
+        redirect: (context, state) =>
+            state.uri.replace(path: RoutePaths.app).toString(),
       ),
       GoRoute(
         path: RoutePaths.onboarding,
@@ -81,11 +94,13 @@ GoRouter createAppRouter(AppState appState) {
       GoRoute(
         path: RoutePaths.app,
         builder: (context, state) {
-          // Only use the tab query param for the INITIAL build.
+          // Only use the tab query param for the INITIAL build or when explicitly set.
           // After that, the MainNavigationScreen manages its own tab state
           // via a stable ValueKey so it is never rebuilt from scratch.
           final tabName = state.uri.queryParameters['tab'];
-          final tabIndex = RoutePaths.tabIndexFromName(tabName);
+          final tabIndex = tabName != null
+              ? RoutePaths.tabIndexFromName(tabName)
+              : -1;
           return MainNavigationScreen(
             key: const ValueKey('main_nav'),
             initialTabIndex: tabIndex,
@@ -95,6 +110,22 @@ GoRouter createAppRouter(AppState appState) {
       GoRoute(
         path: RoutePaths.mentor,
         builder: (context, state) => const MentorChatScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.memory,
+        builder: (context, state) => const MemoryScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.pulse,
+        builder: (context, state) => const PulseScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.studio,
+        builder: (context, state) => const StudioScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.career,
+        builder: (context, state) => const CareerScreen(),
       ),
     ],
   );

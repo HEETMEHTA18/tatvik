@@ -7,4 +7,3 @@ class ProfileOverviewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const ProfileScreen();
 }
-

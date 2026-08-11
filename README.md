@@ -1,12 +1,16 @@
-# DevMentor
-
-AI-Powered Developer Growth Coach.
+# Tatvik
+> **The AI Operating System for Developers**
+> 
+> Powered by **Tatvik** — Developer Intelligence Engine
 
 ## Mission
-Help developers and students grow faster by analyzing their GitHub profile, identifying skill gaps, recommending repositories, suggesting open-source contributions, generating learning roadmaps, and providing AI-powered career guidance.
+Build the world's most intelligent developer platform that continuously understands, connects, explains, predicts, and personalizes everything happening across the software ecosystem.
+
+Unlike traditional news aggregators, Tatvik transforms fragmented developer information into actionable intelligence. A developer should never need to open dozens of websites separately—Tatvik understands the ecosystem and delivers only what matters.
 
 ## Documentation
 Comprehensive project documentation can be found in the [docs/](docs/) directory:
+- [Vision & Philosophy](docs/vision.md)
 - [Roadmap](docs/roadmap.md)
 - [Architecture](docs/architecture.md)
 - [Features](docs/features.md)
@@ -17,6 +21,7 @@ Comprehensive project documentation can be found in the [docs/](docs/) directory
 - [Setup Guide](docs/setup-guide.md)
 - [Development Checklist](docs/development-checklist.md)
 - [Implementation Plan](docs/implementation-plan.md)
+- [Resume Tailoring & Google Drive Integration](docs/resume-tailoring-integration.md)
 
 ## Tech Stack
 - **Frontend:** Flutter (Material 3, Riverpod, GoRouter)

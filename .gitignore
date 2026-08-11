@@ -60,3 +60,9 @@ ENV/
 .env.*
 .DS_Store
 
+
+# Added by AutoDev Doctor
+node_modules/
+google_drive_sync/
+
+*.db

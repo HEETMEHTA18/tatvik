@@ -11,8 +11,8 @@
 
 ## Repository Setup
 ```bash
-git clone https://github.com/your-org/devmentor.git
-cd devmentor
+git clone https://github.com/your-org/tatvik.git
+cd tatvik
 ```
 
 ## Frontend Setup
@@ -62,7 +62,7 @@ Create `backend/.env`:
 ```env
 ENVIRONMENT=development
 API_V1_PREFIX=/api/v1
-DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/devmentor
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/tatvik
 REDIS_URL=redis://localhost:6379/0
 JWT_SECRET_KEY=change-me
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
@@ -95,11 +95,11 @@ pytest
 ## Local Services
 
 ### PostgreSQL
-Create a database named `devmentor`.
+Create a database named `tatvik`.
 
 Example:
 ```bash
-createdb devmentor
+createdb tatvik
 ```
 
 ### Redis

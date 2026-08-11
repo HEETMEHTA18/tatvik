@@ -1,7 +1,7 @@
 # API Specification
 
 ## Versioning
-- **Base URL:** `https://api.devmentor.app/api/v1`
+- **Base URL:** `https://api.tatvik.app/api/v1`
 - All endpoints should be versioned.
 - Breaking changes must ship under a new version.
 
